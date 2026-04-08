@@ -1,0 +1,121 @@
+"use client";
+import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Save } from "lucide-react";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+
+const ROLE_LABELS: Record<string, string> = {
+  admin: "Administrador", coordenador: "Coordenador", roteirista: "Roteirista", membro: "Membro",
+};
+
+const ROLE_STYLES: Record<string, string> = {
+  admin: "bg-red-50 text-red-700", coordenador: "bg-blue-50 text-blue-700",
+  roteirista: "bg-violet-50 text-violet-700", membro: "bg-gray-50 text-gray-600",
+};
+
+export default function PerfilPage() {
+  const { data: session, update } = useSession();
+  const [name, setName] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [userData, setUserData] = useState<any>(null);
+
+  const userId = (session?.user as any)?.id;
+
+  useEffect(() => {
+    if (userId) {
+      fetch(`/api/users/${userId}`).then((r) => r.json()).then((data) => {
+        setUserData(data);
+        setName(data.name);
+      });
+    }
+  }, [userId]);
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault();
+    if (password && password !== confirmPassword) {
+      toast.error("As senhas nao coincidem");
+      return;
+    }
+    setSaving(true);
+    try {
+      const body: any = { name };
+      if (password) body.password = password;
+      const res = await fetch(`/api/users/${userId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) throw new Error((await res.json()).error);
+      toast.success("Perfil atualizado!");
+      setPassword("");
+      setConfirmPassword("");
+      await update({ name });
+    } catch (err: any) { toast.error(err.message); }
+    finally { setSaving(false); }
+  }
+
+  if (!userData) return <div className="max-w-lg mx-auto h-64 bg-muted animate-pulse rounded-lg" />;
+
+  return (
+    <div className="max-w-lg mx-auto space-y-6">
+      <div>
+        <h1 className="font-heading text-2xl">Meu Perfil</h1>
+        <p className="text-sm text-muted-foreground mt-0.5">Informacoes pessoais</p>
+      </div>
+
+      <div className="border rounded-lg bg-card">
+        <div className="p-5">
+          {/* Avatar + Info */}
+          <div className="flex items-center gap-4 mb-6">
+            <div className="h-14 w-14 rounded-xl bg-primary/10 flex items-center justify-center text-xl font-bold text-primary">
+              {userData.name[0]?.toUpperCase()}
+            </div>
+            <div>
+              <p className="text-lg font-semibold">{userData.name}</p>
+              <div className="flex gap-1.5 mt-1">
+                <Badge className={cn("text-[10px] border-0", ROLE_STYLES[userData.role])}>{ROLE_LABELS[userData.role]}</Badge>
+                {userData.skills?.map((s: string) => (
+                  <Badge key={s} variant="outline" className="text-[10px]">{s}</Badge>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <form onSubmit={handleSave} className="space-y-4">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium">Nome</Label>
+              <Input value={name} onChange={(e) => setName(e.target.value)} required className="h-9" />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium">Usuario</Label>
+              <Input value={userData.username} disabled className="h-9 bg-muted/50" />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium">Nova Senha</Label>
+              <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Manter atual" className="h-9" />
+            </div>
+            {password && (
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium">Confirmar Senha</Label>
+                <Input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="h-9" />
+              </div>
+            )}
+          </form>
+        </div>
+
+        <div className="px-5 py-4 border-t bg-muted/20">
+          <Button onClick={handleSave} className="w-full" disabled={saving}>
+            <Save className="h-4 w-4 mr-1.5" /> {saving ? "Salvando..." : "Salvar"}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
