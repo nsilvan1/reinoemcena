@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import mongoose from "mongoose";
 import { connectDB } from "@/lib/mongodb";
 import Roteiro from "@/models/Roteiro";
 import Scale from "@/models/Scale";
-import { requireAuth } from "@/lib/auth-helpers";
+import { requireAuth, requireRole } from "@/lib/auth-helpers";
+import { sanitizeHtml, isSafeUrl } from "@/lib/sanitize";
 
 // GET /api/roteiros
 export async function GET(req: NextRequest) {
@@ -13,8 +15,8 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const scaleId = searchParams.get("scaleId");
 
-  const filter: any = {};
-  if (scaleId) filter.scaleId = scaleId;
+  const filter: Record<string, unknown> = {};
+  if (scaleId && mongoose.isValidObjectId(scaleId)) filter.scaleId = scaleId;
 
   const roteiros = await Roteiro.find(filter)
     .populate("createdBy", "name")
@@ -26,35 +28,73 @@ export async function GET(req: NextRequest) {
 
 // POST /api/roteiros
 export async function POST(req: NextRequest) {
-  const { error, user } = await requireAuth();
+  const { error, user } = await requireRole("roteirista");
   if (error) return error;
-
-  // Roteirista, coordenador ou admin podem criar
-  if (!["admin", "coordenador", "roteirista"].includes(user.role)) {
-    return NextResponse.json({ error: "Sem permissão" }, { status: 403 });
-  }
 
   await connectDB();
   const body = await req.json();
 
-  const roteiro = await Roteiro.create({
-    title: body.title,
-    content: body.content || "",
-    fileUrl: body.fileUrl,
-    scaleId: body.scaleId,
-    weekNumber: body.weekNumber,
-    createdBy: user.id,
-    assignedEditors: body.assignedEditors || [],
-    assignedNarrators: body.assignedNarrators || [],
-  });
+  const title = typeof body.title === "string" ? body.title.trim() : "";
+  const scaleId = typeof body.scaleId === "string" ? body.scaleId : "";
+  const weekNumber = Number(body.weekNumber);
 
-  // Vincular roteiro na semana da escala
-  if (body.scaleId && body.weekNumber) {
-    await Scale.updateOne(
-      { _id: body.scaleId, "weeks.number": body.weekNumber },
-      { $set: { "weeks.$.roteiro": roteiro._id } }
-    );
+  if (!title) {
+    return NextResponse.json({ error: "Título obrigatório" }, { status: 400 });
+  }
+  if (!scaleId || !mongoose.isValidObjectId(scaleId)) {
+    return NextResponse.json({ error: "scaleId inválido" }, { status: 400 });
+  }
+  if (!Number.isFinite(weekNumber) || weekNumber < 1) {
+    return NextResponse.json({ error: "weekNumber inválido" }, { status: 400 });
   }
 
-  return NextResponse.json(roteiro, { status: 201 });
+  const content = typeof body.content === "string" ? sanitizeHtml(body.content) : "";
+
+  if (body.fileUrl !== undefined && body.fileUrl !== null && body.fileUrl !== "") {
+    if (typeof body.fileUrl !== "string" || !isSafeUrl(body.fileUrl)) {
+      return NextResponse.json({ error: "fileUrl inválido" }, { status: 400 });
+    }
+  }
+
+  const assignedEditors = Array.isArray(body.assignedEditors)
+    ? body.assignedEditors.filter((id: unknown) => typeof id === "string" && mongoose.isValidObjectId(id))
+    : [];
+  const assignedNarrators = Array.isArray(body.assignedNarrators)
+    ? body.assignedNarrators.filter((id: unknown) => typeof id === "string" && mongoose.isValidObjectId(id))
+    : [];
+
+  const session = await mongoose.startSession();
+  try {
+    let created;
+    await session.withTransaction(async () => {
+      const docs = await Roteiro.create(
+        [
+          {
+            title,
+            content,
+            fileUrl: body.fileUrl || undefined,
+            scaleId,
+            weekNumber,
+            createdBy: user.id,
+            assignedEditors,
+            assignedNarrators,
+          },
+        ],
+        { session }
+      );
+      created = docs[0];
+
+      await Scale.updateOne(
+        { _id: scaleId, "weeks.number": weekNumber },
+        { $set: { "weeks.$.roteiro": created._id } },
+        { session }
+      );
+    });
+    return NextResponse.json(created, { status: 201 });
+  } catch (err) {
+    console.error("[POST /api/roteiros] transaction failed:", err);
+    return NextResponse.json({ error: "Erro ao criar roteiro" }, { status: 500 });
+  } finally {
+    await session.endSession();
+  }
 }

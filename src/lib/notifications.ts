@@ -1,4 +1,5 @@
 import Notification from "@/models/Notification";
+import { connectDB } from "@/lib/mongodb";
 import { Types } from "mongoose";
 
 export async function createNotification(
@@ -7,6 +8,7 @@ export async function createNotification(
   type: "escala" | "roteiro" | "status" | "revisao" | "geral" = "geral",
   link?: string
 ) {
+  await connectDB();
   return Notification.create({
     userId,
     message,
@@ -21,6 +23,7 @@ export async function notifyMany(
   type: "escala" | "roteiro" | "status" | "revisao" | "geral" = "geral",
   link?: string
 ) {
+  await connectDB();
   const docs = userIds.map((userId) => ({
     userId,
     message,

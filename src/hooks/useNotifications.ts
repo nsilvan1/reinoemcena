@@ -13,17 +13,31 @@ interface Notification {
 export function useNotifications() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [tick, setTick] = useState(0);
 
-  const fetchNotifications = useCallback(async () => {
-    try {
-      const res = await fetch("/api/notifications");
-      if (res.ok) {
-        const data = await res.json();
-        setNotifications(data);
-        setUnreadCount(data.filter((n: Notification) => !n.read).length);
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      try {
+        const res = await fetch("/api/notifications");
+        if (res.ok && !cancelled) {
+          const data: Notification[] = await res.json();
+          setNotifications(data);
+          setUnreadCount(data.filter((n) => !n.read).length);
+        }
+      } catch (err) {
+        console.error("Notifications fetch failed:", err);
       }
-    } catch {}
-  }, []);
+    }
+
+    void load();
+    const interval = setInterval(() => { void load(); }, 30000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [tick]);
 
   const markAsRead = useCallback(async (id?: string) => {
     await fetch("/api/notifications", {
@@ -31,14 +45,12 @@ export function useNotifications() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(id ? { id } : { markAllRead: true }),
     });
-    fetchNotifications();
-  }, [fetchNotifications]);
+    setTick((t) => t + 1);
+  }, []);
 
-  useEffect(() => {
-    fetchNotifications();
-    const interval = setInterval(fetchNotifications, 30000);
-    return () => clearInterval(interval);
-  }, [fetchNotifications]);
+  const refresh = useCallback(() => {
+    setTick((t) => t + 1);
+  }, []);
 
-  return { notifications, unreadCount, markAsRead, refresh: fetchNotifications };
+  return { notifications, unreadCount, markAsRead, refresh };
 }

@@ -1,49 +1,23 @@
 "use client";
-import { useEffect, useState, Fragment } from "react";
+import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import {
-  Calendar, FileText, CheckCircle, Clock, ArrowRight, Bell,
-  PenLine, Mic, Film, Eye, CircleCheck, TrendingUp, Clapperboard,
+  Calendar, CheckCircle, Clock, ArrowRight, Bell,
+  TrendingUp, Clapperboard,
 } from "lucide-react";
-import { format } from "date-fns";
+import { format, isBefore } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { cn } from "@/lib/utils";
+import { cn, parseLocalDate } from "@/lib/utils";
+import { STEPS } from "@/components/pipeline/mini-pipeline";
 
-const STEPS = [
-  { key: "roteiro", label: "Roteiro", icon: PenLine, color: "text-blue-600", bg: "bg-blue-600", dot: "bg-blue-500", light: "bg-blue-50" },
-  { key: "gravacao", label: "Gravacao", icon: Mic, color: "text-amber-600", bg: "bg-amber-600", dot: "bg-amber-500", light: "bg-amber-50" },
-  { key: "edicao", label: "Edicao", icon: Film, color: "text-violet-600", bg: "bg-violet-600", dot: "bg-violet-500", light: "bg-violet-50" },
-  { key: "revisao", label: "Revisao", icon: Eye, color: "text-orange-600", bg: "bg-orange-600", dot: "bg-orange-500", light: "bg-orange-50" },
-  { key: "concluido", label: "Concluido", icon: CircleCheck, color: "text-emerald-600", bg: "bg-emerald-600", dot: "bg-emerald-500", light: "bg-emerald-50" },
-];
-
-function MiniPipeline({ status }: { status: string }) {
-  const idx = STEPS.findIndex((s) => s.key === status);
-  return (
-    <div className="flex items-center gap-px">
-      {STEPS.map((step, i) => (
-        <Fragment key={step.key}>
-          <div className={cn(
-            "h-5 w-5 rounded-full flex items-center justify-center transition-all",
-            i === idx ? `${step.bg} text-white` :
-            i < idx ? "bg-emerald-500 text-white" :
-            "bg-muted text-muted-foreground/20"
-          )}>
-            {i < idx ? (
-              <CheckCircle className="h-2.5 w-2.5" />
-            ) : (
-              <step.icon className="h-2.5 w-2.5" />
-            )}
-          </div>
-          {i < STEPS.length - 1 && (
-            <div className={cn("w-1.5 h-0.5 rounded-full", i < idx ? "bg-emerald-300" : "bg-muted")} />
-          )}
-        </Fragment>
-      ))}
-    </div>
-  );
-}
+const PHASE_BORDER: Record<string, string> = {
+  roteiro: "border-t-blue-500",
+  gravacao: "border-t-amber-500",
+  edicao: "border-t-violet-500",
+  revisao: "border-t-orange-500",
+  concluido: "border-t-emerald-500",
+};
 
 export default function DashboardPage() {
   const { data: session } = useSession();
@@ -81,8 +55,8 @@ export default function DashboardPage() {
   const stats = [
     { label: "Escalas", value: scales.length, icon: Calendar, accent: "bg-blue-500", iconBg: "bg-blue-50 text-blue-600" },
     { label: "Em andamento", value: pending.length, icon: Clock, accent: "bg-amber-500", iconBg: "bg-amber-50 text-amber-600" },
-    { label: "Concluidos", value: completed, icon: CheckCircle, accent: "bg-emerald-500", iconBg: "bg-emerald-50 text-emerald-600" },
-    { label: "Notificacoes", value: unread.length, icon: Bell, accent: "bg-rose-500", iconBg: "bg-rose-50 text-rose-600" },
+    { label: "Concluídos", value: completed, icon: CheckCircle, accent: "bg-emerald-500", iconBg: "bg-emerald-50 text-emerald-600" },
+    { label: "Notificações", value: unread.length, icon: Bell, accent: "bg-rose-500", iconBg: "bg-rose-50 text-rose-600" },
   ];
 
   return (
@@ -95,7 +69,7 @@ export default function DashboardPage() {
             <span className="text-[11px] font-semibold text-primary/60 uppercase tracking-widest">Dashboard</span>
           </div>
           <h1 className="font-heading text-3xl mt-1">
-            Ola, {session?.user?.name?.split(" ")[0]}
+            Olá, {session?.user?.name?.split(" ")[0]}
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
             {format(new Date(), "EEEE, d 'de' MMMM 'de' yyyy", { locale: ptBR })}
@@ -105,7 +79,7 @@ export default function DashboardPage() {
               <div className="flex-1 max-w-48 h-2 rounded-full bg-primary/10 overflow-hidden">
                 <div className="h-full rounded-full bg-primary transition-all duration-700" style={{ width: `${progress}%` }} />
               </div>
-              <span className="text-xs font-medium text-primary">{progress}% concluido</span>
+              <span className="text-xs font-medium text-primary">{progress}% concluído</span>
             </div>
           )}
         </div>
@@ -151,51 +125,62 @@ export default function DashboardPage() {
             <p className="text-xs text-muted-foreground/30 mt-1">Crie uma escala para comecar</p>
           </div>
         ) : (
-          <div className="card-elevated border rounded-xl bg-card overflow-hidden">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b bg-muted/40">
-                  <th className="px-4 py-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider text-left w-14">#</th>
-                  <th className="px-4 py-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider text-left">Tema</th>
-                  <th className="px-4 py-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider text-left hidden sm:table-cell">Escala</th>
-                  <th className="px-4 py-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider text-left hidden md:table-cell w-24">Prazo</th>
-                  <th className="px-4 py-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider text-left">Pipeline</th>
-                  <th className="px-4 py-3 w-8"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {pending.slice(0, 8).map((week: any) => {
-                  const step = STEPS.find((s) => s.key === week.status) || STEPS[0];
-                  return (
-                    <tr key={`${week.scaleId}-${week.number}`} className="border-b last:border-0 hover:bg-accent/30 transition-colors group">
-                      <td className="px-4 py-3.5">
-                        <span className="text-xs font-bold text-muted-foreground bg-muted rounded-md px-1.5 py-0.5">S{week.number}</span>
-                      </td>
-                      <td className="px-4 py-3.5">
-                        <Link href={`/escalas/${week.scaleId}`} className="font-medium hover:text-primary transition-colors">
-                          {week.theme}
-                        </Link>
-                      </td>
-                      <td className="px-4 py-3.5 text-muted-foreground hidden sm:table-cell">{week.scaleTitle}</td>
-                      <td className="px-4 py-3.5 text-muted-foreground tabular-nums text-xs hidden md:table-cell">
-                        {format(new Date(week.deadline), "dd MMM", { locale: ptBR })}
-                      </td>
-                      <td className="px-4 py-3.5">
-                        <div className="flex items-center gap-2">
-                          <MiniPipeline status={week.status} />
-                          <span className={cn("text-[10px] font-semibold uppercase", step.color)}>{step.label}</span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3.5">
-                        <Link href={`/escalas/${week.scaleId}`}>
-                          <ArrowRight className="h-3.5 w-3.5 text-muted-foreground/15 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
-                        </Link>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {pending.slice(0, 6).map((week: any) => {
+              const step = STEPS.find((s) => s.key === week.status) || STEPS[0];
+              const overdue = week.deadline ? isBefore(parseLocalDate(week.deadline), new Date()) : false;
+              return (
+                <Link
+                  key={`${week.scaleId}-${week.number}`}
+                  href={`/escalas/${week.scaleId}`}
+                  className={cn(
+                    "bg-card border rounded-xl p-4 hover:shadow-md hover:border-primary/20 transition-all group cursor-pointer overflow-hidden block",
+                    "border-t-[3px]",
+                    PHASE_BORDER[week.status] || "border-t-muted"
+                  )}
+                >
+                  {/* Topo: badge fase + pill semana */}
+                  <div className="flex items-center justify-between">
+                    <span className={cn(
+                      "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide",
+                      step.tagBg
+                    )}>
+                      <step.icon className="h-2.5 w-2.5" />
+                      {step.label}
+                    </span>
+                    <span className="text-[10px] font-bold text-muted-foreground bg-muted rounded px-1.5 py-0.5">
+                      S{week.number}
+                    </span>
+                  </div>
+
+                  {/* Tema */}
+                  <p className="font-heading text-base font-semibold mt-3 group-hover:text-primary transition-colors leading-tight">
+                    {week.theme}
+                  </p>
+
+                  {/* Nome da escala */}
+                  <p className="text-xs text-muted-foreground mt-0.5 truncate">{week.scaleTitle}</p>
+
+                  {/* Rodapé */}
+                  <div className="flex items-center justify-between mt-4">
+                    {week.deadline ? (
+                      <span className={cn(
+                        "text-xs flex items-center gap-1",
+                        overdue ? "text-red-500 font-medium" : "text-muted-foreground/70"
+                      )}>
+                        <Calendar className="h-3 w-3" />
+                        {format(parseLocalDate(week.deadline), "dd 'de' MMM", { locale: ptBR })}
+                      </span>
+                    ) : (
+                      <span />
+                    )}
+                    <span className="text-xs text-primary font-medium flex items-center gap-1">
+                      Abrir <ArrowRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
+                    </span>
+                  </div>
+                </Link>
+              );
+            })}
           </div>
         )}
       </div>
@@ -206,7 +191,7 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <Bell className="h-4 w-4 text-rose-500" />
-              <h2 className="font-heading text-xl">Notificacoes</h2>
+              <h2 className="font-heading text-xl">Notificações</h2>
               <span className="text-[10px] font-bold bg-rose-500 text-white rounded-full h-5 min-w-5 flex items-center justify-center px-1.5">
                 {unread.length}
               </span>

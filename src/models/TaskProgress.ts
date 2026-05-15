@@ -10,6 +10,8 @@ export interface ITaskProgress extends Document {
   completedAt?: Date;
   notes?: string;
   linkUrl?: string; // link externo (Drive, YouTube, etc.)
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 const TaskProgressSchema = new Schema<ITaskProgress>(

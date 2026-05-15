@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { connectDB } from "@/lib/mongodb";
+import { requireRole } from "@/lib/auth-helpers";
 import User from "@/models/User";
 import Scale from "@/models/Scale";
 import Roteiro from "@/models/Roteiro";
@@ -10,6 +11,13 @@ import Comment from "@/models/Comment";
 
 // POST /api/seed — criar dados completos de teste
 export async function POST() {
+  if (process.env.NODE_ENV === "production") {
+    return NextResponse.json({ error: "Não disponível em produção" }, { status: 403 });
+  }
+
+  const { error } = await requireRole("admin");
+  if (error) return error;
+
   try {
     await connectDB();
 
@@ -367,11 +375,8 @@ export async function POST() {
         outros: "Todos com senha 123456 (nay, sarah, cris, mel, bruna, laura, paula, lari, thays, thais)",
       },
     });
-  } catch (error) {
-    console.error("Seed error:", error);
-    return NextResponse.json(
-      { error: "Erro ao criar seed", details: String(error) },
-      { status: 500 }
-    );
+  } catch (err) {
+    console.error("Seed error:", err);
+    return NextResponse.json({ error: "Erro ao criar seed" }, { status: 500 });
   }
 }

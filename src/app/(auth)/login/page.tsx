@@ -22,7 +22,7 @@ export default function LoginPage() {
     setLoading(true);
     const result = await signIn("credentials", { username, password, redirect: false });
     setLoading(false);
-    if (result?.error) setError("Usuario ou senha incorretos");
+    if (result?.error) setError("Usuário ou senha incorretos");
     else { router.push("/"); router.refresh(); }
   }
 
@@ -42,14 +42,14 @@ export default function LoginPage() {
             <Clapperboard className="h-8 w-8 text-[oklch(0.70_0.11_158)]" />
           </div>
           <h2 className="font-heading text-4xl text-white/90 leading-tight">
-            Producao de<br />videos com<br /><span className="text-[oklch(0.70_0.11_158)]">proposito</span>
+            Produção de<br />vídeos com<br /><span className="text-[oklch(0.70_0.11_158)]">propósito</span>
           </h2>
           <p className="text-white/30 text-sm mt-4 max-w-sm leading-relaxed">
-            Gerencie escalas, roteiros e equipe em um so lugar. Do roteiro ao video final, cada etapa organizada.
+            Gerencie escalas, roteiros e equipe em um só lugar. Do roteiro ao vídeo final, cada etapa organizada.
           </p>
           {/* Pipeline preview */}
           <div className="flex items-center gap-2 mt-8">
-            {["Roteiro", "Gravacao", "Edicao", "Revisao", "Pronto"].map((step, i) => (
+            {["Roteiro", "Gravação", "Edição", "Revisão", "Concluído"].map((step, i) => (
               <div key={step} className="flex items-center gap-2">
                 <div className={`h-2 w-2 rounded-full ${i < 3 ? "bg-[oklch(0.70_0.11_158)]" : "bg-white/10"}`} />
                 <span className={`text-[10px] font-medium uppercase tracking-wider ${i < 3 ? "text-[oklch(0.70_0.11_158)]" : "text-white/15"}`}>
@@ -73,7 +73,7 @@ export default function LoginPage() {
               </div>
             </div>
             <h1 className="font-heading text-2xl text-white/90">Reino em Cena</h1>
-            <p className="text-white/25 text-sm mt-1">Producao de Videos</p>
+            <p className="text-white/25 text-sm mt-1">Produção de Vídeos</p>
           </div>
 
           {/* Desktop heading */}
@@ -90,7 +90,7 @@ export default function LoginPage() {
                 </div>
               )}
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-white/40">Usuario</label>
+                <label className="text-xs font-medium text-white/40">Usuário</label>
                 <Input
                   type="text"
                   placeholder="seu.usuario"
@@ -127,7 +127,7 @@ export default function LoginPage() {
           </div>
 
           <p className="text-center text-white/10 text-[11px] mt-8">
-            Reino em Cena &middot; Gestao de Producao
+            Reino em Cena &middot; Gestão de Produção
           </p>
         </div>
       </div>

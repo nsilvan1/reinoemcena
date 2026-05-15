@@ -91,7 +91,7 @@ export default function RoteiroDetailPage() {
   }
 
   if (loading) return <div className="h-64 bg-muted animate-pulse rounded-xl" />;
-  if (!roteiro) return <p className="text-muted-foreground">Roteiro nao encontrado</p>;
+  if (!roteiro) return <p className="text-muted-foreground">Roteiro não encontrado</p>;
 
   const editors = users.filter((u: any) => u.skills?.includes("editor"));
   const narrators = users.filter((u: any) => u.skills?.includes("narrador"));
@@ -134,7 +134,7 @@ export default function RoteiroDetailPage() {
           <div>
             <div className="flex items-center gap-2 mb-2">
               <FileText className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Conteudo</span>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Conteúdo</span>
             </div>
             {canEdit ? (
               <RichTextEditor content={content} onChange={setContent} placeholder="Escreva o roteiro aqui..." />
@@ -143,7 +143,7 @@ export default function RoteiroDetailPage() {
             ) : (
               <div className="border rounded-lg bg-card p-8 text-center">
                 <FileText className="h-6 w-6 mx-auto text-muted-foreground/15 mb-1.5" />
-                <p className="text-xs text-muted-foreground/40">Sem conteudo</p>
+                <p className="text-xs text-muted-foreground/40">Sem conteúdo</p>
               </div>
             )}
           </div>
@@ -192,7 +192,7 @@ export default function RoteiroDetailPage() {
                   {isAudio && (
                     <div className="p-3 rounded-lg bg-muted/20 border">
                       <audio controls className="w-full h-10" src={fileUrl}>
-                        Seu navegador nao suporta audio.
+                        Seu navegador não suporta áudio.
                       </audio>
                     </div>
                   )}

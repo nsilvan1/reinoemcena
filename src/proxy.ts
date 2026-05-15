@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-export async function proxy(request: NextRequest) {
-  // Skip all auth checks for development
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export async function proxy(_request: NextRequest) {
+  // Passthrough — autorização é por handler via requireAuth()/requireRole(). Veja AGENTS.md.
   return NextResponse.next();
 }
 

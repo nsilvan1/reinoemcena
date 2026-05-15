@@ -25,7 +25,7 @@ export interface IScale extends Document {
 
 const WeekSchema = new Schema<IWeek>(
   {
-    number: { type: Number, required: true },
+    number: { type: Number, required: true, min: 1 },
     theme: { type: String, required: true },
     deadline: { type: Date, required: true },
     status: {
@@ -45,12 +45,18 @@ const WeekSchema = new Schema<IWeek>(
 
 const ScaleSchema = new Schema<IScale>(
   {
-    title: { type: String, required: true },
-    month: { type: String, required: true },
+    title: { type: String, required: true, trim: true },
+    month: {
+      type: String,
+      required: true,
+      match: [/^\d{4}-\d{2}$/, "Formato inválido: use YYYY-MM"],
+    },
     weeks: [WeekSchema],
     createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
   },
   { timestamps: true }
 );
+
+ScaleSchema.index({ month: -1 });
 
 export default mongoose.models.Scale || mongoose.model<IScale>("Scale", ScaleSchema);

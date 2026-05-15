@@ -15,8 +15,8 @@ export interface IUser extends Document {
 
 const UserSchema = new Schema<IUser>(
   {
-    name: { type: String, required: true },
-    username: { type: String, required: true, unique: true, lowercase: true },
+    name: { type: String, required: true, trim: true },
+    username: { type: String, required: true, lowercase: true, trim: true },
     password: { type: String, required: true },
     avatar: { type: String },
     role: {
@@ -27,7 +27,18 @@ const UserSchema = new Schema<IUser>(
     skills: [{ type: String, enum: ["narrador", "editor"] }],
     managedBy: { type: Schema.Types.ObjectId, ref: "User" },
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+    toJSON: {
+      transform: (_doc, ret: Record<string, unknown>) => {
+        delete ret.password;
+        delete ret.__v;
+        return ret;
+      },
+    },
+  }
 );
+
+UserSchema.index({ username: 1 }, { unique: true });
 
 export default mongoose.models.User || mongoose.model<IUser>("User", UserSchema);

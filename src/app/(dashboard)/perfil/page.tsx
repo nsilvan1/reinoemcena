@@ -30,17 +30,20 @@ export default function PerfilPage() {
 
   useEffect(() => {
     if (userId) {
-      fetch(`/api/users/${userId}`).then((r) => r.json()).then((data) => {
-        setUserData(data);
-        setName(data.name);
-      });
+      fetch(`/api/users/${userId}`)
+        .then((r) => (r.ok ? r.json() : Promise.reject(new Error("Falha ao carregar perfil"))))
+        .then((data) => {
+          setUserData(data);
+          setName(data.name);
+        })
+        .catch(() => toast.error("Erro ao carregar perfil"));
     }
   }, [userId]);
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     if (password && password !== confirmPassword) {
-      toast.error("As senhas nao coincidem");
+      toast.error("As senhas não coincidem");
       return;
     }
     setSaving(true);
@@ -67,7 +70,7 @@ export default function PerfilPage() {
     <div className="max-w-lg mx-auto space-y-6">
       <div>
         <h1 className="font-heading text-2xl">Meu Perfil</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">Informacoes pessoais</p>
+        <p className="text-sm text-muted-foreground mt-0.5">Informações pessoais</p>
       </div>
 
       <div className="border rounded-lg bg-card">
@@ -94,7 +97,7 @@ export default function PerfilPage() {
               <Input value={name} onChange={(e) => setName(e.target.value)} required className="h-9" />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-medium">Usuario</Label>
+              <Label className="text-xs font-medium">Usuário</Label>
               <Input value={userData.username} disabled className="h-9 bg-muted/50" />
             </div>
             <div className="space-y-1.5">

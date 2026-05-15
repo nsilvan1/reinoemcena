@@ -33,7 +33,7 @@ src/app/
 ├── globals.css             # Theme tokens (oklch), grain overlay, animations
 ├── (auth)/
 │   ├── layout.tsx          # Passthrough layout
-│   └── login/page.tsx      # Login page (dark cinematic theme)
+│   └── login/page.tsx      # Login page
 ├── (dashboard)/
 │   ├── layout.tsx          # Auth guard + Sidebar + Providers + Toaster
 │   ├── page.tsx            # Dashboard home
@@ -97,7 +97,7 @@ export async function GET() {
 2. **Auth helpers return `{ error, user }`** — check error first, then use user
 3. **Mongoose models use `mongoose.models.X || mongoose.model()`** pattern for HMR safety
 4. **shadcn/ui v4** — components in `src/components/ui/`, import from `@/components/ui/xxx`
-5. **No dark mode** — single warm cinematic light theme with dark sidebar
+5. **No dark mode** — single "Warm Forest" light theme with dark forest sidebar (greenish, hue 158)
 6. **Card styling**: `className="border-0 shadow-sm"` — no borders, subtle shadows
 7. **Date formatting**: always use `date-fns` with `{ locale: ptBR }`
 
@@ -124,11 +124,44 @@ Each phase auto-advances when ALL assigned members mark their task done. Review 
 - **Comment**: scaleId, weekNumber, userId, message, stage
 - **Notification**: userId, message, type, read, link
 
-### Color System (oklch)
-- Primary: warm amber/gold `oklch(0.68 0.17 65)`
-- Background: warm off-white `oklch(0.975 0.006 75)`
-- Sidebar: dark cinematic `oklch(0.15 0.02 50)`
-- Status colors: blue (roteiro), amber (gravacao), purple (edicao), orange (revisao), emerald (concluido)
+### Color System (oklch) — source of truth: `src/app/globals.css`
+Theme name: **Warm Forest** (greenish-teal primary, NOT amber/gold)
+
+- Primary: `oklch(0.44 0.10 158)` (deep teal-green)
+- Background: `oklch(0.975 0.004 85)` (warm off-white)
+- Foreground: `oklch(0.14 0.015 60)`
+- Sidebar: `oklch(0.14 0.018 158)` (dark forest, hue 158 — NOT cinematic hue 50)
+- Sidebar primary: `oklch(0.62 0.11 158)` (soft green accent)
+- Destructive: `oklch(0.53 0.19 25)` (red)
+- Ring: `oklch(0.44 0.10 158)` (matches primary)
+- Viewport theme color: `#1f2e24` (dark green, set in `src/app/layout.tsx`)
+
+Status colors (Tailwind utility classes used in components):
+- `roteiro` → blue (`text-blue-600`, `bg-blue-50`)
+- `gravacao` → amber (`text-amber-600`, `bg-amber-50`)
+- `edicao` → **violet** (`text-violet-600`, `bg-violet-50`) — NOT purple
+- `revisao` → orange (`text-orange-600`, `bg-orange-50`)
+- `concluido` → emerald (`text-emerald-600`, `bg-emerald-50`)
+
+### Typography
+- Body: **DM Sans** (`--font-sans`, weights 400/500/600/700) — apply with `font-sans`
+- Headings: **Newsreader** (`--font-heading`, weights 400/500/600) — apply with `font-heading` (NOT DM Serif Display)
+- Mono: Geist Mono (`--font-geist-mono`)
+
+### Animations (`globals.css:108-138`)
+- `.animate-in-view` — fadeSlideUp 0.4s ease-out
+- `.stagger-1` … `.stagger-6` — animation-delay 0.04s → 0.24s
+- `.animate-pulse-ring` — pulse expanding shadow 2s infinite
+
+### Custom card class
+- `card-elevated` (`globals.css:197-207`) — multi-layer shadow with hover state, often used together with `<Card className="border-0">`
+
+### Path alias & env
+- TS path alias: `@/* → ./src/*` (single alias)
+- Required env: `MONGODB_URI`, `NEXTAUTH_SECRET`, `NEXTAUTH_URL`
+
+### Middleware caveat
+- `src/proxy.ts` is a **passthrough** — do NOT rely on it for auth. All authorization happens per-handler via `requireAuth()` / `requireRole()`.
 
 ### File Upload Pattern
 - Roteiro uploads: PDF, Word, MP3, WAV (max 10MB) via FormData to `/api/roteiros/[id]/upload`

@@ -1,47 +1,15 @@
 "use client";
-import { useEffect, useState, Fragment } from "react";
+import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Plus, Calendar, ArrowRight, CheckCircle,
-  PenLine, Mic, Film, Eye, CircleCheck,
-} from "lucide-react";
-import { format } from "date-fns";
+import { Plus, Calendar } from "lucide-react";
+import { format, isBefore } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { cn } from "@/lib/utils";
-
-const STEPS = [
-  { key: "roteiro", label: "Roteiro", icon: PenLine, color: "text-blue-600", bg: "bg-blue-600", dot: "bg-blue-500" },
-  { key: "gravacao", label: "Gravacao", icon: Mic, color: "text-amber-600", bg: "bg-amber-600", dot: "bg-amber-500" },
-  { key: "edicao", label: "Edicao", icon: Film, color: "text-violet-600", bg: "bg-violet-600", dot: "bg-violet-500" },
-  { key: "revisao", label: "Revisao", icon: Eye, color: "text-orange-600", bg: "bg-orange-600", dot: "bg-orange-500" },
-  { key: "concluido", label: "Concluido", icon: CircleCheck, color: "text-emerald-600", bg: "bg-emerald-600", dot: "bg-emerald-500" },
-];
-
-function MiniPipeline({ status }: { status: string }) {
-  const idx = STEPS.findIndex((s) => s.key === status);
-  return (
-    <div className="flex items-center gap-px">
-      {STEPS.map((step, i) => (
-        <Fragment key={step.key}>
-          <div className={cn(
-            "h-4 w-4 rounded-full flex items-center justify-center",
-            i === idx ? `${step.bg} text-white` :
-            i < idx ? "bg-emerald-500 text-white" :
-            "bg-muted text-muted-foreground/15"
-          )}>
-            {i < idx ? <CheckCircle className="h-2 w-2" /> : <step.icon className="h-2 w-2" />}
-          </div>
-          {i < STEPS.length - 1 && (
-            <div className={cn("w-1 h-px", i < idx ? "bg-emerald-300" : "bg-muted")} />
-          )}
-        </Fragment>
-      ))}
-    </div>
-  );
-}
+import { cn, parseLocalDate } from "@/lib/utils";
+import { toast } from "sonner";
+import { STEPS } from "@/components/pipeline/mini-pipeline";
 
 export default function EscalasPage() {
   const { data: session } = useSession();
@@ -51,7 +19,11 @@ export default function EscalasPage() {
   const canCreate = ["admin", "coordenador"].includes(role);
 
   useEffect(() => {
-    fetch("/api/scales").then((r) => r.json()).then(setScales).finally(() => setLoading(false));
+    fetch("/api/scales")
+      .then((r) => (r.ok ? r.json() : []))
+      .then(setScales)
+      .catch(() => toast.error("Erro ao carregar escalas"))
+      .finally(() => setLoading(false));
   }, []);
 
   if (loading) {
@@ -68,7 +40,7 @@ export default function EscalasPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="font-heading text-2xl">Escalas</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Escalas mensais de producao</p>
+          <p className="text-sm text-muted-foreground mt-0.5">Escalas mensais de produção</p>
         </div>
         {canCreate && (
           <Link href="/escalas/nova">
@@ -107,7 +79,7 @@ export default function EscalasPage() {
                       <div className="flex items-center gap-3">
                         <div className="text-right hidden sm:block">
                           <p className="text-lg font-bold text-primary">{progress}%</p>
-                          <p className="text-[10px] text-muted-foreground">concluido</p>
+                          <p className="text-[10px] text-muted-foreground">concluído</p>
                         </div>
                         <Badge variant="secondary" className="text-xs font-mono">{scale.month}</Badge>
                       </div>
@@ -125,28 +97,32 @@ export default function EscalasPage() {
                         <th className="px-5 py-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider w-14">#</th>
                         <th className="px-5 py-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Tema</th>
                         <th className="px-5 py-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider hidden sm:table-cell w-20">Prazo</th>
-                        <th className="px-5 py-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider w-24">Pipeline</th>
-                        <th className="px-5 py-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider w-24">Etapa</th>
+                        <th className="px-5 py-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider w-32">Etapa</th>
                       </tr>
                     </thead>
                     <tbody>
                       {scale.weeks.map((week: any) => {
                         const sc = STEPS.find((s) => s.key === week.status) || STEPS[0];
+                        const isOverdue = isBefore(parseLocalDate(week.deadline), new Date());
                         return (
                           <tr key={week.number} className="border-t hover:bg-accent/20 transition-colors">
                             <td className="px-5 py-2.5">
                               <span className="text-xs font-bold text-muted-foreground bg-muted rounded-md px-1.5 py-0.5">S{week.number}</span>
                             </td>
                             <td className="px-5 py-2.5 font-medium">{week.theme}</td>
-                            <td className="px-5 py-2.5 text-muted-foreground tabular-nums text-xs hidden sm:table-cell">
-                              {format(new Date(week.deadline), "dd/MM", { locale: ptBR })}
+                            <td className={cn(
+                              "px-5 py-2.5 tabular-nums text-xs hidden sm:table-cell",
+                              isOverdue ? "text-red-500 font-medium" : "text-muted-foreground"
+                            )}>
+                              {format(parseLocalDate(week.deadline), "dd/MM", { locale: ptBR })}
+                              {isOverdue && <span className="ml-1 text-red-400">•</span>}
                             </td>
                             <td className="px-5 py-2.5">
-                              <MiniPipeline status={week.status} />
-                            </td>
-                            <td className="px-5 py-2.5">
-                              <span className={cn("inline-flex items-center gap-1.5 text-[11px] font-semibold", sc.color)}>
-                                <span className={cn("h-1.5 w-1.5 rounded-full", sc.dot)} />
+                              <span className={cn(
+                                "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold",
+                                sc.tagBg
+                              )}>
+                                <sc.icon className="h-3 w-3" />
                                 {sc.label}
                               </span>
                             </td>

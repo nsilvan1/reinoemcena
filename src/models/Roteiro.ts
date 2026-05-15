@@ -16,7 +16,7 @@ export interface IRoteiro extends Document {
 
 const RoteiroSchema = new Schema<IRoteiro>(
   {
-    title: { type: String, required: true },
+    title: { type: String, required: true, trim: true },
     content: { type: String },
     fileUrl: { type: String },
     scaleId: { type: Schema.Types.ObjectId, ref: "Scale", required: true },
@@ -27,5 +27,7 @@ const RoteiroSchema = new Schema<IRoteiro>(
   },
   { timestamps: true }
 );
+
+RoteiroSchema.index({ scaleId: 1, weekNumber: 1 });
 
 export default mongoose.models.Roteiro || mongoose.model<IRoteiro>("Roteiro", RoteiroSchema);

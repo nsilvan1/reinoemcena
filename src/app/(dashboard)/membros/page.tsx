@@ -103,9 +103,11 @@ export default function MembrosPage() {
           <h1 className="font-heading text-2xl">Membros</h1>
           <p className="text-sm text-muted-foreground mt-0.5">{users.length} cadastrados</p>
         </div>
-        <Button size="sm" onClick={openCreate}>
-          <Plus className="h-4 w-4 mr-1.5" /> Novo Membro
-        </Button>
+        {["admin", "coordenador"].includes(role) && (
+          <Button size="sm" onClick={openCreate}>
+            <Plus className="h-4 w-4 mr-1.5" /> Novo Membro
+          </Button>
+        )}
       </div>
 
       {/* Dialog */}
@@ -122,7 +124,7 @@ export default function MembrosPage() {
             {!editingUser && (
               <>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-medium">Usuario</Label>
+                  <Label className="text-xs font-medium">Usuário</Label>
                   <Input type="text" placeholder="nome.usuario" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} required className="h-9" />
                 </div>
                 <div className="space-y-1.5">
@@ -186,7 +188,7 @@ export default function MembrosPage() {
             <thead>
               <tr className="border-b text-left bg-muted/30">
                 <th className="px-4 py-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Membro</th>
-                <th className="px-4 py-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider hidden sm:table-cell">Usuario</th>
+                <th className="px-4 py-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider hidden sm:table-cell">Usuário</th>
                 <th className="px-4 py-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Papel</th>
                 <th className="px-4 py-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">Habilidades</th>
                 <th className="px-4 py-3 w-20"></th>

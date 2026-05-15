@@ -40,9 +40,10 @@ export default function NovaEscalaPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title, month, weeks: weeks.filter((w) => w.theme && w.deadline) }),
       });
-      if (!res.ok) throw new Error((await res.json()).error);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
       toast.success("Escala criada!");
-      router.push("/escalas");
+      router.push(`/escalas/${data._id}`);
     } catch (err: any) {
       toast.error(err.message || "Erro ao criar");
     } finally {
@@ -69,11 +70,11 @@ export default function NovaEscalaPage() {
           <div className="p-5 space-y-5">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label className="text-xs font-medium">Titulo</Label>
+                <Label className="text-xs font-medium">Título</Label>
                 <Input placeholder="Escala Abril" value={title} onChange={(e) => setTitle(e.target.value)} required className="h-9" />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs font-medium">Mes</Label>
+                <Label className="text-xs font-medium">Mês</Label>
                 <Input type="month" value={month} onChange={(e) => setMonth(e.target.value)} required className="h-9" />
               </div>
             </div>

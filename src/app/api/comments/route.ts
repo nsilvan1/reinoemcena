@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
   const scaleId = searchParams.get("scaleId");
   const weekNumber = searchParams.get("weekNumber");
 
-  const filter: any = {};
+  const filter: Record<string, unknown> = {};
   if (scaleId) filter.scaleId = scaleId;
   if (weekNumber) filter.weekNumber = parseInt(weekNumber);
 
@@ -33,17 +33,22 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
 
   if (!body.scaleId || !body.weekNumber || !body.message) {
-    return NextResponse.json({ error: "Campos obrigatorios" }, { status: 400 });
+    return NextResponse.json({ error: "Campos obrigatórios" }, { status: 400 });
   }
 
-  const comment = await Comment.create({
+  const message: string = String(body.message).trim().slice(0, 2000);
+  if (!message) {
+    return NextResponse.json({ error: "Mensagem não pode estar vazia" }, { status: 400 });
+  }
+
+  const comment = new Comment({
     scaleId: body.scaleId,
     weekNumber: body.weekNumber,
     userId: user.id,
-    message: body.message,
+    message,
     stage: body.stage || "geral",
   });
-
-  const populated = await Comment.findById(comment._id).populate("userId", "name username avatar role");
-  return NextResponse.json(populated, { status: 201 });
+  await comment.save();
+  await comment.populate("userId", "name username avatar role");
+  return NextResponse.json(comment, { status: 201 });
 }

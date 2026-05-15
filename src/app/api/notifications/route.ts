@@ -11,7 +11,8 @@ export async function GET() {
   await connectDB();
   const notifications = await Notification.find({ userId: user.id })
     .sort({ createdAt: -1 })
-    .limit(50);
+    .limit(50)
+    .lean();
 
   return NextResponse.json(notifications);
 }

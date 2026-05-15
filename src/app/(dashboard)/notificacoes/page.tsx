@@ -2,18 +2,46 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Bell, Check, CheckCheck } from "lucide-react";
-import { format } from "date-fns";
+import { Bell, Check, CheckCheck, Calendar, FileText, Activity, Eye, Bell as BellIcon } from "lucide-react";
+import { format, isToday, isYesterday, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
-const TYPE_LABELS: Record<string, string> = {
-  escala: "Escala", roteiro: "Roteiro", status: "Status", revisao: "Revisao", geral: "Geral",
+const TYPE_ICONS: Record<string, React.ElementType> = {
+  escala: Calendar,
+  roteiro: FileText,
+  status: Activity,
+  revisao: Eye,
+  geral: BellIcon,
 };
 
-const TYPE_DOTS: Record<string, string> = {
-  escala: "bg-blue-500", roteiro: "bg-violet-500", status: "bg-amber-500", revisao: "bg-orange-500", geral: "bg-gray-400",
+const TYPE_BG: Record<string, string> = {
+  escala: "bg-blue-100 text-blue-600",
+  roteiro: "bg-violet-100 text-violet-600",
+  status: "bg-amber-100 text-amber-600",
+  revisao: "bg-orange-100 text-orange-600",
+  geral: "bg-gray-100 text-gray-600",
 };
+
+function groupByDate(items: any[]) {
+  const groups: { label: string; items: any[] }[] = [];
+  const map: Record<string, number> = {};
+  items.forEach((n) => {
+    const d = new Date(n.createdAt);
+    const key = isToday(d)
+      ? "Hoje"
+      : isYesterday(d)
+      ? "Ontem"
+      : format(d, "d 'de' MMMM", { locale: ptBR });
+    if (map[key] === undefined) {
+      map[key] = groups.length;
+      groups.push({ label: key, items: [] });
+    }
+    groups[map[key]].items.push(n);
+  });
+  return groups;
+}
 
 export default function NotificacoesPage() {
   const router = useRouter();
@@ -21,7 +49,11 @@ export default function NotificacoesPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/notifications").then((r) => r.json()).then(setNotifications).finally(() => setLoading(false));
+    fetch("/api/notifications")
+      .then((r) => (r.ok ? r.json() : []))
+      .then(setNotifications)
+      .catch(() => toast.error("Erro ao carregar notificações"))
+      .finally(() => setLoading(false));
   }, []);
 
   async function markAsRead(id?: string) {
@@ -49,8 +81,8 @@ export default function NotificacoesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="font-heading text-2xl">Notificacoes</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">{unread.length} nao lidas</p>
+          <h1 className="font-heading text-2xl">Notificações</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">{unread.length} não lidas</p>
         </div>
         {unread.length > 0 && (
           <Button variant="ghost" size="sm" onClick={() => markAsRead()}>
@@ -60,64 +92,66 @@ export default function NotificacoesPage() {
       </div>
 
       {notifications.length === 0 ? (
-        <div className="border rounded-lg p-16 text-center bg-card">
+        <div className="border rounded-xl p-16 text-center bg-card">
           <Bell className="h-8 w-8 mx-auto text-muted-foreground/20 mb-2" />
           <p className="text-sm text-muted-foreground">Nenhuma notificacao</p>
         </div>
       ) : (
-        <div className="border rounded-lg bg-card overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b text-left bg-muted/30">
-                <th className="px-4 py-3 w-6"></th>
-                <th className="px-4 py-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Mensagem</th>
-                <th className="px-4 py-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider hidden sm:table-cell w-20">Tipo</th>
-                <th className="px-4 py-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell w-28">Data</th>
-                <th className="px-4 py-3 w-10"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {notifications.map((n: any) => (
-                <tr
-                  key={n._id}
-                  className={cn(
-                    "border-b last:border-0 hover:bg-muted/30 transition-colors cursor-pointer",
-                    !n.read && "bg-primary/[0.02]"
-                  )}
-                  onClick={() => {
-                    if (!n.read) markAsRead(n._id);
-                    if (n.link) router.push(n.link);
-                  }}
-                >
-                  <td className="px-4 py-3">
-                    <div className={cn("h-1.5 w-1.5 rounded-full", !n.read ? "bg-primary" : "bg-transparent")} />
-                  </td>
-                  <td className="px-4 py-3">
-                    <p className={cn("text-sm", !n.read && "font-medium")}>{n.message}</p>
-                  </td>
-                  <td className="px-4 py-3 hidden sm:table-cell">
-                    <span className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                      <span className={cn("h-1.5 w-1.5 rounded-full", TYPE_DOTS[n.type] || TYPE_DOTS.geral)} />
-                      {TYPE_LABELS[n.type] || "Geral"}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-[11px] text-muted-foreground tabular-nums hidden md:table-cell">
-                    {format(new Date(n.createdAt), "dd/MM HH:mm", { locale: ptBR })}
-                  </td>
-                  <td className="px-4 py-3">
-                    {!n.read && (
-                      <button
-                        className="h-6 w-6 rounded-md hover:bg-muted flex items-center justify-center transition-colors"
-                        onClick={(e) => { e.stopPropagation(); markAsRead(n._id); }}
-                      >
-                        <Check className="h-3 w-3 text-muted-foreground" />
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="space-y-5">
+          {groupByDate(notifications).map(({ label, items }) => (
+            <div key={label}>
+              <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-1 mb-2">
+                {label}
+              </p>
+              <div className="card-elevated border rounded-xl bg-card overflow-hidden divide-y">
+                {items.map((n: any) => {
+                  const NIcon = TYPE_ICONS[n.type] || TYPE_ICONS.geral;
+                  const iconBg = TYPE_BG[n.type] || TYPE_BG.geral;
+                  return (
+                    <div
+                      key={n._id}
+                      className={cn(
+                        "flex items-start gap-3 px-4 py-3.5 transition-colors",
+                        !n.read && "bg-primary/[0.025]",
+                        n.link ? "cursor-pointer hover:bg-accent/30" : "cursor-default"
+                      )}
+                      onClick={() => {
+                        if (!n.read) markAsRead(n._id);
+                        if (n.link) router.push(n.link);
+                      }}
+                    >
+                      <div className={cn("h-8 w-8 rounded-full flex items-center justify-center shrink-0 mt-0.5", iconBg)}>
+                        <NIcon className="h-4 w-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className={cn("text-sm leading-snug", !n.read ? "font-medium" : "text-muted-foreground")}>
+                          {n.message}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground/60 mt-0.5">
+                          {formatDistanceToNow(new Date(n.createdAt), { locale: ptBR, addSuffix: true })}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {!n.read && <div className="h-2 w-2 rounded-full bg-primary" />}
+                        {!n.read && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              markAsRead(n._id);
+                            }}
+                            className="h-6 w-6 rounded-md hover:bg-muted flex items-center justify-center transition-colors"
+                            title="Marcar como lida"
+                          >
+                            <Check className="h-3 w-3 text-muted-foreground" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>

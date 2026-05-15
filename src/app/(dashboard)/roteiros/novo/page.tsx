@@ -10,7 +10,7 @@ import {
   CalendarDays, CheckCircle2, PenLine, Paperclip, Calendar,
 } from "lucide-react";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
+import { cn, parseLocalDate } from "@/lib/utils";
 import { RichTextEditor } from "@/components/editor/rich-text-editor";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -40,7 +40,12 @@ export default function NovoRoteiroPage() {
   const [filePreviewUrl, setFilePreviewUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => { fetch("/api/scales").then((r) => r.json()).then(setScales); }, []);
+  useEffect(() => {
+    fetch("/api/scales")
+      .then((r) => (r.ok ? r.json() : []))
+      .then(setScales)
+      .catch(() => toast.error("Erro ao carregar escalas"));
+  }, []);
   const selectedScale = scales.find((s) => s._id === scaleId);
   const selectedWeek = selectedScale?.weeks?.find((w: any) => String(w.number) === weekNumber);
 
@@ -69,7 +74,7 @@ export default function NovoRoteiroPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!scaleId || !weekNumber) { toast.error("Selecione escala e semana"); return; }
-    if (!title.trim()) { toast.error("Preencha o titulo"); return; }
+    if (!title.trim()) { toast.error("Preencha o título"); return; }
     setLoading(true);
     try {
       const res = await fetch("/api/roteiros", {
@@ -100,9 +105,9 @@ export default function NovoRoteiroPage() {
   }
 
   const filledSteps = [
-    { label: "Titulo", done: title.trim().length > 0 },
+    { label: "Título", done: title.trim().length > 0 },
     { label: "Escala", done: !!scaleId && !!weekNumber },
-    { label: "Conteudo", done: content.length > 10 || !!file },
+    { label: "Conteúdo", done: content.length > 10 || !!file },
   ];
   const filledCount = filledSteps.filter((s) => s.done).length;
 
@@ -143,11 +148,11 @@ export default function NovoRoteiroPage() {
             {/* Title + Scale selection */}
             <div className="card-elevated border rounded-xl bg-card overflow-hidden">
               <div className="px-4 py-2.5 border-b bg-muted/20">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Informacoes</p>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Informações</p>
               </div>
               <div className="p-4 space-y-4">
                 <div>
-                  <Label className="text-[11px] font-semibold text-muted-foreground mb-1 block">Titulo do Roteiro</Label>
+                  <Label className="text-[11px] font-semibold text-muted-foreground mb-1 block">Título do Roteiro</Label>
                   <Input
                     placeholder="Ex: Semana 2 - Joao 21:1-14"
                     value={title}
@@ -161,7 +166,7 @@ export default function NovoRoteiroPage() {
                 <div>
                   <Label className="text-[11px] font-semibold text-muted-foreground mb-2 block">Escala</Label>
                   {scales.length === 0 ? (
-                    <p className="text-xs text-muted-foreground/40">Nenhuma escala disponivel</p>
+                    <p className="text-xs text-muted-foreground/40">Nenhuma escala disponível</p>
                   ) : (
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                       {scales.map((s: any) => (
@@ -216,7 +221,7 @@ export default function NovoRoteiroPage() {
                             </div>
                             <p className="text-[10px] text-muted-foreground truncate">{w.theme}</p>
                             <p className="text-[9px] text-muted-foreground/50 mt-0.5">
-                              {format(new Date(w.deadline), "dd MMM", { locale: ptBR })}
+                              {format(parseLocalDate(w.deadline), "dd MMM", { locale: ptBR })}
                             </p>
                           </button>
                         );
@@ -242,7 +247,7 @@ export default function NovoRoteiroPage() {
             <div>
               <div className="flex items-center gap-2 mb-2">
                 <PenLine className="h-3.5 w-3.5 text-muted-foreground" />
-                <Label className="text-[11px] font-semibold text-muted-foreground">Conteudo do Roteiro</Label>
+                <Label className="text-[11px] font-semibold text-muted-foreground">Conteúdo do Roteiro</Label>
               </div>
               <RichTextEditor
                 content={content}

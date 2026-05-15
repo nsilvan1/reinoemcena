@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { useNotifications } from "@/hooks/useNotifications";
+import { ROLE_HIERARCHY, ROLE_LABELS, type Role } from "@/types";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
@@ -16,25 +17,16 @@ const navItems = [
   { href: "/escalas", label: "Escalas", icon: Calendar },
   { href: "/roteiros", label: "Roteiros", icon: FileText },
   { href: "/membros", label: "Membros", icon: Users, minRole: "coordenador" },
-  { href: "/notificacoes", label: "Notificacoes", icon: Bell },
+  { href: "/notificacoes", label: "Notificações", icon: Bell },
 ];
-
-const ROLE_HIERARCHY: Record<string, number> = {
-  admin: 4, coordenador: 3, roteirista: 2, membro: 1,
-};
-
-const ROLE_LABELS: Record<string, string> = {
-  admin: "Administrador", coordenador: "Coordenador",
-  roteirista: "Roteirista", membro: "Membro",
-};
 
 function NavContent({ onClose }: { onClose?: () => void }) {
   const pathname = usePathname();
   const { data: session } = useSession();
   const { unreadCount } = useNotifications();
-  const userRole = (session?.user as any)?.role || "membro";
-  const userLevel = ROLE_HIERARCHY[userRole] || 1;
-  const userName = session?.user?.name || "Usuario";
+  const userRole = ((session?.user as any)?.role || "membro") as Role;
+  const userLevel = ROLE_HIERARCHY[userRole] ?? 1;
+  const userName = session?.user?.name || "Usuário";
 
   return (
     <div className="flex flex-col h-full bg-sidebar text-sidebar-foreground">
@@ -52,7 +44,7 @@ function NavContent({ onClose }: { onClose?: () => void }) {
               Reino em Cena
             </h1>
             <p className="text-[10px] uppercase tracking-[0.15em] text-sidebar-foreground/30 mt-1">
-              Producao de Videos
+              Produção de Vídeos
             </p>
           </div>
         </Link>
@@ -70,7 +62,7 @@ function NavContent({ onClose }: { onClose?: () => void }) {
         </p>
         <div className="space-y-0.5">
           {navItems
-            .filter((item) => !item.minRole || userLevel >= (ROLE_HIERARCHY[item.minRole] || 0))
+            .filter((item) => !item.minRole || userLevel >= (ROLE_HIERARCHY[item.minRole as Role] ?? 0))
             .map((item) => {
               const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
               const isNotif = item.href === "/notificacoes";
@@ -157,7 +149,7 @@ export function Sidebar() {
             <Menu className="h-5 w-5" />
           </SheetTrigger>
           <SheetContent side="left" className="p-0 w-64 border-0 bg-sidebar" showCloseButton={false}>
-            <SheetTitle className="sr-only">Menu de navegacao</SheetTitle>
+            <SheetTitle className="sr-only">Menu de navegação</SheetTitle>
             <NavContent onClose={() => setOpen(false)} />
           </SheetContent>
         </Sheet>

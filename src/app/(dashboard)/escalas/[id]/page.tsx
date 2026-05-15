@@ -4,27 +4,21 @@ import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
   ArrowLeft, Check, ExternalLink, FileText, Mic, Upload,
   RotateCcw, Send, Play, MessageCircle, Clock, Link2,
   PenLine, Film, Eye, CircleCheck, CalendarDays, History,
-  CheckCircle2, Paperclip, MessageSquare, X,
+  CheckCircle2, Paperclip, MessageSquare, X, AlertTriangle,
+  ChevronDown, ChevronUp,
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
-
-const STEPS = [
-  { key: "roteiro", label: "Roteiro", icon: PenLine, color: "text-blue-600", bg: "bg-blue-600", lightBg: "bg-blue-50", lightText: "text-blue-700", lightBorder: "border-blue-200", gradient: "from-blue-500 to-blue-600", dotBg: "bg-blue-500", tagBg: "bg-blue-100 text-blue-700" },
-  { key: "gravacao", label: "Gravacao", icon: Mic, color: "text-amber-600", bg: "bg-amber-600", lightBg: "bg-amber-50", lightText: "text-amber-700", lightBorder: "border-amber-200", gradient: "from-amber-500 to-amber-600", dotBg: "bg-amber-500", tagBg: "bg-amber-100 text-amber-700" },
-  { key: "edicao", label: "Edicao", icon: Film, color: "text-violet-600", bg: "bg-violet-600", lightBg: "bg-violet-50", lightText: "text-violet-700", lightBorder: "border-violet-200", gradient: "from-violet-500 to-violet-600", dotBg: "bg-violet-500", tagBg: "bg-violet-100 text-violet-700" },
-  { key: "revisao", label: "Revisao", icon: Eye, color: "text-orange-600", bg: "bg-orange-600", lightBg: "bg-orange-50", lightText: "text-orange-700", lightBorder: "border-orange-200", gradient: "from-orange-500 to-orange-600", dotBg: "bg-orange-500", tagBg: "bg-orange-100 text-orange-700" },
-  { key: "concluido", label: "Concluido", icon: CircleCheck, color: "text-emerald-600", bg: "bg-emerald-600", lightBg: "bg-emerald-50", lightText: "text-emerald-700", lightBorder: "border-emerald-200", gradient: "from-emerald-500 to-emerald-600", dotBg: "bg-emerald-500", tagBg: "bg-emerald-100 text-emerald-700" },
-];
+import { cn, parseLocalDate } from "@/lib/utils";
+import { STEPS } from "@/components/pipeline/mini-pipeline";
+import { RichTextEditor } from "@/components/editor/rich-text-editor";
 
 const ROLE_TO_STAGE: Record<string, string> = { roteirista: "roteiro", narrador: "gravacao", editor: "edicao" };
 
@@ -41,7 +35,22 @@ export default function ScaleDetailPage() {
   const [sendingComment, setSendingComment] = useState(false);
   const [uploadingAudio, setUploadingAudio] = useState(false);
   const [viewingStage, setViewingStage] = useState<string | null>(null);
+  const [linkUrl, setLinkUrl] = useState("");
   const commentsEndRef = useRef<HTMLDivElement>(null);
+
+  // Inline roteiro creation
+  const [showInlineRoteiro, setShowInlineRoteiro] = useState(false);
+  const [inlineTitle, setInlineTitle] = useState("");
+  const [inlineContent, setInlineContent] = useState("");
+  const [inlineFile, setInlineFile] = useState<File | null>(null);
+  const [savingRoteiro, setSavingRoteiro] = useState(false);
+  const inlineFileRef = useRef<HTMLInputElement>(null);
+
+  // Team section collapse
+  const [showTeam, setShowTeam] = useState(false);
+
+  // Admin advance confirmation
+  const [confirmAdvance, setConfirmAdvance] = useState<string | null>(null);
 
   const userId = (session?.user as any)?.id;
   const role = (session?.user as any)?.role;
@@ -56,9 +65,9 @@ export default function ScaleDetailPage() {
   useEffect(() => {
     if (!scale) return;
     Promise.all([
-      fetch(`/api/task-progress?scaleId=${id}&weekNumber=${selectedWeek}`).then((r) => r.json()),
-      fetch(`/api/comments?scaleId=${id}&weekNumber=${selectedWeek}`).then((r) => r.json()),
-    ]).then(([p, c]) => { setProgress(p); setComments(c); }).catch(() => {});
+      fetch(`/api/task-progress?scaleId=${id}&weekNumber=${selectedWeek}`).then((r) => (r.ok ? r.json() : [])),
+      fetch(`/api/comments?scaleId=${id}&weekNumber=${selectedWeek}`).then((r) => (r.ok ? r.json() : [])),
+    ]).then(([p, c]) => { setProgress(p); setComments(c); }).catch((err) => console.error("Erro ao carregar dados da semana:", err));
   }, [id, selectedWeek, scale]);
 
   useEffect(() => {
@@ -68,6 +77,24 @@ export default function ScaleDetailPage() {
   useEffect(() => {
     setViewingStage(null);
   }, [selectedWeek]);
+
+  useEffect(() => {
+    setConfirmAdvance(null);
+    setShowInlineRoteiro(false);
+    setInlineTitle("");
+    setInlineContent("");
+    setInlineFile(null);
+  }, [selectedWeek]);
+
+  useEffect(() => {
+    if (!scale) return;
+    const wk = scale.weeks.find((w: { number: number }) => w.number === selectedWeek);
+    const total =
+      (wk?.assignments?.roteiristas?.length || 0) +
+      (wk?.assignments?.narradores?.length || 0) +
+      (wk?.assignments?.editores?.length || 0);
+    setShowTeam(total > 0);
+  }, [selectedWeek, scale]);
 
   async function refreshData() {
     const [scaleRes, progRes, commRes] = await Promise.all([
@@ -80,12 +107,39 @@ export default function ScaleDetailPage() {
     if (commRes.ok) setComments(await commRes.json());
   }
 
+  async function handleInlineRoteiroSave() {
+    if (!inlineTitle.trim()) { toast.error("Informe o título do roteiro"); return; }
+    if (!inlineContent.trim() && !inlineFile) { toast.error("Escreva o conteúdo ou anexe um arquivo"); return; }
+    setSavingRoteiro(true);
+    try {
+      const res = await fetch("/api/roteiros", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: inlineTitle.trim(), content: inlineContent, scaleId: id, weekNumber: selectedWeek }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error);
+      const roteiro = await res.json();
+      if (inlineFile) {
+        const formData = new FormData();
+        formData.append("file", inlineFile);
+        const uploadRes = await fetch(`/api/roteiros/${roteiro._id}/upload`, { method: "POST", body: formData });
+        if (!uploadRes.ok) toast.error("Roteiro salvo, mas erro no upload do arquivo");
+      }
+      toast.success("Roteiro salvo!");
+      setShowInlineRoteiro(false);
+      setInlineTitle(""); setInlineContent(""); setInlineFile(null);
+      refreshData();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Erro ao salvar roteiro");
+    } finally { setSavingRoteiro(false); }
+  }
+
   async function markComplete(taskRole: string, linkUrl?: string) {
     const res = await fetch(`/api/scales/${id}/weeks/${selectedWeek}`, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ role: taskRole, completed: true, linkUrl }),
     });
-    if (res.ok) { toast.success("Concluido!"); refreshData(); } else toast.error("Erro");
+    if (res.ok) { toast.success("Concluído!"); refreshData(); } else toast.error("Erro");
   }
 
   async function handleReview(approve: boolean, rejectTo?: string) {
@@ -97,13 +151,43 @@ export default function ScaleDetailPage() {
     if (res.ok) { toast.success(approve ? "Aprovado!" : "Reprovado"); refreshData(); }
   }
 
+  async function setWeekStatus(newStatus: string) {
+    const res = await fetch(`/api/scales/${id}/weeks/${selectedWeek}`, {
+      method: "PUT", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: newStatus }),
+    });
+    if (res.ok) { toast.success("Etapa atualizada!"); refreshData(); }
+    else toast.error("Erro ao atualizar etapa");
+  }
+
   async function handleAudioUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 30 * 1024 * 1024) { toast.error("Max 30MB"); return; }
+    const currentWk = scale?.weeks?.find((w: { number: number }) => w.number === selectedWeek);
+    const roteiroId = currentWk?.roteiro?._id || currentWk?.roteiro;
+    if (!roteiroId) {
+      toast.error("Crie o roteiro antes de enviar áudio");
+      return;
+    }
     setUploadingAudio(true);
-    try { await markComplete("narrador", file.name); } catch { toast.error("Erro no upload"); }
-    finally { setUploadingAudio(false); }
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const uploadRes = await fetch(`/api/roteiros/${roteiroId}/upload`, { method: "POST", body: formData });
+      if (!uploadRes.ok) {
+        const err = await uploadRes.json().catch(() => ({}));
+        toast.error(err.error || "Erro no upload do áudio");
+        return;
+      }
+      const { fileUrl } = await uploadRes.json();
+      await markComplete("narrador", fileUrl);
+    } catch (err) {
+      console.error("Erro no upload de audio:", err);
+      toast.error("Erro no upload de áudio");
+    } finally {
+      setUploadingAudio(false);
+    }
   }
 
   async function sendComment() {
@@ -164,12 +248,13 @@ export default function ScaleDetailPage() {
       </div>
     </div>
   );
-  if (!scale) return <p className="text-muted-foreground">Escala nao encontrada</p>;
+  if (!scale) return <p className="text-muted-foreground">Escala não encontrada</p>;
 
   const currentWeek = scale.weeks.find((w: any) => w.number === selectedWeek);
   const weekStatus = currentWeek?.status || "roteiro";
   const stepIdx = STEPS.findIndex((s) => s.key === weekStatus);
   const currentStep = STEPS[stepIdx];
+  const nextStep = STEPS[stepIdx + 1];
   const isNarrator = currentWeek?.assignments?.narradores?.some((u: any) => (u._id || u) === userId);
   const isEditor = currentWeek?.assignments?.editores?.some((u: any) => (u._id || u) === userId);
   const isRoteirista = currentWeek?.assignments?.roteiristas?.some((u: any) => (u._id || u) === userId);
@@ -195,18 +280,39 @@ export default function ScaleDetailPage() {
         </div>
       </div>
 
-      {/* Week pills */}
-      <div className="flex gap-1.5 overflow-x-auto pb-0.5">
+      {/* Week tabs — rich cards */}
+      <div className="flex gap-2 overflow-x-auto pb-1">
         {scale.weeks.map((week: any) => {
           const ws = STEPS.find((s) => s.key === week.status) || STEPS[0];
           const sel = selectedWeek === week.number;
+          const overdue = week.status !== "concluido" && parseLocalDate(week.deadline) < new Date();
           return (
-            <button key={week.number} onClick={() => setSelectedWeek(week.number)} className={cn(
-              "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all border",
-              sel ? `bg-gradient-to-r ${ws.gradient} text-white border-transparent shadow-sm` : "bg-card border-border hover:border-primary/20"
-            )}>
-              <ws.icon className="h-3 w-3" /> S{week.number}
-              {!sel && week.status === "concluido" && <CircleCheck className="h-3 w-3 text-emerald-500" />}
+            <button
+              key={week.number}
+              onClick={() => setSelectedWeek(week.number)}
+              className={cn(
+                "flex flex-col items-start px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all border min-w-[80px]",
+                sel
+                  ? `bg-gradient-to-br ${ws.gradient} text-white border-transparent shadow-sm`
+                  : "bg-card border-border hover:border-primary/20"
+              )}
+            >
+              <div className="flex items-center gap-1.5 w-full">
+                <ws.icon className={cn("h-3 w-3 shrink-0", sel ? "text-white" : ws.color)} />
+                <span>S{week.number}</span>
+                {!sel && week.status === "concluido" && (
+                  <CircleCheck className="h-3 w-3 text-emerald-500 ml-auto" />
+                )}
+                {!sel && overdue && (
+                  <span className="h-1.5 w-1.5 rounded-full bg-rose-500 shrink-0 ml-auto" title="Prazo vencido" />
+                )}
+              </div>
+              <span className={cn(
+                "text-[10px] mt-0.5 truncate w-full font-medium",
+                sel ? "text-white/80" : "text-muted-foreground"
+              )}>
+                {week.theme.length > 18 ? week.theme.slice(0, 18) + "…" : week.theme}
+              </span>
             </button>
           );
         })}
@@ -217,17 +323,438 @@ export default function ScaleDetailPage() {
           {/* ═══ LEFT ═══ */}
           <div className="xl:col-span-2 space-y-4">
 
-            {/* Theme + Clickable Pipeline */}
+            {/* Action — FIRST: user sees their task immediately */}
             <div className="card-elevated border rounded-xl bg-card overflow-hidden">
-              <div className={cn("h-0.5 bg-gradient-to-r", currentStep.gradient)} />
+              <div className="px-4 py-2.5 border-b bg-muted/20 flex items-center gap-2">
+                {weekStatus === "concluido" ? (
+                  <CircleCheck className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                ) : (
+                  <div className={cn("h-1.5 w-1.5 rounded-full animate-pulse-ring shrink-0", currentStep.dot)} />
+                )}
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                  Ação · {currentStep.label}
+                </p>
+              </div>
+              <div className="p-4">
+                {weekStatus === "roteiro" && canReview && !isRoteirista && (() => {
+                  const total = currentWeek?.assignments?.roteiristas?.length || 0;
+                  const done = progress.filter((p: any) => p.role === "roteirista" && p.completed).length;
+                  const advanceWarning = !currentWeek.roteiro ? "Nenhum roteiro criado" : null;
+                  return (
+                    <div className={cn("p-3 rounded-lg border space-y-2.5", STEPS[0].lightBg, STEPS[0].lightBorder)}>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-2.5">
+                          <PenLine className={cn("h-4 w-4 shrink-0", STEPS[0].color)} />
+                          <div>
+                            <p className={cn("text-sm font-bold", STEPS[0].lightText)}>Fase: Roteiro</p>
+                            <p className="text-[11px] text-muted-foreground/70">
+                              {total > 0 ? `${done} de ${total} roteirista${total > 1 ? "s" : ""} concluiu` : "Nenhum roteirista atribuído"}
+                            </p>
+                          </div>
+                        </div>
+                        {nextStep && (
+                          confirmAdvance === nextStep.key ? (
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <span className="text-[10px] text-amber-600 font-medium">{advanceWarning}</span>
+                              <Button size="sm" variant="destructive" className="h-8 text-xs rounded-lg"
+                                onClick={() => { setConfirmAdvance(null); setWeekStatus(nextStep.key); }}>
+                                Avançar mesmo assim
+                              </Button>
+                              <Button size="sm" variant="ghost" className="h-8 text-xs rounded-lg"
+                                onClick={() => setConfirmAdvance(null)}>
+                                <X className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          ) : (
+                            <Button size="sm" variant="outline"
+                              className={cn("h-8 text-xs rounded-lg shrink-0 border",
+                                advanceWarning ? "border-amber-300 text-amber-700 hover:bg-amber-50" : cn(STEPS[0].lightBorder, STEPS[0].lightText)
+                              )}
+                              onClick={() => {
+                                if (advanceWarning) setConfirmAdvance(nextStep.key);
+                                else setWeekStatus(nextStep.key);
+                              }}>
+                              {advanceWarning && <AlertTriangle className="h-3.5 w-3.5 mr-1" />}
+                              <nextStep.icon className="h-3.5 w-3.5 mr-1" /> Avançar
+                            </Button>
+                          )
+                        )}
+                      </div>
+                      {!currentWeek.roteiro && !showInlineRoteiro && (
+                        <Button size="sm" className="bg-blue-600 hover:bg-blue-700 h-8 text-xs rounded-lg w-full"
+                          onClick={() => setShowInlineRoteiro(true)}>
+                          <PenLine className="h-3.5 w-3.5 mr-1" /> Escrever roteiro agora
+                        </Button>
+                      )}
+                      {showInlineRoteiro && (
+                        <div className="space-y-3 pt-1">
+                          <Input placeholder="Título do roteiro" value={inlineTitle}
+                            onChange={(e) => setInlineTitle(e.target.value)} className="h-9 text-sm bg-white" />
+                          <RichTextEditor content={inlineContent} onChange={setInlineContent} placeholder="Escreva o roteiro..." />
+                          <div className="flex items-center gap-2">
+                            <input ref={inlineFileRef} type="file" className="hidden" accept=".pdf,.doc,.docx,.mp3,.wav"
+                              onChange={(e) => setInlineFile(e.target.files?.[0] || null)} />
+                            {inlineFile ? (
+                              <div className="flex items-center gap-2 text-[11px] text-blue-700 bg-blue-50 border border-blue-100 rounded-lg px-2 py-1 flex-1">
+                                <FileText className="h-3 w-3 shrink-0" />
+                                <span className="truncate">{inlineFile.name}</span>
+                                <button onClick={() => setInlineFile(null)} className="ml-auto"><X className="h-3 w-3" /></button>
+                              </div>
+                            ) : (
+                              <button type="button" onClick={() => inlineFileRef.current?.click()}
+                                className="text-[11px] text-blue-600 hover:underline flex items-center gap-1">
+                                <Paperclip className="h-3 w-3" /> Anexar arquivo (opcional)
+                              </button>
+                            )}
+                          </div>
+                          <div className="flex gap-2">
+                            <Button size="sm" className="bg-blue-600 hover:bg-blue-700 h-8 text-xs rounded-lg flex-1"
+                              disabled={savingRoteiro || !inlineTitle.trim() || (!inlineContent.trim() && !inlineFile)}
+                              onClick={handleInlineRoteiroSave}>
+                              {savingRoteiro ? "Salvando..." : "Salvar Roteiro"}
+                            </Button>
+                            <Button size="sm" variant="ghost" className="h-8 text-xs rounded-lg"
+                              onClick={() => { setShowInlineRoteiro(false); setInlineTitle(""); setInlineContent(""); setInlineFile(null); }}>
+                              Cancelar
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                {weekStatus === "roteiro" && isRoteirista && (
+                  currentWeek.roteiro ? (
+                    <div className={cn("p-3 rounded-lg border space-y-2.5", STEPS[0].lightBg, STEPS[0].lightBorder)}>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-2.5">
+                          <PenLine className="h-4 w-4 text-blue-600" />
+                          <div>
+                            <p className="text-sm font-bold text-blue-700">Roteiro vinculado</p>
+                            <p className="text-[11px] text-muted-foreground/70">{currentWeek.roteiro.title || "Sem título"}</p>
+                          </div>
+                        </div>
+                        <Button size="sm" onClick={() => markComplete("roteirista")}
+                          className="bg-blue-600 hover:bg-blue-700 h-8 text-xs rounded-lg shrink-0">
+                          <Check className="h-3.5 w-3.5 mr-1" /> Concluir
+                        </Button>
+                      </div>
+                      <Link href={`/roteiros/${currentWeek.roteiro._id || currentWeek.roteiro}`}
+                        className="text-[11px] text-blue-600 hover:underline flex items-center gap-1">
+                        <ExternalLink className="h-3 w-3" /> Abrir roteiro completo
+                      </Link>
+                    </div>
+                  ) : (
+                    <div className={cn("p-3 rounded-lg border space-y-3", STEPS[0].lightBg, STEPS[0].lightBorder)}>
+                      {!showInlineRoteiro ? (
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2.5">
+                            <PenLine className="h-4 w-4 text-blue-600" />
+                            <div>
+                              <p className="text-sm font-bold text-blue-700">Criar roteiro</p>
+                              <p className="text-[11px] text-muted-foreground/70">Escreva o roteiro ou anexe o arquivo aqui mesmo</p>
+                            </div>
+                          </div>
+                          <div className="flex gap-2 pt-1">
+                            <Button size="sm" className="bg-blue-600 hover:bg-blue-700 h-8 text-xs rounded-lg flex-1"
+                              onClick={() => setShowInlineRoteiro(true)}>
+                              <PenLine className="h-3.5 w-3.5 mr-1" /> Escrever agora
+                            </Button>
+                            <Link href="/roteiros/novo">
+                              <Button size="sm" variant="ghost" className="h-8 text-xs rounded-lg text-muted-foreground border">
+                                <ExternalLink className="h-3.5 w-3.5 mr-1" /> Editor completo
+                              </Button>
+                            </Link>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          <Input
+                            placeholder="Título do roteiro"
+                            value={inlineTitle}
+                            onChange={(e) => setInlineTitle(e.target.value)}
+                            className="h-9 text-sm bg-white"
+                          />
+                          <RichTextEditor
+                            content={inlineContent}
+                            onChange={setInlineContent}
+                            placeholder="Escreva o roteiro..."
+                          />
+                          <div className="flex items-center gap-2">
+                            <input
+                              ref={inlineFileRef}
+                              type="file"
+                              className="hidden"
+                              accept=".pdf,.doc,.docx,.mp3,.wav"
+                              onChange={(e) => setInlineFile(e.target.files?.[0] || null)}
+                            />
+                            {inlineFile ? (
+                              <div className="flex items-center gap-2 text-[11px] text-blue-700 bg-blue-50 border border-blue-100 rounded-lg px-2 py-1 flex-1">
+                                <FileText className="h-3 w-3 shrink-0" />
+                                <span className="truncate">{inlineFile.name}</span>
+                                <button onClick={() => setInlineFile(null)} className="ml-auto">
+                                  <X className="h-3 w-3" />
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => inlineFileRef.current?.click()}
+                                className="text-[11px] text-blue-600 hover:underline flex items-center gap-1"
+                              >
+                                <Paperclip className="h-3 w-3" /> Anexar arquivo (opcional)
+                              </button>
+                            )}
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              className="bg-blue-600 hover:bg-blue-700 h-8 text-xs rounded-lg flex-1"
+                              disabled={savingRoteiro || !inlineTitle.trim() || (!inlineContent.trim() && !inlineFile)}
+                              onClick={handleInlineRoteiroSave}
+                            >
+                              {savingRoteiro ? "Salvando..." : "Salvar Roteiro"}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-8 text-xs rounded-lg"
+                              onClick={() => {
+                                setShowInlineRoteiro(false);
+                                setInlineTitle("");
+                                setInlineContent("");
+                                setInlineFile(null);
+                              }}
+                            >
+                              Cancelar
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )
+                )}
+
+                {weekStatus === "gravacao" && canReview && !isNarrator && (() => {
+                  const total = currentWeek?.assignments?.narradores?.length || 0;
+                  const done = progress.filter((p: any) => p.role === "narrador" && p.completed).length;
+                  const audioLinks = progress.filter((p: any) => p.role === "narrador" && p.linkUrl);
+                  const advanceWarning = audioLinks.length === 0 ? "Nenhum áudio enviado" : null;
+                  return (
+                    <div className={cn("p-3 rounded-lg border space-y-2.5", STEPS[1].lightBg, STEPS[1].lightBorder)}>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-2.5">
+                          <Mic className={cn("h-4 w-4 shrink-0", STEPS[1].color)} />
+                          <div>
+                            <p className={cn("text-sm font-bold", STEPS[1].lightText)}>Fase: Gravação</p>
+                            <p className="text-[11px] text-muted-foreground/70">
+                              {total > 0 ? `${done} de ${total} narrador${total > 1 ? "es" : ""} enviou áudio` : "Nenhum narrador atribuído"}
+                            </p>
+                          </div>
+                        </div>
+                        {nextStep && (
+                          confirmAdvance === nextStep.key ? (
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <span className="text-[10px] text-amber-600 font-medium">{advanceWarning}</span>
+                              <Button size="sm" variant="destructive" className="h-8 text-xs rounded-lg"
+                                onClick={() => { setConfirmAdvance(null); setWeekStatus(nextStep.key); }}>
+                                Avançar mesmo assim
+                              </Button>
+                              <Button size="sm" variant="ghost" className="h-8 text-xs rounded-lg"
+                                onClick={() => setConfirmAdvance(null)}>
+                                <X className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          ) : (
+                            <Button size="sm" variant="outline"
+                              className={cn("h-8 text-xs rounded-lg shrink-0 border",
+                                advanceWarning ? "border-amber-300 text-amber-700 hover:bg-amber-50" : cn(STEPS[1].lightBorder, STEPS[1].lightText)
+                              )}
+                              onClick={() => {
+                                if (advanceWarning) setConfirmAdvance(nextStep.key);
+                                else setWeekStatus(nextStep.key);
+                              }}>
+                              {advanceWarning && <AlertTriangle className="h-3.5 w-3.5 mr-1" />}
+                              <nextStep.icon className="h-3.5 w-3.5 mr-1" /> Avançar
+                            </Button>
+                          )
+                        )}
+                      </div>
+                      {audioLinks.map((p: any) => (
+                        <a key={p._id} href={p.linkUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 p-2 rounded-lg bg-white/50 border border-amber-200/40 hover:border-amber-300 transition-colors text-xs font-medium">
+                          <Play className="h-3 w-3" /> {p.userId?.name} <ExternalLink className="h-2.5 w-2.5 ml-auto opacity-30" />
+                        </a>
+                      ))}
+                    </div>
+                  );
+                })()}
+
+                {weekStatus === "gravacao" && isNarrator && (
+                  <div className={cn("p-3 rounded-lg border space-y-3", STEPS[1].lightBg, STEPS[1].lightBorder, STEPS[1].lightText)}>
+                    <div className="flex items-center gap-2.5">
+                      <Mic className="h-4 w-4" />
+                      <div>
+                        <p className="text-sm font-bold">Enviar narração</p>
+                        <p className="text-[11px] opacity-60">MP3, WAV, M4A — max 30MB</p>
+                      </div>
+                    </div>
+                    <label className="cursor-pointer">
+                      <div className="flex items-center justify-center gap-2 p-3 rounded-lg border-2 border-dashed border-amber-300/50 hover:border-amber-400 transition-colors text-sm font-semibold">
+                        <Upload className="h-4 w-4" /> {uploadingAudio ? "Enviando..." : "Selecionar áudio"}
+                      </div>
+                      <input type="file" className="hidden" accept=".mp3,.wav,.m4a,.ogg,.webm" onChange={handleAudioUpload} disabled={uploadingAudio} />
+                    </label>
+                  </div>
+                )}
+
+                {weekStatus === "edicao" && canReview && !isEditor && (() => {
+                  const total = currentWeek?.assignments?.editores?.length || 0;
+                  const done = progress.filter((p: any) => p.role === "editor" && p.completed).length;
+                  const videoLinks = progress.filter((p: any) => p.role === "editor" && p.linkUrl);
+                  const advanceWarning = videoLinks.length === 0 ? "Nenhum vídeo enviado" : null;
+                  return (
+                    <div className={cn("p-3 rounded-lg border space-y-2.5", STEPS[2].lightBg, STEPS[2].lightBorder)}>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-2.5">
+                          <Film className={cn("h-4 w-4 shrink-0", STEPS[2].color)} />
+                          <div>
+                            <p className={cn("text-sm font-bold", STEPS[2].lightText)}>Fase: Edição</p>
+                            <p className="text-[11px] text-muted-foreground/70">
+                              {total > 0 ? `${done} de ${total} editor${total > 1 ? "es" : ""} enviou vídeo` : "Nenhum editor atribuído"}
+                            </p>
+                          </div>
+                        </div>
+                        {nextStep && (
+                          confirmAdvance === nextStep.key ? (
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <span className="text-[10px] text-amber-600 font-medium">{advanceWarning}</span>
+                              <Button size="sm" variant="destructive" className="h-8 text-xs rounded-lg"
+                                onClick={() => { setConfirmAdvance(null); setWeekStatus(nextStep.key); }}>
+                                Avançar mesmo assim
+                              </Button>
+                              <Button size="sm" variant="ghost" className="h-8 text-xs rounded-lg"
+                                onClick={() => setConfirmAdvance(null)}>
+                                <X className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          ) : (
+                            <Button size="sm" variant="outline"
+                              className={cn("h-8 text-xs rounded-lg shrink-0 border",
+                                advanceWarning ? "border-amber-300 text-amber-700 hover:bg-amber-50" : cn(STEPS[2].lightBorder, STEPS[2].lightText)
+                              )}
+                              onClick={() => {
+                                if (advanceWarning) setConfirmAdvance(nextStep.key);
+                                else setWeekStatus(nextStep.key);
+                              }}>
+                              {advanceWarning && <AlertTriangle className="h-3.5 w-3.5 mr-1" />}
+                              <nextStep.icon className="h-3.5 w-3.5 mr-1" /> Avançar
+                            </Button>
+                          )
+                        )}
+                      </div>
+                      {videoLinks.map((p: any) => (
+                        <a key={p._id} href={p.linkUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 p-2 rounded-lg bg-white/50 border border-violet-200/40 hover:border-violet-300 transition-colors text-xs font-medium">
+                          <Play className="h-3 w-3" /> {p.userId?.name} <ExternalLink className="h-2.5 w-2.5 ml-auto opacity-30" />
+                        </a>
+                      ))}
+                    </div>
+                  );
+                })()}
+
+                {weekStatus === "edicao" && isEditor && (
+                  <div className={cn("p-3 rounded-lg border space-y-3", STEPS[2].lightBg, STEPS[2].lightBorder, STEPS[2].lightText)}>
+                    <div className="flex items-center gap-2.5">
+                      <Film className="h-4 w-4" />
+                      <div>
+                        <p className="text-sm font-bold">Finalizar edição</p>
+                        <p className="text-[11px] opacity-60">Cole o link do video editado</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <div className="flex-1 relative">
+                        <Link2 className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-violet-400" />
+                        <Input
+                          type="url"
+                          placeholder="https://drive.google.com/... ou YouTube"
+                          value={linkUrl}
+                          onChange={(e) => setLinkUrl(e.target.value)}
+                          className="h-8 pl-8 text-xs rounded-lg"
+                        />
+                      </div>
+                      <Button
+                        size="sm"
+                        className="bg-violet-600 hover:bg-violet-700 h-8 text-xs rounded-lg"
+                        disabled={!linkUrl.trim() || !/^https?:\/\//.test(linkUrl.trim())}
+                        onClick={() => { markComplete("editor", linkUrl); setLinkUrl(""); }}
+                      >
+                        <Check className="h-3.5 w-3.5 mr-1" /> Enviar
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {weekStatus === "revisao" && canReview && (
+                  <div className={cn("p-3 rounded-lg border space-y-3", STEPS[3].lightBg, STEPS[3].lightBorder, STEPS[3].lightText)}>
+                    <div className="flex items-center gap-2.5">
+                      <Eye className="h-4 w-4" />
+                      <div>
+                        <p className="text-sm font-bold">Revisão</p>
+                        <p className="text-[11px] opacity-60">Assista e aprove ou reprove</p>
+                      </div>
+                    </div>
+                    {progress.filter((p: any) => p.role === "editor" && p.linkUrl).map((p: any) => (
+                      <a key={p._id} href={p.linkUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 p-2 rounded-lg bg-white/50 border border-orange-200/40 hover:border-orange-300 transition-colors text-sm font-medium">
+                        <Play className="h-3.5 w-3.5" /> {p.userId?.name} <ExternalLink className="h-2.5 w-2.5 ml-auto opacity-30" />
+                      </a>
+                    ))}
+                    <div className="flex gap-2">
+                      <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 h-8 text-xs rounded-lg flex-1" onClick={() => handleReview(true)}>
+                        <Check className="h-3.5 w-3.5 mr-1" /> Aprovar
+                      </Button>
+                      <Button size="sm" variant="destructive" className="h-8 text-xs rounded-lg" onClick={() => handleReview(false, "edicao")}>
+                        <RotateCcw className="h-3.5 w-3.5 mr-1" /> Edição
+                      </Button>
+                      <Button size="sm" variant="outline" className="h-8 text-xs rounded-lg" onClick={() => handleReview(false, "gravacao")}>
+                        <RotateCcw className="h-3.5 w-3.5 mr-1" /> Gravação
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {weekStatus === "concluido" && (
+                  <div className="flex items-center gap-3 p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700">
+                    <CircleCheck className="h-5 w-5 shrink-0" />
+                    <div>
+                      <p className="text-sm font-bold">Semana concluída</p>
+                      <p className="text-[11px] opacity-60">Todos os passos foram finalizados</p>
+                    </div>
+                  </div>
+                )}
+
+                {weekStatus !== "concluido" && !isRoteirista && !isNarrator && !isEditor && !canReview && (
+                  <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/30 border border-dashed text-muted-foreground/40">
+                    <Clock className="h-4 w-4" />
+                    <p className="text-xs">Nenhuma ação disponível para você nesta etapa</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Theme + Clickable Pipeline — context header */}
+            <div className="card-elevated border rounded-xl bg-card overflow-hidden">
+              <div className={cn("h-1 bg-gradient-to-r", currentStep.gradient)} />
               <div className="px-4 py-3 flex items-center justify-between gap-3 border-b">
                 <div className="min-w-0">
                   <h2 className="font-heading text-base truncate">{currentWeek.theme}</h2>
                   <span className="flex items-center gap-1 text-[11px] text-muted-foreground mt-0.5">
-                    <CalendarDays className="h-3 w-3" /> {format(new Date(currentWeek.deadline), "dd MMM yyyy", { locale: ptBR })}
+                    <CalendarDays className="h-3 w-3" /> {format(parseLocalDate(currentWeek.deadline), "dd MMM yyyy", { locale: ptBR })}
                   </span>
                 </div>
-                <Badge className={cn("bg-gradient-to-r text-white border-0 text-[10px] px-2 py-0.5 shrink-0", currentStep.gradient)}>{currentStep.label}</Badge>
+                <div className={cn("flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-gradient-to-r text-white shrink-0", currentStep.gradient)}>
+                  <currentStep.icon className="h-3.5 w-3.5" />
+                  {currentStep.label}
+                </div>
               </div>
 
               {/* Clickable pipeline */}
@@ -343,195 +870,108 @@ export default function ScaleDetailPage() {
               )}
             </div>
 
-            {/* Team + Progress */}
-            <div className="card-elevated border rounded-xl bg-card overflow-hidden">
-              <div className="px-4 py-2.5 border-b bg-muted/20">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Equipe & Progresso</p>
-              </div>
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b text-left">
-                    <th className="px-4 py-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Membro</th>
-                    <th className="px-4 py-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Funcao</th>
-                    <th className="px-4 py-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider hidden sm:table-cell">Anexo</th>
-                    <th className="px-4 py-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider text-right">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {teamGroups.map((group) =>
-                    group.members.map((u: any) => {
-                      const mp = progress.find((p: any) => (p.userId?._id || p.userId) === (u._id || u));
-                      return (
-                        <tr key={`${group.key}-${u._id || u}`} className="border-b last:border-0 hover:bg-muted/20 transition-colors">
-                          <td className="px-4 py-2">
-                            <div className="flex items-center gap-2">
-                              <div className={cn("h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-bold", group.tagBg)}>
-                                {u.name?.[0] || "?"}
-                              </div>
-                              <span className="font-medium text-sm">{u.name || "—"}</span>
-                            </div>
-                          </td>
-                          <td className="px-4 py-2">
-                            <span className={cn("inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded", group.tagBg)}>
-                              <group.icon className="h-2.5 w-2.5" /> {group.label}
-                            </span>
-                          </td>
-                          <td className="px-4 py-2 hidden sm:table-cell">
-                            {mp?.linkUrl ? (
-                              <a href={mp.linkUrl} target="_blank" rel="noopener noreferrer" className="text-[11px] text-primary hover:underline inline-flex items-center gap-0.5">
-                                <ExternalLink className="h-2.5 w-2.5" /> Abrir
-                              </a>
-                            ) : <span className="text-[11px] text-muted-foreground/25">—</span>}
-                          </td>
-                          <td className="px-4 py-2 text-right">
-                            {mp ? (
-                              <span className={cn("text-[10px] font-bold px-1.5 py-0.5 rounded-full",
-                                mp.completed ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
-                              )}>{mp.completed ? "Concluido" : "Pendente"}</span>
-                            ) : <span className="text-[10px] text-muted-foreground/25">—</span>}
-                          </td>
-                        </tr>
-                      );
-                    })
+            {/* Team + Progress — collapsible */}
+            {(() => {
+              const totalMembers = teamGroups.reduce((acc, g) => acc + g.members.length, 0);
+              return (
+                <div className="card-elevated border rounded-xl bg-card overflow-hidden">
+                  <button
+                    onClick={() => setShowTeam((v) => !v)}
+                    className="w-full px-4 py-2.5 border-b bg-muted/20 flex items-center justify-between gap-2 hover:bg-muted/30 transition-colors"
+                  >
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Equipe & Progresso</p>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-muted-foreground/60 font-medium">{totalMembers} membro{totalMembers !== 1 ? "s" : ""}</span>
+                      {showTeam
+                        ? <ChevronUp className="h-3.5 w-3.5 text-muted-foreground/50" />
+                        : <ChevronDown className="h-3.5 w-3.5 text-muted-foreground/50" />}
+                    </div>
+                  </button>
+                  {showTeam && (
+                    <>
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b text-left">
+                            <th className="px-4 py-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Membro</th>
+                            <th className="px-4 py-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Função</th>
+                            <th className="px-4 py-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider hidden sm:table-cell">Anexo</th>
+                            <th className="px-4 py-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider text-right">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {totalMembers === 0 && (
+                            <tr>
+                              <td colSpan={4} className="px-4 py-8 text-center">
+                                <p className="text-xs text-muted-foreground/50">Nenhum membro atribuído a esta semana</p>
+                                {canReview && (
+                                  <p className="text-[11px] text-muted-foreground/30 mt-1">Edite a escala para atribuir roteiristas, narradores e editores</p>
+                                )}
+                              </td>
+                            </tr>
+                          )}
+                          {teamGroups.map((group) =>
+                            group.members.map((u: any) => {
+                              const mp = progress.find((p: any) =>
+                                (p.userId?._id?.toString() || p.userId?.toString()) === (u._id?.toString() || u?.toString())
+                              );
+                              return (
+                                <tr key={`${group.key}-${u._id || u}`} className="border-b last:border-0 hover:bg-muted/20 transition-colors">
+                                  <td className="px-4 py-2">
+                                    <div className="flex items-center gap-2">
+                                      <div className={cn("h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-bold", group.tagBg)}>
+                                        {u.name?.[0] || "?"}
+                                      </div>
+                                      <span className="font-medium text-sm">{u.name || "—"}</span>
+                                    </div>
+                                  </td>
+                                  <td className="px-4 py-2">
+                                    <span className={cn("inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded", group.tagBg)}>
+                                      <group.icon className="h-2.5 w-2.5" /> {group.label}
+                                    </span>
+                                  </td>
+                                  <td className="px-4 py-2 hidden sm:table-cell">
+                                    {mp?.linkUrl ? (
+                                      <a href={mp.linkUrl} target="_blank" rel="noopener noreferrer" className="text-[11px] text-primary hover:underline inline-flex items-center gap-0.5">
+                                        <ExternalLink className="h-2.5 w-2.5" /> Abrir
+                                      </a>
+                                    ) : <span className="text-[11px] text-muted-foreground/25">—</span>}
+                                  </td>
+                                  <td className="px-4 py-2 text-right">
+                                    {mp ? (
+                                      <span className={cn("text-[10px] font-bold px-1.5 py-0.5 rounded-full",
+                                        mp.completed ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+                                      )}>{mp.completed ? "Concluído" : "Pendente"}</span>
+                                    ) : (() => {
+                                      const activeInPhase =
+                                        (weekStatus === "roteiro" && group.key === "roteiristas") ||
+                                        (weekStatus === "gravacao" && group.key === "narradores") ||
+                                        (weekStatus === "edicao" && group.key === "editores") ||
+                                        weekStatus === "revisao";
+                                      return activeInPhase ? (
+                                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-orange-50 text-orange-600">
+                                          Pendente
+                                        </span>
+                                      ) : (
+                                        <span className="text-[10px] text-muted-foreground/25">—</span>
+                                      );
+                                    })()}
+                                  </td>
+                                </tr>
+                              );
+                            })
+                          )}
+                        </tbody>
+                      </table>
+                      {currentWeek.roteiro && (
+                        <Link href={`/roteiros/${currentWeek.roteiro._id || currentWeek.roteiro}`} className="flex items-center gap-2 px-4 py-2.5 border-t hover:bg-muted/20 transition-colors text-sm font-medium text-primary">
+                          <FileText className="h-3.5 w-3.5" /> Ver Roteiro <ExternalLink className="h-3 w-3 opacity-40" />
+                        </Link>
+                      )}
+                    </>
                   )}
-                </tbody>
-              </table>
-              {currentWeek.roteiro && (
-                <Link href={`/roteiros/${currentWeek.roteiro._id || currentWeek.roteiro}`} className="flex items-center gap-2 px-4 py-2.5 border-t hover:bg-muted/20 transition-colors text-sm font-medium text-primary">
-                  <FileText className="h-3.5 w-3.5" /> Ver Roteiro <ExternalLink className="h-3 w-3 opacity-40" />
-                </Link>
-              )}
-            </div>
-
-            {/* Action */}
-            <div className="card-elevated border rounded-xl bg-card overflow-hidden">
-              <div className="px-4 py-2.5 border-b bg-muted/20 flex items-center gap-2">
-                <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse-ring" />
-                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Acao</p>
-              </div>
-              <div className="p-4">
-                {weekStatus === "roteiro" && isRoteirista && (
-                  currentWeek.roteiro ? (
-                    <div className={cn("flex items-center justify-between p-3 rounded-lg border", STEPS[0].lightBg, STEPS[0].lightBorder, STEPS[0].lightText)}>
-                      <div className="flex items-center gap-2.5">
-                        <PenLine className="h-4 w-4" />
-                        <div>
-                          <p className="text-sm font-bold">Finalizar roteiro</p>
-                          <p className="text-[11px] opacity-60">Roteiro vinculado — pode concluir</p>
-                        </div>
-                      </div>
-                      <Button size="sm" onClick={() => markComplete("roteirista")} className="bg-blue-600 hover:bg-blue-700 h-8 text-xs rounded-lg">
-                        <Check className="h-3.5 w-3.5 mr-1" /> Concluir
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className={cn("p-3 rounded-lg border space-y-2", STEPS[0].lightBg, STEPS[0].lightBorder, STEPS[0].lightText)}>
-                      <div className="flex items-center gap-2.5">
-                        <PenLine className="h-4 w-4" />
-                        <div>
-                          <p className="text-sm font-bold">Criar roteiro primeiro</p>
-                          <p className="text-[11px] opacity-60">Voce precisa criar e vincular um roteiro a esta semana antes de concluir</p>
-                        </div>
-                      </div>
-                      <Link href={`/roteiros/novo`}>
-                        <Button size="sm" variant="outline" className="h-8 text-xs rounded-lg">
-                          <PenLine className="h-3.5 w-3.5 mr-1" /> Criar Roteiro
-                        </Button>
-                      </Link>
-                    </div>
-                  )
-                )}
-
-                {weekStatus === "gravacao" && isNarrator && (
-                  <div className={cn("p-3 rounded-lg border space-y-3", STEPS[1].lightBg, STEPS[1].lightBorder, STEPS[1].lightText)}>
-                    <div className="flex items-center gap-2.5">
-                      <Mic className="h-4 w-4" />
-                      <div>
-                        <p className="text-sm font-bold">Enviar narracao</p>
-                        <p className="text-[11px] opacity-60">MP3, WAV, M4A — max 30MB</p>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <label className="flex-1 cursor-pointer">
-                        <div className="flex items-center justify-center gap-2 p-3 rounded-lg border-2 border-dashed border-amber-300/50 hover:border-amber-400 transition-colors text-sm font-semibold">
-                          <Upload className="h-4 w-4" /> {uploadingAudio ? "Enviando..." : "Selecionar audio"}
-                        </div>
-                        <input type="file" className="hidden" accept=".mp3,.wav,.m4a,.ogg,.webm" onChange={handleAudioUpload} disabled={uploadingAudio} />
-                      </label>
-                      <Button size="sm" variant="outline" className="shrink-0 self-center h-8 text-xs rounded-lg" onClick={() => markComplete("narrador")}>
-                        <Check className="h-3.5 w-3.5 mr-1" /> Sem audio
-                      </Button>
-                    </div>
-                  </div>
-                )}
-
-                {weekStatus === "edicao" && isEditor && (
-                  <div className={cn("p-3 rounded-lg border space-y-3", STEPS[2].lightBg, STEPS[2].lightBorder, STEPS[2].lightText)}>
-                    <div className="flex items-center gap-2.5">
-                      <Film className="h-4 w-4" />
-                      <div>
-                        <p className="text-sm font-bold">Finalizar edicao</p>
-                        <p className="text-[11px] opacity-60">Cole o link do video editado</p>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <div className="flex-1 relative">
-                        <Link2 className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-violet-400" />
-                        <Input type="url" placeholder="https://drive.google.com/..." id="linkUrl" className="h-8 pl-8 text-xs rounded-lg" />
-                      </div>
-                      <Button size="sm" className="bg-violet-600 hover:bg-violet-700 h-8 text-xs rounded-lg" onClick={() => { const l = (document.getElementById("linkUrl") as HTMLInputElement)?.value; markComplete("editor", l); }}>
-                        <Check className="h-3.5 w-3.5 mr-1" /> Enviar
-                      </Button>
-                    </div>
-                  </div>
-                )}
-
-                {weekStatus === "revisao" && canReview && (
-                  <div className={cn("p-3 rounded-lg border space-y-3", STEPS[3].lightBg, STEPS[3].lightBorder, STEPS[3].lightText)}>
-                    <div className="flex items-center gap-2.5">
-                      <Eye className="h-4 w-4" />
-                      <div>
-                        <p className="text-sm font-bold">Revisao</p>
-                        <p className="text-[11px] opacity-60">Assista e aprove ou reprove</p>
-                      </div>
-                    </div>
-                    {progress.filter((p: any) => p.role === "editor" && p.linkUrl).map((p: any) => (
-                      <a key={p._id} href={p.linkUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 p-2 rounded-lg bg-white/50 border border-orange-200/40 hover:border-orange-300 transition-colors text-sm font-medium">
-                        <Play className="h-3.5 w-3.5" /> {p.userId?.name} <ExternalLink className="h-2.5 w-2.5 ml-auto opacity-30" />
-                      </a>
-                    ))}
-                    <div className="flex gap-2">
-                      <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 h-8 text-xs rounded-lg flex-1" onClick={() => handleReview(true)}>
-                        <Check className="h-3.5 w-3.5 mr-1" /> Aprovar
-                      </Button>
-                      <Button size="sm" variant="destructive" className="h-8 text-xs rounded-lg" onClick={() => handleReview(false, "edicao")}>
-                        <RotateCcw className="h-3.5 w-3.5 mr-1" /> Edicao
-                      </Button>
-                      <Button size="sm" variant="outline" className="h-8 text-xs rounded-lg" onClick={() => handleReview(false, "gravacao")}>
-                        <RotateCcw className="h-3.5 w-3.5 mr-1" /> Gravacao
-                      </Button>
-                    </div>
-                  </div>
-                )}
-
-                {weekStatus === "concluido" && (
-                  <div className="flex items-center gap-3 p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700">
-                    <CircleCheck className="h-5 w-5 shrink-0" />
-                    <div>
-                      <p className="text-sm font-bold">Semana concluida</p>
-                      <p className="text-[11px] opacity-60">Todos os passos foram finalizados</p>
-                    </div>
-                  </div>
-                )}
-
-                {weekStatus !== "concluido" && !isRoteirista && !isNarrator && !isEditor && !canReview && (
-                  <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/30 border border-dashed text-muted-foreground/40">
-                    <Clock className="h-4 w-4" />
-                    <p className="text-xs">Nenhuma acao disponivel para voce nesta etapa</p>
-                  </div>
-                )}
-              </div>
-            </div>
+                </div>
+              );
+            })()}
           </div>
 
           {/* ═══ RIGHT — Comments ═══ */}
@@ -540,7 +980,7 @@ export default function ScaleDetailPage() {
               <div className="flex flex-col" style={{ height: "min(calc(100vh - 9rem), 580px)" }}>
                 <div className="px-3 py-2.5 border-b bg-muted/20 flex items-center gap-2">
                   <MessageCircle className="h-3.5 w-3.5 text-primary" />
-                  <span className="text-xs font-bold">Comentarios</span>
+                  <span className="text-xs font-bold">Comentários</span>
                   {comments.length > 0 && (
                     <span className="text-[9px] font-bold bg-primary/10 text-primary rounded-full h-4 min-w-4 flex items-center justify-center px-1 ml-auto">{comments.length}</span>
                   )}
@@ -550,7 +990,7 @@ export default function ScaleDetailPage() {
                   {comments.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full">
                       <MessageCircle className="h-5 w-5 text-muted-foreground/15 mb-1" />
-                      <p className="text-[11px] text-muted-foreground/30">Nenhum comentario</p>
+                      <p className="text-[11px] text-muted-foreground/30">Nenhum comentário</p>
                     </div>
                   ) : (
                     comments.map((c: any) => {
