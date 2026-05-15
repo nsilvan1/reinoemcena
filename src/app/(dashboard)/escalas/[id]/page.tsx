@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
   ArrowLeft, Check, ExternalLink, FileText, Mic, Upload,
-  RotateCcw, Send, Play, MessageCircle, Clock, Link2,
+  RotateCcw, Send, MessageCircle, Clock,
   PenLine, Film, Eye, CircleCheck, CalendarDays, History,
   CheckCircle2, Paperclip, MessageSquare, X, AlertTriangle,
   ChevronDown, ChevronUp,
@@ -23,6 +23,8 @@ import { StageAttachments } from "@/components/escala/stage-attachments";
 import { CharactersSection } from "@/components/escala/characters-section";
 import { RecordingsUploader } from "@/components/escala/recordings-uploader";
 import { RecordingsOverview } from "@/components/escala/recordings-overview";
+import { EditingUploader } from "@/components/escala/editing-uploader";
+import { EditingOverview } from "@/components/escala/editing-overview";
 
 const ROLE_TO_STAGE: Record<string, string> = { roteirista: "roteiro", narrador: "gravacao", editor: "edicao" };
 
@@ -583,8 +585,7 @@ export default function ScaleDetailPage() {
                 {weekStatus === "edicao" && canReview && !isEditor && (() => {
                   const total = currentWeek?.assignments?.editores?.length || 0;
                   const done = progress.filter((p: any) => p.role === "editor" && p.completed).length;
-                  const videoLinks = progress.filter((p: any) => p.role === "editor" && p.linkUrl);
-                  const advanceWarning = videoLinks.length === 0 ? "Nenhum vídeo enviado" : null;
+                  const advanceWarning = done < total ? `Faltam ${total - done} editor${total - done > 1 ? "es" : ""}` : null;
                   return (
                     <div className={cn("p-3 rounded-lg border space-y-2.5", STEPS[2].lightBg, STEPS[2].lightBorder)}>
                       <div className="flex items-start justify-between gap-3">
@@ -593,7 +594,7 @@ export default function ScaleDetailPage() {
                           <div>
                             <p className={cn("text-sm font-bold", STEPS[2].lightText)}>Fase: Edição</p>
                             <p className="text-[11px] text-muted-foreground/70">
-                              {total > 0 ? `${done} de ${total} editor${total > 1 ? "es" : ""} enviou vídeo` : "Nenhum editor atribuído"}
+                              {total > 0 ? `${done} de ${total} editor${total > 1 ? "es" : ""} concluiu` : "Nenhum editor atribuído"}
                             </p>
                           </div>
                         </div>
@@ -625,46 +626,30 @@ export default function ScaleDetailPage() {
                           )
                         )}
                       </div>
-                      {videoLinks.map((p: any) => (
-                        <a key={p._id} href={p.linkUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 p-2 rounded-lg bg-white/50 border border-violet-200/40 hover:border-violet-300 transition-colors text-xs font-medium">
-                          <Play className="h-3 w-3" /> {p.userId?.name} <ExternalLink className="h-2.5 w-2.5 ml-auto opacity-30" />
-                        </a>
-                      ))}
+                      <EditingOverview
+                        scaleId={String(id)}
+                        weekNumber={selectedWeek}
+                        editores={(currentWeek?.assignments?.editores || []).map((u: any) => ({ _id: u._id || u, name: u.name || "?" }))}
+                        progress={progress}
+                      />
                     </div>
                   );
                 })()}
 
-                {weekStatus === "edicao" && isEditor && (
-                  <div className={cn("p-3 rounded-lg border space-y-3", STEPS[2].lightBg, STEPS[2].lightBorder, STEPS[2].lightText)}>
-                    <div className="flex items-center gap-2.5">
-                      <Film className="h-4 w-4" />
-                      <div>
-                        <p className="text-sm font-bold">Finalizar edição</p>
-                        <p className="text-[11px] opacity-60">Cole o link do video editado</p>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <div className="flex-1 relative">
-                        <Link2 className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-violet-400" />
-                        <Input
-                          type="url"
-                          placeholder="https://drive.google.com/... ou YouTube"
-                          value={linkUrl}
-                          onChange={(e) => setLinkUrl(e.target.value)}
-                          className="h-8 pl-8 text-xs rounded-lg"
-                        />
-                      </div>
-                      <Button
-                        size="sm"
-                        className="bg-violet-600 hover:bg-violet-700 h-8 text-xs rounded-lg"
-                        disabled={!linkUrl.trim() || !/^https?:\/\//.test(linkUrl.trim())}
-                        onClick={() => { markComplete("editor", linkUrl); setLinkUrl(""); }}
-                      >
-                        <Check className="h-3.5 w-3.5 mr-1" /> Enviar
-                      </Button>
-                    </div>
-                  </div>
-                )}
+                {weekStatus === "edicao" && isEditor && (() => {
+                  const myProgress = progress.find((p: any) => p.role === "editor" && (p.userId?._id || p.userId) === userId);
+                  return (
+                    <EditingUploader
+                      scaleId={String(id)}
+                      weekNumber={selectedWeek}
+                      currentUserId={String(userId)}
+                      hasRoteiro={!!currentWeek?.roteiro}
+                      notes={myProgress?.notes || ""}
+                      completed={!!myProgress?.completed}
+                      onChanged={refreshData}
+                    />
+                  );
+                })()}
 
                 {weekStatus === "revisao" && canReview && (
                   <div className={cn("p-3 rounded-lg border space-y-3", STEPS[3].lightBg, STEPS[3].lightBorder, STEPS[3].lightText)}>
@@ -675,11 +660,12 @@ export default function ScaleDetailPage() {
                         <p className="text-[11px] opacity-60">Assista e aprove ou reprove</p>
                       </div>
                     </div>
-                    {progress.filter((p: any) => p.role === "editor" && p.linkUrl).map((p: any) => (
-                      <a key={p._id} href={p.linkUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 p-2 rounded-lg bg-white/50 border border-orange-200/40 hover:border-orange-300 transition-colors text-sm font-medium">
-                        <Play className="h-3.5 w-3.5" /> {p.userId?.name} <ExternalLink className="h-2.5 w-2.5 ml-auto opacity-30" />
-                      </a>
-                    ))}
+                    <EditingOverview
+                      scaleId={String(id)}
+                      weekNumber={selectedWeek}
+                      editores={(currentWeek?.assignments?.editores || []).map((u: any) => ({ _id: u._id || u, name: u.name || "?" }))}
+                      progress={progress}
+                    />
                     <div className="flex gap-2">
                       <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 h-8 text-xs rounded-lg flex-1" onClick={() => handleReview(true)}>
                         <Check className="h-3.5 w-3.5 mr-1" /> Aprovar
