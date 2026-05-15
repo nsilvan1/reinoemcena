@@ -21,6 +21,8 @@ import { STEPS } from "@/components/pipeline/mini-pipeline";
 import { RichTextEditor } from "@/components/editor/rich-text-editor";
 import { StageAttachments } from "@/components/escala/stage-attachments";
 import { CharactersSection } from "@/components/escala/characters-section";
+import { RecordingsUploader } from "@/components/escala/recordings-uploader";
+import { RecordingsOverview } from "@/components/escala/recordings-overview";
 
 const ROLE_TO_STAGE: Record<string, string> = { roteirista: "roteiro", narrador: "gravacao", editor: "edicao" };
 
@@ -35,7 +37,6 @@ export default function ScaleDetailPage() {
   const [selectedWeek, setSelectedWeek] = useState<number>(1);
   const [newComment, setNewComment] = useState("");
   const [sendingComment, setSendingComment] = useState(false);
-  const [uploadingAudio, setUploadingAudio] = useState(false);
   const [viewingStage, setViewingStage] = useState<string | null>(null);
   const [linkUrl, setLinkUrl] = useState("");
   const commentsEndRef = useRef<HTMLDivElement>(null);
@@ -163,35 +164,6 @@ export default function ScaleDetailPage() {
     else toast.error("Erro ao atualizar etapa");
   }
 
-  async function handleAudioUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 30 * 1024 * 1024) { toast.error("Max 30MB"); return; }
-    const currentWk = scale?.weeks?.find((w: { number: number }) => w.number === selectedWeek);
-    const roteiroId = currentWk?.roteiro?._id || currentWk?.roteiro;
-    if (!roteiroId) {
-      toast.error("Crie o roteiro antes de enviar áudio");
-      return;
-    }
-    setUploadingAudio(true);
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const uploadRes = await fetch(`/api/roteiros/${roteiroId}/upload`, { method: "POST", body: formData });
-      if (!uploadRes.ok) {
-        const err = await uploadRes.json().catch(() => ({}));
-        toast.error(err.error || "Erro no upload do áudio");
-        return;
-      }
-      const { fileUrl } = await uploadRes.json();
-      await markComplete("narrador", fileUrl);
-    } catch (err) {
-      console.error("Erro no upload de audio:", err);
-      toast.error("Erro no upload de áudio");
-    } finally {
-      setUploadingAudio(false);
-    }
-  }
 
   async function sendComment() {
     if (!newComment.trim()) return;
@@ -542,17 +514,16 @@ export default function ScaleDetailPage() {
                 {weekStatus === "gravacao" && canReview && !isNarrator && (() => {
                   const total = currentWeek?.assignments?.narradores?.length || 0;
                   const done = progress.filter((p: any) => p.role === "narrador" && p.completed).length;
-                  const audioLinks = progress.filter((p: any) => p.role === "narrador" && p.linkUrl);
-                  const advanceWarning = audioLinks.length === 0 ? "Nenhum áudio enviado" : null;
+                  const advanceWarning = done === 0 ? "Nenhuma narração concluída" : (done < total ? `${total - done} narrador(es) pendente(s)` : null);
                   return (
-                    <div className={cn("p-3 rounded-lg border space-y-2.5", STEPS[1].lightBg, STEPS[1].lightBorder)}>
+                    <div className={cn("p-3 rounded-lg border space-y-3", STEPS[1].lightBg, STEPS[1].lightBorder)}>
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex items-center gap-2.5">
                           <Mic className={cn("h-4 w-4 shrink-0", STEPS[1].color)} />
                           <div>
                             <p className={cn("text-sm font-bold", STEPS[1].lightText)}>Fase: Gravação</p>
                             <p className="text-[11px] text-muted-foreground/70">
-                              {total > 0 ? `${done} de ${total} narrador${total > 1 ? "es" : ""} enviou áudio` : "Nenhum narrador atribuído"}
+                              {total > 0 ? `${done} de ${total} narrador${total > 1 ? "es" : ""} concluiu` : "Nenhum narrador atribuído"}
                             </p>
                           </div>
                         </div>
@@ -584,32 +555,30 @@ export default function ScaleDetailPage() {
                           )
                         )}
                       </div>
-                      {audioLinks.map((p: any) => (
-                        <a key={p._id} href={p.linkUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 p-2 rounded-lg bg-white/50 border border-amber-200/40 hover:border-amber-300 transition-colors text-xs font-medium">
-                          <Play className="h-3 w-3" /> {p.userId?.name} <ExternalLink className="h-2.5 w-2.5 ml-auto opacity-30" />
-                        </a>
-                      ))}
+                      <RecordingsOverview
+                        scaleId={String(id)}
+                        weekNumber={selectedWeek}
+                        narradores={(currentWeek?.assignments?.narradores || []).map((u: any) => ({ _id: u._id || u, name: u.name || "?" }))}
+                        progress={progress}
+                      />
                     </div>
                   );
                 })()}
 
-                {weekStatus === "gravacao" && isNarrator && (
-                  <div className={cn("p-3 rounded-lg border space-y-3", STEPS[1].lightBg, STEPS[1].lightBorder, STEPS[1].lightText)}>
-                    <div className="flex items-center gap-2.5">
-                      <Mic className="h-4 w-4" />
-                      <div>
-                        <p className="text-sm font-bold">Enviar narração</p>
-                        <p className="text-[11px] opacity-60">MP3, WAV, M4A — max 30MB</p>
-                      </div>
-                    </div>
-                    <label className="cursor-pointer">
-                      <div className="flex items-center justify-center gap-2 p-3 rounded-lg border-2 border-dashed border-amber-300/50 hover:border-amber-400 transition-colors text-sm font-semibold">
-                        <Upload className="h-4 w-4" /> {uploadingAudio ? "Enviando..." : "Selecionar áudio"}
-                      </div>
-                      <input type="file" className="hidden" accept=".mp3,.wav,.m4a,.ogg,.webm" onChange={handleAudioUpload} disabled={uploadingAudio} />
-                    </label>
-                  </div>
-                )}
+                {weekStatus === "gravacao" && isNarrator && (() => {
+                  const myProgress = progress.find((p: any) => p.role === "narrador" && (p.userId?._id || p.userId) === userId);
+                  return (
+                    <RecordingsUploader
+                      scaleId={String(id)}
+                      weekNumber={selectedWeek}
+                      currentUserId={String(userId)}
+                      hasRoteiro={!!currentWeek?.roteiro}
+                      notes={myProgress?.notes || ""}
+                      completed={!!myProgress?.completed}
+                      onChanged={refreshData}
+                    />
+                  );
+                })()}
 
                 {weekStatus === "edicao" && canReview && !isEditor && (() => {
                   const total = currentWeek?.assignments?.editores?.length || 0;
