@@ -19,6 +19,8 @@ import { toast } from "sonner";
 import { cn, parseLocalDate } from "@/lib/utils";
 import { STEPS } from "@/components/pipeline/mini-pipeline";
 import { RichTextEditor } from "@/components/editor/rich-text-editor";
+import { StageAttachments } from "@/components/escala/stage-attachments";
+import { CharactersSection } from "@/components/escala/characters-section";
 
 const ROLE_TO_STAGE: Record<string, string> = { roteirista: "roteiro", narrador: "gravacao", editor: "edicao" };
 
@@ -55,6 +57,7 @@ export default function ScaleDetailPage() {
   const userId = (session?.user as any)?.id;
   const role = (session?.user as any)?.role;
   const canReview = ["admin", "coordenador"].includes(role);
+  const canEditCharacters = ["admin", "coordenador", "roteirista"].includes(role);
 
   useEffect(() => {
     fetch(`/api/scales/${id}`).then((r) => r.ok ? r.json() : null).then((data) => {
@@ -738,6 +741,18 @@ export default function ScaleDetailPage() {
                     <p className="text-xs">Nenhuma ação disponível para você nesta etapa</p>
                   </div>
                 )}
+
+                {weekStatus !== "concluido" && (
+                  <div className="mt-4 pt-4 border-t">
+                    <StageAttachments
+                      scaleId={String(id)}
+                      weekNumber={selectedWeek}
+                      stage={weekStatus}
+                      currentUserId={userId}
+                      canDeleteAny={canReview}
+                    />
+                  </div>
+                )}
               </div>
             </div>
 
@@ -869,6 +884,13 @@ export default function ScaleDetailPage() {
                 </div>
               )}
             </div>
+
+            <CharactersSection
+              scaleId={String(id)}
+              weekNumber={selectedWeek}
+              canEdit={canEditCharacters}
+              currentUserId={userId}
+            />
 
             {/* Team + Progress — collapsible */}
             {(() => {

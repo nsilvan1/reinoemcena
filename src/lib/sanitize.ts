@@ -12,6 +12,7 @@ const ALLOWED_TAGS = [
   "strong",
   "em",
   "u",
+  "s",
   "ol",
   "ul",
   "li",
@@ -20,9 +21,10 @@ const ALLOWED_TAGS = [
   "code",
   "pre",
   "span",
+  "mark",
 ];
 
-const ALLOWED_ATTR = ["href", "class", "target", "rel"];
+const ALLOWED_ATTR = ["href", "class", "target", "rel", "data-color"];
 
 // Aceita apenas http(s):, mailto:, e URIs relativas. Bloqueia javascript:, data:, file:, etc.
 const ALLOWED_URI_REGEXP =

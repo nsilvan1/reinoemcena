@@ -5,6 +5,7 @@ import Roteiro from "@/models/Roteiro";
 import Scale from "@/models/Scale";
 import { requireAuth, requireRole } from "@/lib/auth-helpers";
 import { sanitizeHtml, isSafeUrl } from "@/lib/sanitize";
+import { notifyMany } from "@/lib/notifications";
 
 // GET /api/roteiros
 export async function GET(req: NextRequest) {
@@ -90,6 +91,29 @@ export async function POST(req: NextRequest) {
         { session }
       );
     });
+
+    // Notificar atribuídos (fora da transação para não bloquear se notificações falharem)
+    if (created) {
+      const createdDoc = created as { _id: { toString(): string }; title: string };
+      const link = `/roteiros/${createdDoc._id.toString()}`;
+      if (assignedEditors.length > 0) {
+        await notifyMany(
+          assignedEditors,
+          `Você foi atribuído como editor no roteiro "${createdDoc.title}"`,
+          "roteiro",
+          link
+        );
+      }
+      if (assignedNarrators.length > 0) {
+        await notifyMany(
+          assignedNarrators,
+          `Você foi atribuído como narrador no roteiro "${createdDoc.title}"`,
+          "roteiro",
+          link
+        );
+      }
+    }
+
     return NextResponse.json(created, { status: 201 });
   } catch (err) {
     console.error("[POST /api/roteiros] transaction failed:", err);

@@ -6,12 +6,15 @@ import Scale from "@/models/Scale";
 import { requireAuth, requireRole } from "@/lib/auth-helpers";
 import { notifyMany } from "@/lib/notifications";
 import { sanitizeHtml, isSafeUrl } from "@/lib/sanitize";
+import { canEditRoteiro } from "@/lib/roteiro-permissions";
+import { unlinkUploadedFile } from "@/lib/upload-storage";
+import RoteiroVersion from "@/models/RoteiroVersion";
 
 type Params = { params: Promise<{ id: string }> };
 
 // GET /api/roteiros/[id]
 export async function GET(req: NextRequest, { params }: Params) {
-  const { error } = await requireAuth();
+  const { error, user } = await requireAuth();
   if (error) return error;
 
   await connectDB();
@@ -24,7 +27,20 @@ export async function GET(req: NextRequest, { params }: Params) {
     .populate("assignedEditors assignedNarrators", "name username avatar");
 
   if (!roteiro) return NextResponse.json({ error: "Roteiro não encontrado" }, { status: 404 });
-  return NextResponse.json(roteiro);
+
+  // Anota permissões da sessão atual para a UI usar sem replicar regras de auth.
+  const canEdit = await canEditRoteiro(roteiro, user.id, user.role);
+  const canManageAssignments =
+    user.role === "admin" ||
+    user.role === "coordenador" ||
+    roteiro.createdBy._id?.toString() === user.id ||
+    roteiro.createdBy.toString() === user.id;
+
+  return NextResponse.json({
+    ...roteiro.toObject(),
+    canEdit,
+    canManageAssignments,
+  });
 }
 
 // PUT /api/roteiros/[id]
@@ -43,8 +59,9 @@ export async function PUT(req: NextRequest, { params }: Params) {
   const roteiro = await Roteiro.findById(id);
   if (!roteiro) return NextResponse.json({ error: "Não encontrado" }, { status: 404 });
 
-  // Roteirista só edita o próprio; coordenador/admin pode editar qualquer
-  if (user.role === "roteirista" && roteiro.createdBy.toString() !== user.id) {
+  // Coord+: tudo. Roteirista: autor original OU atribuído como roteirista na semana.
+  const allowed = await canEditRoteiro(roteiro, user.id, user.role);
+  if (!allowed) {
     return NextResponse.json({ error: "Sem permissão" }, { status: 403 });
   }
 
@@ -61,22 +78,35 @@ export async function PUT(req: NextRequest, { params }: Params) {
     update.content = sanitizeHtml(body.content);
   }
 
+  let fileUrlToRemove: string | undefined;
   if (body.fileUrl !== undefined) {
     if (body.fileUrl === null || body.fileUrl === "") {
       update.fileUrl = undefined;
+      if (roteiro.fileUrl) fileUrlToRemove = roteiro.fileUrl;
     } else if (typeof body.fileUrl === "string" && isSafeUrl(body.fileUrl)) {
+      // Substituição direta de URL: agenda remoção do antigo se for diferente
+      if (roteiro.fileUrl && roteiro.fileUrl !== body.fileUrl) {
+        fileUrlToRemove = roteiro.fileUrl;
+      }
       update.fileUrl = body.fileUrl;
     } else {
       return NextResponse.json({ error: "fileUrl inválido" }, { status: 400 });
     }
   }
 
-  if (Array.isArray(body.assignedEditors)) {
+  // Assignments só por autor original OU coord+. Roteirista "apenas atribuído"
+  // pode editar conteúdo mas não muda a equipe.
+  const canManageAssignments =
+    user.role === "admin" ||
+    user.role === "coordenador" ||
+    roteiro.createdBy.toString() === user.id;
+
+  if (canManageAssignments && Array.isArray(body.assignedEditors)) {
     update.assignedEditors = body.assignedEditors.filter(
       (x: unknown) => typeof x === "string" && mongoose.isValidObjectId(x)
     );
   }
-  if (Array.isArray(body.assignedNarrators)) {
+  if (canManageAssignments && Array.isArray(body.assignedNarrators)) {
     update.assignedNarrators = body.assignedNarrators.filter(
       (x: unknown) => typeof x === "string" && mongoose.isValidObjectId(x)
     );
@@ -109,9 +139,29 @@ export async function PUT(req: NextRequest, { params }: Params) {
     );
   }
 
+  // Snapshot da versão anterior se houve mudança real em title/content
+  const titleChanged =
+    typeof update.title === "string" && update.title !== roteiro.title;
+  const contentChanged =
+    typeof update.content === "string" &&
+    update.content !== (roteiro.content || "");
+
+  if (titleChanged || contentChanged) {
+    await RoteiroVersion.create({
+      roteiroId: roteiro._id,
+      title: roteiro.title,
+      content: roteiro.content || "",
+      snapshotBy: user.id,
+    });
+  }
+
   const updated = await Roteiro.findByIdAndUpdate(id, update, { new: true })
     .populate("createdBy", "name")
     .populate("assignedEditors assignedNarrators", "name avatar");
+
+  if (fileUrlToRemove) {
+    await unlinkUploadedFile(fileUrlToRemove);
+  }
 
   return NextResponse.json(updated);
 }
@@ -134,6 +184,8 @@ export async function DELETE(req: NextRequest, { params }: Params) {
     return NextResponse.json({ error: "Sem permissão" }, { status: 403 });
   }
 
+  const fileUrlToRemove = roteiro.fileUrl;
+
   const session = await mongoose.startSession();
   try {
     await session.withTransaction(async () => {
@@ -144,6 +196,9 @@ export async function DELETE(req: NextRequest, { params }: Params) {
         { session }
       );
     });
+    if (fileUrlToRemove) {
+      await unlinkUploadedFile(fileUrlToRemove);
+    }
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error("[DELETE /api/roteiros/:id] transaction failed:", err);

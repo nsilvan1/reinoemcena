@@ -59,4 +59,22 @@ const ScaleSchema = new Schema<IScale>(
 
 ScaleSchema.index({ month: -1 });
 
+// Mantém Roteiro.weekNumber consistente com Scale.weeks[].number sempre que a
+// escala for salva. Não cobre updates via findOneAndUpdate com $set em weeks —
+// se introduzir um endpoint que renumera semanas via update direto, chamar
+// também manualmente o sync (ver lib/scale-sync.ts).
+ScaleSchema.pre("save", async function () {
+  if (!this.isModified("weeks")) return;
+  const Roteiro = mongoose.models.Roteiro;
+  if (!Roteiro) return;
+  for (const week of this.weeks) {
+    if (week.roteiro) {
+      await Roteiro.updateOne(
+        { _id: week.roteiro, weekNumber: { $ne: week.number } },
+        { $set: { weekNumber: week.number, scaleId: this._id } }
+      );
+    }
+  }
+});
+
 export default mongoose.models.Scale || mongoose.model<IScale>("Scale", ScaleSchema);

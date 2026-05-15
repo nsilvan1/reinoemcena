@@ -5,11 +5,9 @@ import crypto from "crypto";
 import mongoose from "mongoose";
 import { connectDB } from "@/lib/mongodb";
 import Roteiro from "@/models/Roteiro";
-import { requireRole } from "@/lib/auth-helpers";
+import { requireAuth, requireRole } from "@/lib/auth-helpers";
 import { canEditRoteiro } from "@/lib/roteiro-permissions";
-import { unlinkUploadedFile } from "@/lib/upload-storage";
 
-// MIME -> extensão segura. Rejeita qualquer mismatch entre tipo declarado e extensão final.
 const MIME_TO_EXT: Record<string, string> = {
   "application/pdf": "pdf",
   "application/msword": "doc",
@@ -19,22 +17,51 @@ const MIME_TO_EXT: Record<string, string> = {
   "audio/wav": "wav",
   "audio/x-wav": "wav",
   "audio/wave": "wav",
+  "audio/mp4": "m4a",
+  "audio/x-m4a": "m4a",
+  "audio/ogg": "ogg",
+  "audio/webm": "webm",
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+  "text/plain": "txt",
 };
 
-const MAX_SIZE = 10 * 1024 * 1024; // 10MB
-const MIN_SIZE = 100; // 100 bytes
+const MAX_SIZE = 10 * 1024 * 1024;
+const MIN_SIZE = 100;
 
-// TODO PROD: o filesystem do Next/Vercel é efêmero — arquivos em /public/uploads
-// são perdidos a cada deploy/cold start. Antes de produção, migrar para storage
-// externo (S3, R2, Vercel Blob, GCS) e remover a escrita local abaixo. Mantemos
-// este código apenas para dev/local.
-export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+type Params = { params: Promise<{ id: string }> };
+
+// GET /api/roteiros/[id]/files
+export async function GET(req: NextRequest, { params }: Params) {
+  const { error } = await requireAuth();
+  if (error) return error;
+
+  await connectDB();
+  const { id } = await params;
+
+  if (!mongoose.isValidObjectId(id)) {
+    return NextResponse.json({ error: "ID inválido" }, { status: 400 });
+  }
+
+  const roteiro = await Roteiro.findById(id)
+    .select("files")
+    .populate("files.uploadedBy", "name");
+  if (!roteiro) {
+    return NextResponse.json({ error: "Roteiro não encontrado" }, { status: 404 });
+  }
+
+  return NextResponse.json(roteiro.files || []);
+}
+
+// POST /api/roteiros/[id]/files — multipart, faz push em files[]
+export async function POST(req: NextRequest, { params }: Params) {
   const { error, user } = await requireRole("roteirista");
   if (error) return error;
 
   await connectDB();
-
   const { id } = await params;
+
   if (!mongoose.isValidObjectId(id)) {
     return NextResponse.json({ error: "ID inválido" }, { status: 400 });
   }
@@ -44,7 +71,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: "Roteiro não encontrado" }, { status: 404 });
   }
 
-  // Coord+: tudo. Roteirista: autor original OU atribuído como roteirista na semana.
   const allowed = await canEditRoteiro(roteiro, user.id, user.role);
   if (!allowed) {
     return NextResponse.json({ error: "Sem permissão" }, { status: 403 });
@@ -69,46 +95,36 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: "Arquivo muito grande (máx. 10MB)" }, { status: 400 });
   }
 
-  const bytes = await file.arrayBuffer();
-  const buffer = Buffer.from(bytes);
-
   const uploadDir = path.join(process.cwd(), "public", "uploads");
   await mkdir(uploadDir, { recursive: true });
 
-  // Nome final 100% derivado: ID do roteiro + UUID + extensão segura.
-  // Nada do file.name do client é usado — evita path traversal e injeção de extensão.
   const fileName = `${id}-${crypto.randomUUID()}.${ext}`;
   const filePath = path.join(uploadDir, fileName);
-
-  await writeFile(filePath, buffer);
-  const fileUrl = `/uploads/${fileName}`;
+  await writeFile(filePath, Buffer.from(await file.arrayBuffer()));
 
   const displayName = file.name
     .replace(/[^\x20-\x7E -￿]/g, "")
     .trim()
     .slice(0, 120) || fileName;
 
-  // Semântica deste endpoint legado: troca o "arquivo principal".
-  // Remove o anterior do disco e de files[] (se existir lá) e adiciona o novo.
-  const previousUrl = roteiro.fileUrl;
-  interface FileSubdoc { url: string; _id: unknown }
-  roteiro.files = (roteiro.files as FileSubdoc[]).filter(
-    (f) => f.url !== previousUrl
-  );
-  roteiro.files.push({
-    url: fileUrl,
+  const fileEntry = {
+    url: `/uploads/${fileName}`,
     name: displayName,
     mimeType: file.type,
     size: file.size,
     uploadedBy: user.id,
     uploadedAt: new Date(),
-  });
-  roteiro.fileUrl = fileUrl;
+  };
+
+  roteiro.files.push(fileEntry);
+  // Mantém fileUrl apontando para o primeiro arquivo (compat com UI antiga)
+  if (!roteiro.fileUrl) roteiro.fileUrl = fileEntry.url;
   await roteiro.save();
 
-  if (previousUrl && previousUrl !== fileUrl) {
-    await unlinkUploadedFile(previousUrl);
-  }
+  const fresh = await Roteiro.findById(id)
+    .select("files")
+    .populate("files.uploadedBy", "name");
+  const added = fresh?.files?.[fresh.files.length - 1];
 
-  return NextResponse.json({ fileUrl });
+  return NextResponse.json(added, { status: 201 });
 }

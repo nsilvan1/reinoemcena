@@ -1,80 +1,132 @@
 "use client";
-import { useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import {
-  ArrowLeft, Download, FileText, Film, Mic, Save, Upload, X,
-  FileAudio, File, Paperclip, ExternalLink, Maximize2,
-} from "lucide-react";
-import { format } from "date-fns";
+import { ArrowLeft, FileText, Film, Mic, Save, Check, AlertCircle, Loader2 } from "lucide-react";
+import { format, formatDistanceToNowStrict } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { RichTextEditor, RichTextViewer } from "@/components/editor/rich-text-editor";
-import Link from "next/link";
+import { VersionHistory } from "@/components/roteiro/version-history";
+import { RoteiroFiles } from "@/components/roteiro/roteiro-files";
 
-function getFileIcon(name: string) {
-  const ext = name?.split(".")?.pop()?.toLowerCase() || "";
-  if (["pdf"].includes(ext)) return FileText;
-  if (["doc", "docx"].includes(ext)) return FileText;
-  if (["mp3", "wav", "m4a", "ogg", "webm"].includes(ext)) return FileAudio;
-  return File;
+type SaveState = "idle" | "saving" | "error";
+
+const AUTOSAVE_DELAY_MS = 1200;
+
+// O TipTap reaplica `style` (cor de fundo do Highlight) mesmo após salvarmos
+// um HTML sem style. Para evitar loop eterno de "dirty", a comparação ignora
+// esse atributo volátil e diferenças de espaçamento.
+function normalizeForDiff(html: string) {
+  return html
+    .replace(/\s*style="[^"]*"/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 export default function RoteiroDetailPage() {
   const { id } = useParams();
   const { data: session } = useSession();
   const router = useRouter();
-  const fileRef = useRef<HTMLInputElement>(null);
   const [roteiro, setRoteiro] = useState<any>(null);
   const [users, setUsers] = useState<any[]>([]);
   const [content, setContent] = useState("");
+  const [lastSavedContent, setLastSavedContent] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [fileExpanded, setFileExpanded] = useState(false);
+  const [saveState, setSaveState] = useState<SaveState>("idle");
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+  const [now, setNow] = useState(() => new Date());
+  const saveStateRef = useRef<SaveState>("idle");
+
+  useEffect(() => {
+    saveStateRef.current = saveState;
+  }, [saveState]);
 
   const role = (session?.user as any)?.role;
-  const userId = (session?.user as any)?.id;
-  const canEdit = role === "admin" || role === "coordenador" || (role === "roteirista" && roteiro?.createdBy?._id === userId);
+  // canEdit vem do server (calculado por canEditRoteiro). Fallback para coord+
+  // antes do roteiro carregar para evitar flash de "read-only" inicial.
+  const canEdit: boolean =
+    roteiro?.canEdit ?? (role === "admin" || role === "coordenador");
+  const canManageAssignments: boolean = roteiro?.canManageAssignments ?? false;
+
+  const isDirty =
+    lastSavedContent !== null &&
+    normalizeForDiff(content) !== normalizeForDiff(lastSavedContent);
 
   useEffect(() => {
     Promise.all([
       fetch(`/api/roteiros/${id}`).then((r) => r.ok ? r.json() : null),
       fetch("/api/users").then((r) => r.ok ? r.json() : []),
     ]).then(([r, u]) => {
-      if (r) { setRoteiro(r); setContent(r.content || ""); }
+      if (r) {
+        setRoteiro(r);
+        const initial = r.content || "";
+        setContent(initial);
+        setLastSavedContent(initial);
+      }
       setUsers(u);
     }).finally(() => setLoading(false));
   }, [id]);
 
-  async function handleSave() {
-    setSaving(true);
-    try {
-      const res = await fetch(`/api/roteiros/${id}`, {
-        method: "PUT", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content }),
-      });
-      if (res.ok) { setRoteiro(await res.json()); toast.success("Salvo!"); }
-    } catch { toast.error("Erro ao salvar"); }
-    finally { setSaving(false); }
-  }
+  const saveContent = useCallback(
+    async (silent: boolean) => {
+      if (saveStateRef.current === "saving" || !canEdit) return;
+      setSaveState("saving");
+      try {
+        const res = await fetch(`/api/roteiros/${id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ content }),
+        });
+        if (!res.ok) {
+          setSaveState("error");
+          if (!silent) toast.error("Erro ao salvar");
+          return;
+        }
+        const data = await res.json();
+        setRoteiro(data);
+        setLastSavedContent(data.content || "");
+        setLastSavedAt(new Date());
+        setSaveState("idle");
+        if (!silent) toast.success("Salvo!");
+      } catch {
+        setSaveState("error");
+        if (!silent) toast.error("Erro ao salvar");
+      }
+    },
+    [canEdit, content, id]
+  );
 
-  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 10 * 1024 * 1024) { toast.error("Max 10MB"); return; }
-    setUploading(true);
-    const formData = new FormData();
-    formData.append("file", file);
-    try {
-      const res = await fetch(`/api/roteiros/${id}/upload`, { method: "POST", body: formData });
-      if (res.ok) { const data = await res.json(); setRoteiro({ ...roteiro, fileUrl: data.fileUrl }); toast.success("Arquivo enviado!"); }
-      else { const err = await res.json(); toast.error(err.error); }
-    } catch { toast.error("Erro no upload"); }
-    finally { setUploading(false); if (fileRef.current) fileRef.current.value = ""; }
+  // Autosave com debounce. Não dispara durante save em curso.
+  useEffect(() => {
+    if (!canEdit || !isDirty || saveState === "saving") return;
+    const t = setTimeout(() => saveContent(true), AUTOSAVE_DELAY_MS);
+    return () => clearTimeout(t);
+  }, [content, canEdit, isDirty, saveState, saveContent]);
+
+  // Alerta o usuário antes de fechar com alterações pendentes
+  useEffect(() => {
+    if (!isDirty && saveState !== "saving") return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [isDirty, saveState]);
+
+  // Tick a cada 15s para atualizar o "salvo há Xs"
+  useEffect(() => {
+    if (!lastSavedAt) return;
+    const t = setInterval(() => setNow(new Date()), 15000);
+    return () => clearInterval(t);
+  }, [lastSavedAt]);
+
+  async function handleSave() {
+    await saveContent(false);
   }
 
   async function toggleAssignment(assignUserId: string, field: "assignedEditors" | "assignedNarrators") {
@@ -98,13 +150,6 @@ export default function RoteiroDetailPage() {
   const assignedEditorIds = (roteiro.assignedEditors || []).map((u: any) => u._id || u);
   const assignedNarratorIds = (roteiro.assignedNarrators || []).map((u: any) => u._id || u);
 
-  const fileUrl = roteiro.fileUrl;
-  const fileName = fileUrl?.split("/")?.pop() || "";
-  const fileExt = fileName.split(".")?.pop()?.toLowerCase() || "";
-  const isPdf = fileExt === "pdf";
-  const isAudio = ["mp3", "wav", "m4a", "ogg", "webm"].includes(fileExt);
-  const FileIcon = fileUrl ? getFileIcon(fileName) : File;
-
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -120,11 +165,38 @@ export default function RoteiroDetailPage() {
             </p>
           </div>
         </div>
-        {canEdit && (
-          <Button size="sm" onClick={handleSave} disabled={saving} className="h-8 text-xs shrink-0">
-            <Save className="h-3.5 w-3.5 mr-1" /> {saving ? "Salvando..." : "Salvar"}
-          </Button>
-        )}
+        <div className="flex items-center gap-1.5 shrink-0">
+          {canEdit && (
+            <SaveStatusPill
+              state={saveState}
+              dirty={isDirty}
+              lastSavedAt={lastSavedAt}
+              now={now}
+              onRetry={() => saveContent(false)}
+            />
+          )}
+          <VersionHistory
+            roteiroId={String(id)}
+            canEdit={canEdit}
+            onRestore={(data) => {
+              setRoteiro({ ...roteiro, title: data.title, content: data.content });
+              setContent(data.content || "");
+              setLastSavedContent(data.content || "");
+              setLastSavedAt(new Date());
+            }}
+          />
+          {canEdit && (
+            <Button
+              size="sm"
+              onClick={handleSave}
+              disabled={saveState === "saving" || !isDirty}
+              className="h-8 text-xs"
+            >
+              <Save className="h-3.5 w-3.5 mr-1" />{" "}
+              {saveState === "saving" ? "Salvando..." : "Salvar"}
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -148,80 +220,8 @@ export default function RoteiroDetailPage() {
             )}
           </div>
 
-          {/* File section */}
-          <div className="card-elevated border rounded-xl bg-card overflow-hidden">
-            <div className="px-4 py-2.5 border-b bg-muted/20 flex items-center gap-2">
-              <Paperclip className="h-3.5 w-3.5 text-muted-foreground" />
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Arquivo</p>
-            </div>
-            <div className="p-4">
-              {fileUrl ? (
-                <div className="space-y-3">
-                  {/* File info bar */}
-                  <div className="flex items-center gap-3 p-3 rounded-lg bg-blue-50 border border-blue-100">
-                    <div className="h-9 w-9 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
-                      <FileIcon className="h-4.5 w-4.5 text-blue-600" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{fileName}</p>
-                      <p className="text-[11px] text-blue-600/60 uppercase">{fileExt}</p>
-                    </div>
-                    <div className="flex items-center gap-1 shrink-0">
-                      {isPdf && (
-                        <button onClick={() => setFileExpanded(!fileExpanded)} className="h-7 w-7 rounded-md flex items-center justify-center hover:bg-blue-100 transition-colors" title="Expandir">
-                          <Maximize2 className="h-3.5 w-3.5 text-blue-600" />
-                        </button>
-                      )}
-                      <a href={fileUrl} download className="h-7 w-7 rounded-md flex items-center justify-center hover:bg-blue-100 transition-colors" title="Baixar">
-                        <Download className="h-3.5 w-3.5 text-blue-600" />
-                      </a>
-                      <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="h-7 w-7 rounded-md flex items-center justify-center hover:bg-blue-100 transition-colors" title="Abrir em nova aba">
-                        <ExternalLink className="h-3.5 w-3.5 text-blue-600" />
-                      </a>
-                    </div>
-                  </div>
-
-                  {/* PDF inline viewer */}
-                  {isPdf && (
-                    <div className={cn("rounded-lg overflow-hidden border bg-muted/20 transition-all", fileExpanded ? "h-[600px]" : "h-72")}>
-                      <iframe src={fileUrl} className="w-full h-full" title="Visualizar PDF" />
-                    </div>
-                  )}
-
-                  {/* Audio inline player */}
-                  {isAudio && (
-                    <div className="p-3 rounded-lg bg-muted/20 border">
-                      <audio controls className="w-full h-10" src={fileUrl}>
-                        Seu navegador não suporta áudio.
-                      </audio>
-                    </div>
-                  )}
-
-                  {/* Replace file */}
-                  {canEdit && (
-                    <button type="button" onClick={() => fileRef.current?.click()} className="text-xs text-primary hover:underline font-medium">
-                      Trocar arquivo
-                    </button>
-                  )}
-                </div>
-              ) : (
-                <div>
-                  <p className="text-xs text-muted-foreground/40 mb-3">Nenhum arquivo anexado</p>
-                  {canEdit && (
-                    <label className="cursor-pointer block">
-                      <div className="border-2 border-dashed rounded-xl p-5 text-center hover:bg-accent/30 hover:border-primary/30 transition-all group">
-                        <Upload className="h-5 w-5 mx-auto text-muted-foreground/25 group-hover:text-primary/40 transition-colors mb-1" />
-                        <p className="text-xs text-muted-foreground/40 group-hover:text-muted-foreground transition-colors">
-                          {uploading ? "Enviando..." : "PDF, Word, MP3, WAV (max 10MB)"}
-                        </p>
-                      </div>
-                    </label>
-                  )}
-                </div>
-              )}
-              <input ref={fileRef} type="file" className="hidden" accept=".pdf,.doc,.docx,.mp3,.wav" onChange={handleUpload} disabled={uploading} />
-            </div>
-          </div>
+          {/* Arquivos (múltiplos) */}
+          <RoteiroFiles roteiroId={String(id)} canEdit={canEdit} />
         </div>
 
         {/* ═══ Right — Assignments ═══ */}
@@ -247,12 +247,12 @@ export default function RoteiroDetailPage() {
                     return (
                       <button
                         key={u._id}
-                        onClick={() => canEdit && toggleAssignment(u._id, "assignedEditors")}
-                        disabled={!canEdit}
+                        onClick={() => canManageAssignments && toggleAssignment(u._id, "assignedEditors")}
+                        disabled={!canManageAssignments}
                         className={cn(
                           "w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm transition-all",
                           isAssigned ? "bg-violet-50 text-violet-700 ring-1 ring-violet-200" : "hover:bg-muted/50",
-                          !canEdit && "cursor-default"
+                          !canManageAssignments && "cursor-default"
                         )}
                       >
                         <div className={cn("h-5 w-5 rounded-full flex items-center justify-center text-[9px] font-bold", isAssigned ? "bg-violet-200 text-violet-700" : "bg-muted text-muted-foreground")}>
@@ -289,12 +289,12 @@ export default function RoteiroDetailPage() {
                     return (
                       <button
                         key={u._id}
-                        onClick={() => canEdit && toggleAssignment(u._id, "assignedNarrators")}
-                        disabled={!canEdit}
+                        onClick={() => canManageAssignments && toggleAssignment(u._id, "assignedNarrators")}
+                        disabled={!canManageAssignments}
                         className={cn(
                           "w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm transition-all",
                           isAssigned ? "bg-amber-50 text-amber-700 ring-1 ring-amber-200" : "hover:bg-muted/50",
-                          !canEdit && "cursor-default"
+                          !canManageAssignments && "cursor-default"
                         )}
                       >
                         <div className={cn("h-5 w-5 rounded-full flex items-center justify-center text-[9px] font-bold", isAssigned ? "bg-amber-200 text-amber-700" : "bg-muted text-muted-foreground")}>
@@ -313,4 +313,53 @@ export default function RoteiroDetailPage() {
       </div>
     </div>
   );
+}
+
+interface SaveStatusPillProps {
+  state: SaveState;
+  dirty: boolean;
+  lastSavedAt: Date | null;
+  now: Date;
+  onRetry: () => void;
+}
+
+function SaveStatusPill({ state, dirty, lastSavedAt, now, onRetry }: SaveStatusPillProps) {
+  if (state === "saving") {
+    return (
+      <span className="flex items-center gap-1 text-[11px] text-muted-foreground bg-muted/50 px-2 py-1 rounded-md">
+        <Loader2 className="h-3 w-3 animate-spin" /> Salvando…
+      </span>
+    );
+  }
+  if (state === "error") {
+    return (
+      <button
+        onClick={onRetry}
+        className="flex items-center gap-1 text-[11px] text-red-600 bg-red-50 hover:bg-red-100 px-2 py-1 rounded-md font-medium"
+        title="Tentar salvar novamente"
+      >
+        <AlertCircle className="h-3 w-3" /> Erro · Tentar
+      </button>
+    );
+  }
+  if (dirty) {
+    return (
+      <span className="flex items-center gap-1 text-[11px] text-amber-700 bg-amber-50 px-2 py-1 rounded-md">
+        <span className="h-1.5 w-1.5 rounded-full bg-amber-500" /> Não salvo
+      </span>
+    );
+  }
+  if (lastSavedAt) {
+    const diffMs = now.getTime() - lastSavedAt.getTime();
+    const label =
+      diffMs < 5000
+        ? "agora"
+        : `há ${formatDistanceToNowStrict(lastSavedAt, { locale: ptBR })}`;
+    return (
+      <span className="flex items-center gap-1 text-[11px] text-muted-foreground/70 px-2 py-1">
+        <Check className="h-3 w-3 text-emerald-600" /> Salvo {label}
+      </span>
+    );
+  }
+  return null;
 }
