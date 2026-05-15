@@ -5,9 +5,10 @@ import Scale from "@/models/Scale";
 import TaskProgress from "@/models/TaskProgress";
 import Character from "@/models/Character";
 import HistoryCard from "@/models/HistoryCard";
-import { requireAuth, requireRole } from "@/lib/auth-helpers";
+import { requireAuth } from "@/lib/auth-helpers";
 import { isSafeUrl } from "@/lib/sanitize";
 import { tryAdvanceWeek } from "@/lib/week-advance";
+import { notifyMany } from "@/lib/notifications";
 import { WeekStatus, ROLE_HIERARCHY, type Role } from "@/types";
 
 type Params = { params: Promise<{ id: string; weekNumber: string }> };
@@ -92,6 +93,13 @@ export async function PUT(req: NextRequest, { params }: Params) {
   const weekIdx = scale.weeks.findIndex((w: { number: number }) => w.number === wNum);
   if (weekIdx === -1) return NextResponse.json({ error: "Semana não encontrada" }, { status: 404 });
 
+  // Snapshot pré-save para detectar mudança em refs do acervo
+  const prevHistoryId = scale.weeks[weekIdx].historyCardId?.toString();
+  const prevCharIds = (scale.weeks[weekIdx].characterIds || [])
+    .map((c: { toString(): string }) => c.toString())
+    .sort()
+    .join(",");
+
   if (body.theme !== undefined) scale.weeks[weekIdx].theme = body.theme;
   if (body.deadline !== undefined) scale.weeks[weekIdx].deadline = body.deadline;
   if (body.assignments !== undefined) scale.weeks[weekIdx].assignments = body.assignments;
@@ -106,6 +114,36 @@ export async function PUT(req: NextRequest, { params }: Params) {
   }
 
   await scale.save();
+
+  // Notifica time da semana se houve mudança em refs do acervo
+  const newHistoryId = scale.weeks[weekIdx].historyCardId?.toString();
+  const newCharIds = (scale.weeks[weekIdx].characterIds || [])
+    .map((c: { toString(): string }) => c.toString())
+    .sort()
+    .join(",");
+  const historyChanged = prevHistoryId !== newHistoryId;
+  const charactersChanged = prevCharIds !== newCharIds;
+
+  if (historyChanged || charactersChanged) {
+    const week = scale.weeks[weekIdx];
+    const targetIds = new Set<string>([
+      ...week.assignments.roteiristas.map((u: { toString(): string }) => u.toString()),
+      ...week.assignments.narradores.map((u: { toString(): string }) => u.toString()),
+      ...week.assignments.editores.map((u: { toString(): string }) => u.toString()),
+    ]);
+    targetIds.delete(user.id); // não notifica quem fez a mudança
+    const userIds = Array.from(targetIds);
+    if (userIds.length > 0) {
+      const parts: string[] = [];
+      if (historyChanged) parts.push(newHistoryId ? "história" : "história removida");
+      if (charactersChanged) parts.push("personagens");
+      const message = `Acervo da Semana ${wNum} "${week.theme}" foi atualizado (${parts.join(", ")})`;
+      await notifyMany(userIds, message, "escala", `/escalas/${id}`).catch((err) => {
+        console.error("[notifyMany acervo]", err);
+      });
+    }
+  }
+
   return NextResponse.json(scale.weeks[weekIdx]);
 }
 
