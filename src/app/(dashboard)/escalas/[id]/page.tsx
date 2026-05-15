@@ -250,11 +250,11 @@ export default function ScaleDetailPage() {
 
   if (loading) return (
     <div className="space-y-4">
-      <div className="h-8 w-52 bg-muted animate-pulse rounded-md" />
-      <div className="h-10 bg-muted animate-pulse rounded-lg" />
+      <div className="h-8 w-52 skeleton rounded-md" />
+      <div className="h-10 skeleton rounded-lg" />
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-        <div className="xl:col-span-2 h-80 bg-muted animate-pulse rounded-xl" />
-        <div className="h-80 bg-muted animate-pulse rounded-xl" />
+        <div className="xl:col-span-2 h-80 skeleton rounded-xl" />
+        <div className="h-80 skeleton rounded-xl" />
       </div>
     </div>
   );

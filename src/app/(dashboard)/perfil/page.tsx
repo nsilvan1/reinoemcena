@@ -64,7 +64,7 @@ export default function PerfilPage() {
     finally { setSaving(false); }
   }
 
-  if (!userData) return <div className="max-w-lg mx-auto h-64 bg-muted animate-pulse rounded-lg" />;
+  if (!userData) return <div className="max-w-lg mx-auto h-64 skeleton rounded-lg" />;
 
   return (
     <div className="max-w-lg mx-auto space-y-6">

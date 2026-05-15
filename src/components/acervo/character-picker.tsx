@@ -97,7 +97,7 @@ export function CharacterPicker({ open, onOpenChange, selectedIds, onConfirm }: 
           {list === null ? (
             <div className="grid grid-cols-3 gap-2">
               {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="aspect-square bg-muted animate-pulse rounded-lg" />
+                <div key={i} className="aspect-square skeleton rounded-lg" />
               ))}
             </div>
           ) : list.length === 0 ? (

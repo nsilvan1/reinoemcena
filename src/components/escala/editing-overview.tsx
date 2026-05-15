@@ -92,7 +92,7 @@ export function EditingOverview({ scaleId, weekNumber, editores, progress }: Pro
   const pending = editores.filter((e) => !completedIds.has(e._id));
 
   if (loading) {
-    return <div className="h-24 bg-muted/30 animate-pulse rounded-lg" />;
+    return <div className="h-24 skeleton rounded-lg" />;
   }
 
   return (

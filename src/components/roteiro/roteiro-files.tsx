@@ -181,7 +181,7 @@ export function RoteiroFiles({ roteiroId, canEdit }: Props) {
 
       <div className="p-3 space-y-2">
         {loading ? (
-          <div className="h-16 bg-muted/30 animate-pulse rounded-lg" />
+          <div className="h-16 skeleton rounded-lg" />
         ) : files.length === 0 ? (
           <p className="text-xs text-muted-foreground/40 text-center py-4">
             Nenhum arquivo anexado

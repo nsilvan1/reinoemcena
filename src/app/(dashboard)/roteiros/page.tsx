@@ -31,8 +31,8 @@ export default function RoteirosPage() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <div className="h-8 w-40 bg-muted animate-pulse rounded-md" />
-        <div className="h-64 bg-muted animate-pulse rounded-lg" />
+        <div className="h-8 w-40 skeleton rounded-md" />
+        <div className="h-64 skeleton rounded-lg" />
       </div>
     );
   }

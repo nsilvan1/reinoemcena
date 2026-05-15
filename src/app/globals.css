@@ -152,6 +152,30 @@
   100% { background-position: 200% 0; }
 }
 
+/* ═══ Skeleton with shimmer sweep ═══ */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: oklch(0.95 0.004 85);
+  border-radius: 0.5rem;
+}
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    oklch(1 0 0 / 0.55) 30%,
+    oklch(1 0 0 / 0.85) 50%,
+    oklch(1 0 0 / 0.55) 70%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+  background-position: -200% 0;
+}
+
 @keyframes pulse-ring {
   0% { box-shadow: 0 0 0 0 oklch(0.44 0.10 158 / 0.3); }
   70% { box-shadow: 0 0 0 6px oklch(0.44 0.10 158 / 0); }
@@ -430,3 +454,44 @@ button, a, input, textarea, select {
   100% { opacity: 1; transform: scale(1) translateY(0); }
 }
 .pop-in { animation: pop-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+/* ═══ Pipeline flow animation ═══ */
+@keyframes pipeline-dot {
+  0%, 30% { transform: scale(1); box-shadow: 0 0 0 0 oklch(0.78 0.13 158 / 0); }
+  50% { transform: scale(1.4); box-shadow: 0 0 0 6px oklch(0.78 0.13 158 / 0.18), 0 0 14px oklch(0.78 0.13 158 / 0.7); }
+  80%, 100% { transform: scale(1); box-shadow: 0 0 6px oklch(0.78 0.13 158 / 0.5); }
+}
+.pipeline-dot {
+  animation: pipeline-dot 4s ease-in-out infinite;
+}
+@keyframes pipeline-line {
+  0%, 100% { background-position: 200% 0; }
+  50% { background-position: -100% 0; }
+}
+.pipeline-line {
+  background: linear-gradient(90deg, transparent 0%, oklch(0.78 0.13 158 / 0.6) 50%, transparent 100%);
+  background-size: 200% 100%;
+  animation: pipeline-line 4s ease-in-out infinite;
+}
+@keyframes pipeline-glow {
+  0%, 100% { opacity: 0.3; transform: translateY(0); }
+  50% { opacity: 1; transform: translateY(-2px); }
+}
+
+/* ═══ Floating particles ═══ */
+@keyframes particle-rise {
+  0% { transform: translateY(20px) translateX(var(--drift, 0)) scale(0); opacity: 0; }
+  20% { opacity: 1; transform: translateY(0) translateX(0) scale(1); }
+  100% { transform: translateY(-200px) translateX(calc(var(--drift, 0) * 4)) scale(0.4); opacity: 0; }
+}
+.particle {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: oklch(0.78 0.13 158);
+  filter: blur(0.5px);
+  animation: particle-rise var(--duration, 8s) ease-out infinite;
+  animation-delay: var(--delay, 0s);
+  pointer-events: none;
+}

@@ -31,8 +31,8 @@ export default function EscalasPage() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <div className="h-8 w-40 bg-muted animate-pulse rounded-md" />
-        {[...Array(2)].map((_, i) => <div key={i} className="h-56 bg-muted animate-pulse rounded-xl" />)}
+        <div className="h-8 w-40 skeleton rounded-md" />
+        {[...Array(2)].map((_, i) => <div key={i} className="h-56 skeleton rounded-xl" />)}
       </div>
     );
   }

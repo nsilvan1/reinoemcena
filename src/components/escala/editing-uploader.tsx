@@ -287,7 +287,7 @@ export function EditingUploader({
 
       {/* Lista de cortes */}
       {loading ? (
-        <div className="h-12 bg-muted/30 animate-pulse rounded-lg" />
+        <div className="h-12 skeleton rounded-lg" />
       ) : cuts.length > 0 ? (
         <ul className="space-y-1.5">
           {cuts.map((c, idx) => (

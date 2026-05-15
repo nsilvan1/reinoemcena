@@ -197,9 +197,9 @@ export function HistoryCardSheet({
 
         {loading ? (
           <div className="p-6 space-y-3">
-            <div className="aspect-video bg-muted animate-pulse rounded-lg" />
-            <div className="h-6 bg-muted animate-pulse rounded w-2/3" />
-            <div className="h-3 bg-muted animate-pulse rounded w-full" />
+            <div className="aspect-video skeleton rounded-lg" />
+            <div className="h-6 skeleton rounded w-2/3" />
+            <div className="h-3 skeleton rounded w-full" />
           </div>
         ) : (
           <div className="flex flex-col h-full">

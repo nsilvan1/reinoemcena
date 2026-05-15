@@ -92,7 +92,7 @@ export function RecordingsOverview({ scaleId, weekNumber, narradores, progress }
   const pending = narradores.filter((n) => !completedIds.has(n._id));
 
   if (loading) {
-    return <div className="h-24 bg-muted/30 animate-pulse rounded-lg" />;
+    return <div className="h-24 skeleton rounded-lg" />;
   }
 
   return (

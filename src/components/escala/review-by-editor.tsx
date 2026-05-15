@@ -123,7 +123,7 @@ export function ReviewByEditor({ scaleId, weekNumber, editores, progress, onChan
   }
 
   if (loading) {
-    return <div className="h-24 bg-muted/30 animate-pulse rounded-lg" />;
+    return <div className="h-24 skeleton rounded-lg" />;
   }
 
   return (

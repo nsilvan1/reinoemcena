@@ -142,7 +142,7 @@ export default function RoteiroDetailPage() {
     } catch { toast.error("Erro"); }
   }
 
-  if (loading) return <div className="h-64 bg-muted animate-pulse rounded-xl" />;
+  if (loading) return <div className="h-64 skeleton rounded-xl" />;
   if (!roteiro) return <p className="text-muted-foreground">Roteiro não encontrado</p>;
 
   const editors = users.filter((u: any) => u.skills?.includes("editor"));

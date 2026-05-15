@@ -152,7 +152,7 @@ export function VersionHistory({ roteiroId, canEdit, onRestore }: Props) {
             {loading ? (
               <div className="p-4 space-y-2">
                 {Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="h-16 bg-muted/30 animate-pulse rounded-lg" />
+                  <div key={i} className="h-16 skeleton rounded-lg" />
                 ))}
               </div>
             ) : versions.length === 0 ? (

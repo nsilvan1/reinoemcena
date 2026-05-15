@@ -113,10 +113,10 @@ export default function DashboardPage() {
   if (loading || !data) {
     return (
       <div className="space-y-5">
-        <div className="h-20 bg-muted/40 animate-pulse rounded-2xl" />
+        <div className="h-20 skeleton rounded-2xl" />
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div className="lg:col-span-2 h-48 bg-muted/40 animate-pulse rounded-2xl" />
-          <div className="h-48 bg-muted/40 animate-pulse rounded-2xl" />
+          <div className="lg:col-span-2 h-48 skeleton rounded-2xl" />
+          <div className="h-48 skeleton rounded-2xl" />
         </div>
       </div>
     );

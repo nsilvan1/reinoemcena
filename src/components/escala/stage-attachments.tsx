@@ -160,7 +160,7 @@ export function StageAttachments({
       </div>
 
       {loading ? (
-        <div className="h-12 bg-muted/30 animate-pulse rounded-lg" />
+        <div className="h-12 skeleton rounded-lg" />
       ) : items.length === 0 ? (
         <p className="text-[11px] text-muted-foreground/40 text-center py-2 italic">
           Nenhum anexo nesta etapa

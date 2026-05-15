@@ -113,55 +113,37 @@ export default function LoginPage() {
                 Do roteiro ao vídeo final — cada etapa organizada com seu time, seu acervo e seu ritmo.
               </p>
 
-              {/* Pipeline preview */}
-              <div className="mt-10 space-y-2.5">
-                <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-white/40">
+              {/* Pipeline animated */}
+              <div className="mt-12 space-y-4">
+                <p className="text-[10px] font-mono uppercase tracking-[0.22em] text-white/35">
                   Fluxo de produção
                 </p>
-                <div className="flex items-center gap-1.5">
-                  {[
-                    { label: "Roteiro", active: true },
-                    { label: "Gravação", active: true },
-                    { label: "Edição", active: true },
-                    { label: "Revisão", active: false },
-                    { label: "Concluído", active: false },
-                  ].map((step, i, arr) => (
-                    <div key={step.label} className="flex items-center gap-1.5">
-                      <div
-                        className={`h-1.5 w-1.5 rounded-full ${step.active ? "bg-[oklch(0.78_0.13_158)] shadow-[0_0_8px_oklch(0.78_0.13_158)]" : "bg-white/15"}`}
-                      />
-                      <span
-                        className={`text-[10px] font-medium uppercase tracking-wider ${step.active ? "text-[oklch(0.85_0.10_158)]" : "text-white/20"}`}
-                      >
-                        {step.label}
-                      </span>
-                      {i < arr.length - 1 && (
-                        <div
-                          className={`w-3 h-px ${arr[i + 1].active && step.active ? "bg-[oklch(0.78_0.13_158)]/40" : "bg-white/8"}`}
-                        />
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
+                <div className="relative">
+                  {/* Background track */}
+                  <div className="absolute top-1/2 left-0 right-0 h-px bg-white/8 -translate-y-1/2" />
+                  {/* Animated flowing light */}
+                  <div className="absolute top-1/2 left-0 right-0 h-px -translate-y-1/2 pipeline-line" />
 
-              {/* Mini stat tiles */}
-              <div className="grid grid-cols-3 gap-2 mt-8">
-                {[
-                  { value: "43", label: "Personagens" },
-                  { value: "5", label: "Etapas" },
-                  { value: "∞", label: "Histórias" },
-                ].map((s) => (
-                  <div
-                    key={s.label}
-                    className="glass rounded-xl p-3"
-                  >
-                    <p className="font-heading text-2xl text-white/95 tabular-nums">{s.value}</p>
-                    <p className="text-[10px] uppercase tracking-wider text-white/40 mt-1 font-medium">
-                      {s.label}
-                    </p>
+                  <div className="relative grid grid-cols-5 gap-2">
+                    {[
+                      { label: "Roteiro" },
+                      { label: "Gravação" },
+                      { label: "Edição" },
+                      { label: "Revisão" },
+                      { label: "Concluído" },
+                    ].map((step, i) => (
+                      <div key={step.label} className="flex flex-col items-center text-center">
+                        <div
+                          className="h-2.5 w-2.5 rounded-full bg-[oklch(0.78_0.13_158)] pipeline-dot"
+                          style={{ animationDelay: `${i * 0.7}s` }}
+                        />
+                        <span className="text-[9px] font-mono uppercase tracking-[0.18em] text-white/45 mt-3">
+                          {step.label}
+                        </span>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                </div>
               </div>
             </div>
           </div>

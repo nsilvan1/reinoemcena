@@ -90,7 +90,7 @@ export function HistoryCardPicker({ open, onOpenChange, selectedId, onSelect }: 
           {list === null ? (
             <div className="grid grid-cols-2 gap-2">
               {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="aspect-video bg-muted animate-pulse rounded-lg" />
+                <div key={i} className="aspect-video skeleton rounded-lg" />
               ))}
             </div>
           ) : list.length === 0 ? (

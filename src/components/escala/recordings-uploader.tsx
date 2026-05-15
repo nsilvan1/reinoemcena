@@ -253,7 +253,7 @@ export function RecordingsUploader({
 
       {/* Lista de tomadas */}
       {loading ? (
-        <div className="h-12 bg-muted/30 animate-pulse rounded-lg" />
+        <div className="h-12 skeleton rounded-lg" />
       ) : takes.length > 0 ? (
         <ul className="space-y-1.5">
           {takes.map((t, idx) => (
