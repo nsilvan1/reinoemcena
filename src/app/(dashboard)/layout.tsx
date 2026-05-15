@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { Sidebar } from "@/components/layout/sidebar";
+import { SidebarV2 } from "@/components/v2/sidebar";
 import { Providers } from "@/components/providers";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -11,12 +11,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   return (
     <Providers>
-      <div className="relative min-h-screen bg-background">
-        <div className="ambient-bg" />
-        <Sidebar />
-        <main className="relative lg:pl-64 z-10">
+      <div className="relative min-h-screen bg-background text-foreground">
+        <div className="ambient-shell" />
+        <SidebarV2 />
+        <main className="relative lg:pl-60 z-10">
           <div className="pt-14 lg:pt-0">
-            <div className="px-4 py-6 sm:px-6 lg:px-10 lg:py-8 max-w-[1200px] mx-auto">
+            <div className="px-4 py-6 sm:px-8 lg:px-12 lg:py-10 max-w-[1280px] mx-auto">
               {children}
             </div>
           </div>
