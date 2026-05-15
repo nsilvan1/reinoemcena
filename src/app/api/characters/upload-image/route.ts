@@ -6,6 +6,8 @@ import { requireRole } from "@/lib/auth-helpers";
 
 const MIME_TO_EXT: Record<string, string> = {
   "image/jpeg": "jpg",
+  "image/jpg": "jpg",
+  "image/pjpeg": "jpg",
   "image/png": "png",
   "image/webp": "webp",
   "image/gif": "gif",
