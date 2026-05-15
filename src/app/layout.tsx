@@ -40,12 +40,12 @@ export default function RootLayout({
   return (
     <html
       lang="pt-BR"
-      className={`${dmSans.variable} ${newsreader.variable} h-full antialiased`}
+      className={`${dmSans.variable} ${newsreader.variable} antialiased`}
     >
       <head>
         <link rel="apple-touch-icon" href="/icons/icon-192.png" />
       </head>
-      <body suppressHydrationWarning className="min-h-full flex flex-col font-sans">
+      <body suppressHydrationWarning className="min-h-screen flex flex-col font-sans">
         {children}
       </body>
     </html>

@@ -93,7 +93,7 @@ export default function LoginPage() {
   const showWelcome = stage === "welcome";
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[oklch(0.09_0.015_158)]">
+    <div className="relative min-h-screen bg-[oklch(0.09_0.015_158)]">
       {/* Background — dark forest gradient + radial glows */}
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,oklch(0.30_0.08_158_/_0.35),transparent_60%),radial-gradient(ellipse_60%_80%_at_100%_100%,oklch(0.40_0.10_158_/_0.18),transparent_60%),radial-gradient(ellipse_50%_70%_at_0%_100%,oklch(0.35_0.09_158_/_0.12),transparent_60%)]" />
 
