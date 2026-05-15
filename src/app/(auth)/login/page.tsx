@@ -9,22 +9,39 @@ import {
   Lock,
   Sparkles,
   Check,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 type Stage = "form" | "authenticating" | "welcome";
 
+const REMEMBER_KEY = "reinoemcena.rememberUser";
+
 export default function LoginPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState("");
   const [stage, setStage] = useState<Stage>("form");
   const [welcomeName, setWelcomeName] = useState("");
   const [mounted, setMounted] = useState(false);
   const router = useRouter();
 
-  useEffect(() => setMounted(true), []);
+  useEffect(() => {
+    setMounted(true);
+    try {
+      const remembered = localStorage.getItem(REMEMBER_KEY);
+      if (remembered) {
+        setUsername(remembered);
+        setRememberMe(true);
+      }
+    } catch {
+      // localStorage indisponível — ignora
+    }
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -41,6 +58,17 @@ export default function LoginPage() {
       setStage("form");
       setError("Usuário ou senha incorretos");
       return;
+    }
+
+    // Persiste preferência de "lembrar usuário" (NÃO guarda senha)
+    try {
+      if (rememberMe) {
+        localStorage.setItem(REMEMBER_KEY, username);
+      } else {
+        localStorage.removeItem(REMEMBER_KEY);
+      }
+    } catch {
+      // ignore
     }
 
     // Sucesso — animação de boas-vindas
@@ -227,17 +255,59 @@ export default function LoginPage() {
                       <div className="relative group">
                         <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-white/25 group-focus-within:text-[oklch(0.78_0.13_158)] transition-colors" strokeWidth={1.8} />
                         <Input
-                          type="password"
+                          type={showPassword ? "text" : "password"}
                           placeholder="••••••••"
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
                           required
                           disabled={isLoading}
                           autoComplete="current-password"
-                          className="h-12 pl-10 bg-white/[0.04] border-white/10 text-white placeholder:text-white/20 focus:bg-white/[0.06] focus:border-[oklch(0.55_0.13_158)]/40 focus:ring-2 focus:ring-[oklch(0.55_0.13_158)]/15 rounded-xl"
+                          className="h-12 pl-10 pr-11 bg-white/[0.04] border-white/10 text-white placeholder:text-white/20 focus:bg-white/[0.06] focus:border-[oklch(0.55_0.13_158)]/40 focus:ring-2 focus:ring-[oklch(0.55_0.13_158)]/15 rounded-xl"
                         />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword((v) => !v)}
+                          disabled={isLoading}
+                          tabIndex={-1}
+                          aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 h-7 w-7 rounded-lg flex items-center justify-center text-white/35 hover:text-white/80 hover:bg-white/[0.06] transition-colors"
+                        >
+                          {showPassword ? (
+                            <EyeOff className="h-4 w-4" strokeWidth={1.8} />
+                          ) : (
+                            <Eye className="h-4 w-4" strokeWidth={1.8} />
+                          )}
+                        </button>
                       </div>
                     </div>
+
+                    {/* Remember me */}
+                    <label className="flex items-center gap-2.5 cursor-pointer select-none group/remember pt-0.5">
+                      <span className="relative flex items-center justify-center">
+                        <input
+                          type="checkbox"
+                          checked={rememberMe}
+                          onChange={(e) => setRememberMe(e.target.checked)}
+                          disabled={isLoading}
+                          className="peer sr-only"
+                        />
+                        <span
+                          className={`h-4 w-4 rounded-md border transition-all flex items-center justify-center
+                            ${
+                              rememberMe
+                                ? "bg-[oklch(0.50_0.13_158)] border-[oklch(0.60_0.13_158)] shadow-[0_0_8px_oklch(0.55_0.13_158_/_0.4)]"
+                                : "bg-white/[0.04] border-white/15 group-hover/remember:border-white/30"
+                            }`}
+                        >
+                          {rememberMe && (
+                            <Check className="h-2.5 w-2.5 text-white" strokeWidth={3} />
+                          )}
+                        </span>
+                      </span>
+                      <span className="text-[12px] text-white/55 group-hover/remember:text-white/80 transition-colors">
+                        Lembrar usuário neste dispositivo
+                      </span>
+                    </label>
 
                     <Button
                       type="submit"
