@@ -103,7 +103,7 @@ export default function NotificacoesPage() {
               <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-1 mb-2">
                 {label}
               </p>
-              <div className="card-elevated border rounded-xl bg-card overflow-hidden divide-y">
+              <div className="card-glass rounded-xl overflow-hidden divide-y">
                 {items.map((n: any) => {
                   const NIcon = TYPE_ICONS[n.type] || TYPE_ICONS.geral;
                   const iconBg = TYPE_BG[n.type] || TYPE_BG.geral;

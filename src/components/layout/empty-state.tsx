@@ -33,7 +33,7 @@ export function EmptyState({
   return (
     <div
       className={cn(
-        "relative overflow-hidden rounded-2xl border bg-card p-10 sm:p-14 flex flex-col items-center text-center",
+        "relative overflow-hidden rounded-2xl card-glass p-10 sm:p-14 flex flex-col items-center text-center",
         className
       )}
     >

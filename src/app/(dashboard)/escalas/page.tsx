@@ -116,7 +116,7 @@ export default function EscalasPage() {
                   idx === 0 ? "stagger-1" : idx === 1 ? "stagger-2" : "stagger-3"
                 )}
               >
-                <div className="card-elevated border rounded-2xl bg-card hover:border-primary/25 hover:-translate-y-0.5 transition-all duration-300 overflow-hidden">
+                <div className="card-glass rounded-2xl hover:border-primary/25 hover:-translate-y-0.5 transition-all duration-300 overflow-hidden">
                   <div className="px-5 sm:px-6 py-4 sm:py-5 border-b bg-gradient-to-r from-card to-primary/[0.02]">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">

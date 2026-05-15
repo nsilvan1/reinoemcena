@@ -146,7 +146,7 @@ export function RoteiroFiles({ roteiroId, canEdit }: Props) {
   const preview = files.find((f) => f._id === previewId);
 
   return (
-    <div className="card-elevated border rounded-xl bg-card overflow-hidden">
+    <div className="card-glass rounded-xl overflow-hidden">
       <div className="px-4 py-2.5 border-b bg-muted/20 flex items-center gap-2">
         <Paperclip className="h-3.5 w-3.5 text-muted-foreground" />
         <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">

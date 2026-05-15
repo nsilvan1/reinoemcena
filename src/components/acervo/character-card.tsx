@@ -23,7 +23,7 @@ export function CharacterCard({ character, onClick, className }: Props) {
       type="button"
       onClick={onClick}
       className={cn(
-        "group text-left rounded-xl overflow-hidden border bg-card hover:border-primary/40 hover:shadow-md transition-all",
+        "group text-left rounded-xl overflow-hidden card-glass hover:-translate-y-0.5 transition-all",
         className
       )}
     >

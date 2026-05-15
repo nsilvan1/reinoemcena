@@ -180,7 +180,7 @@ export default function DashboardPage() {
       {data.stats.totalWeeks > 0 && (
         <section className="animate-in-view stagger-2">
           <SectionHeader eyebrow="Pipeline" title="Distribuição das semanas" />
-          <div className="card-elevated border rounded-2xl bg-card p-5">
+          <div className="card-glass rounded-2xl p-5">
             <div className="flex items-center gap-2 lg:gap-4">
               {(Object.keys(PHASE_THEME) as Array<keyof typeof PHASE_THEME>).map((key, idx, arr) => {
                 const phase = PHASE_THEME[key];
@@ -245,7 +245,7 @@ export default function DashboardPage() {
           {canReview && data.pendingReviews.length > 0 && (
             <section className="animate-in-view stagger-3">
               <SectionHeader eyebrow="Revisão" title="Aguardando você" badge={data.pendingReviews.length} />
-              <div className="card-elevated border rounded-2xl bg-card overflow-hidden">
+              <div className="card-glass rounded-2xl overflow-hidden">
                 {data.pendingReviews.map((r, i) => (
                   <Link
                     key={`${r.scaleId}-${r.weekNumber}-${r.editorId}`}
@@ -277,7 +277,7 @@ export default function DashboardPage() {
           {unread.length > 0 && (
             <section className="animate-in-view stagger-4">
               <SectionHeader eyebrow="Atividade" title="Notificações" badge={unread.length} rightLink={{ href: "/notificacoes", label: "Ver todas" }} />
-              <div className="card-elevated border rounded-2xl bg-card overflow-hidden">
+              <div className="card-glass rounded-2xl overflow-hidden">
                 {unread.slice(0, 5).map((n, i) => (
                   <div key={n._id} className={cn("flex items-start gap-2.5 p-3 hover:bg-primary/[0.03] transition-colors", i > 0 && "border-t")}>
                     <div className="mt-1 h-1.5 w-1.5 rounded-full bg-primary shrink-0" />
@@ -496,7 +496,7 @@ function StatCard({
   }[hue];
 
   return (
-    <div className="relative rounded-2xl p-4 bg-card border overflow-hidden transition-all hover:border-foreground/15 hover:-translate-y-0.5">
+    <div className="relative rounded-2xl p-4 card-glass overflow-hidden transition-all hover:-translate-y-0.5">
       <div className="flex items-start justify-between mb-2">
         <Icon className="h-4 w-4 text-muted-foreground/40" strokeWidth={1.8} />
         <span className={cn("h-1.5 w-1.5 rounded-full mt-1.5", styles.dot)} />
@@ -524,7 +524,7 @@ function TaskCard({ task }: { task: PendingTask }) {
   return (
     <Link
       href={`/escalas/${task.scaleId}`}
-      className="group relative block rounded-xl border bg-card hover:border-foreground/15 hover:shadow-sm transition-all overflow-hidden"
+      className="group relative block rounded-xl card-glass hover:shadow-sm transition-all overflow-hidden"
     >
       <div className={cn("absolute left-0 top-0 bottom-0 w-[3px]", wasRejected ? "bg-red-500" : theme.dot)} />
       <div className="pl-4 pr-3 py-3 flex items-center gap-3">
@@ -569,7 +569,7 @@ function DeadlineRow({ d }: { d: UpcomingDeadline }) {
   return (
     <Link
       href={`/escalas/${d.scaleId}`}
-      className="group relative flex items-center gap-3 rounded-xl border bg-card p-3 hover:border-foreground/15 hover:shadow-sm transition-all overflow-hidden"
+      className="group relative flex items-center gap-3 rounded-xl card-glass p-3 hover:shadow-sm transition-all overflow-hidden"
     >
       <div className={cn("absolute left-0 top-0 bottom-0 w-[3px]", d.overdue ? "bg-red-500" : phase.dot)} />
       <div className={cn("ml-1 h-9 w-9 rounded-xl flex items-center justify-center shrink-0", phase.soft)}>

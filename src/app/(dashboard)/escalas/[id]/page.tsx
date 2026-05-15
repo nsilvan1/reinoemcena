@@ -343,7 +343,7 @@ export default function ScaleDetailPage() {
 
 
             {/* Action — FIRST: user sees their task immediately */}
-            <div className="card-elevated border rounded-xl bg-card overflow-hidden">
+            <div className="card-glass rounded-xl overflow-hidden">
               <div className="px-4 py-2.5 border-b bg-muted/20 flex items-center gap-2">
                 {weekStatus === "concluido" ? (
                   <CircleCheck className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
@@ -788,7 +788,7 @@ export default function ScaleDetailPage() {
             </div>
 
             {/* Theme + Clickable Pipeline — context header */}
-            <div className="card-elevated border rounded-xl bg-card overflow-hidden">
+            <div className="card-glass rounded-xl overflow-hidden">
               <div className={cn("h-1 bg-gradient-to-r", currentStep.gradient)} />
               <div className="px-4 py-3 flex items-center justify-between gap-3 border-b">
                 <div className="min-w-0">
@@ -920,7 +920,7 @@ export default function ScaleDetailPage() {
             {(() => {
               const totalMembers = teamGroups.reduce((acc, g) => acc + g.members.length, 0);
               return (
-                <div className="card-elevated border rounded-xl bg-card overflow-hidden">
+                <div className="card-glass rounded-xl overflow-hidden">
                   <button
                     onClick={() => setShowTeam((v) => !v)}
                     className="w-full px-4 py-2.5 border-b bg-muted/20 flex items-center justify-between gap-2 hover:bg-muted/30 transition-colors"
@@ -1022,7 +1022,7 @@ export default function ScaleDetailPage() {
 
           {/* ═══ RIGHT — Comments ═══ */}
           <div>
-            <div className="card-elevated border rounded-xl bg-card sticky top-20 overflow-hidden">
+            <div className="card-glass rounded-xl sticky top-20 overflow-hidden">
               <div className="flex flex-col" style={{ height: "min(calc(100vh - 9rem), 580px)" }}>
                 <div className="px-3 py-2.5 border-b bg-muted/20 flex items-center gap-2">
                   <MessageCircle className="h-3.5 w-3.5 text-primary" />

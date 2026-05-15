@@ -25,7 +25,7 @@ export function PageHeader({
   return (
     <div
       className={cn(
-        "relative overflow-hidden rounded-2xl border bg-card",
+        "relative overflow-hidden rounded-2xl card-glass",
         compact ? "p-4" : "p-5 sm:p-6",
         className
       )}

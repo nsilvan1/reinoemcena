@@ -43,7 +43,7 @@ export function WeekReferences({
 
   return (
     <>
-      <div className="card-elevated border rounded-xl bg-card overflow-hidden">
+      <div className="card-glass rounded-xl overflow-hidden">
         <div className="px-4 py-2.5 border-b bg-muted/20 flex items-center justify-between gap-2">
           <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
             <BookOpen className="h-3 w-3" /> Referências

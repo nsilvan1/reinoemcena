@@ -146,7 +146,7 @@ export default function NovoRoteiroPage() {
           {/* ═══ Left — Info + Editor ═══ */}
           <div className="lg:col-span-2 space-y-4">
             {/* Title + Scale selection */}
-            <div className="card-elevated border rounded-xl bg-card overflow-hidden">
+            <div className="card-glass rounded-xl overflow-hidden">
               <div className="px-4 py-2.5 border-b bg-muted/20">
                 <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Informações</p>
               </div>
@@ -260,7 +260,7 @@ export default function NovoRoteiroPage() {
           {/* ═══ Right — File + Summary ═══ */}
           <div className="space-y-4">
             {/* File upload */}
-            <div className="card-elevated border rounded-xl bg-card overflow-hidden">
+            <div className="card-glass rounded-xl overflow-hidden">
               <div className="px-4 py-2.5 border-b bg-muted/20 flex items-center gap-2">
                 <Paperclip className="h-3.5 w-3.5 text-muted-foreground" />
                 <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Arquivo</p>
@@ -316,7 +316,7 @@ export default function NovoRoteiroPage() {
             </div>
 
             {/* Summary + Actions */}
-            <div className="card-elevated border rounded-xl bg-card overflow-hidden sticky top-20">
+            <div className="card-glass rounded-xl overflow-hidden sticky top-20">
               <div className="px-4 py-2.5 border-b bg-muted/20">
                 <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Resumo</p>
               </div>

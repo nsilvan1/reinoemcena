@@ -223,7 +223,7 @@ export default function MembrosPage() {
           }
         />
       ) : (
-        <div className="card-elevated border rounded-2xl bg-card overflow-hidden animate-in-view">
+        <div className="card-glass rounded-2xl overflow-hidden animate-in-view">
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left bg-muted/30 border-b border-border/60">

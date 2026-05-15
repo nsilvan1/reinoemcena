@@ -226,7 +226,7 @@ export default function RoteiroDetailPage() {
 
         {/* ═══ Right — Assignments ═══ */}
         <div>
-          <div className="card-elevated border rounded-xl bg-card overflow-hidden sticky top-20">
+          <div className="card-glass rounded-xl overflow-hidden sticky top-20">
             {/* Editors */}
             <div className="px-4 py-2.5 border-b bg-muted/20 flex items-center gap-2">
               <div className="h-5 w-5 rounded bg-violet-100 flex items-center justify-center">
