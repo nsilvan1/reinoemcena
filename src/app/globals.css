@@ -309,6 +309,31 @@ button, a, input, textarea, select {
   transition: color 150ms ease, background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
 }
 
+/* ═══ Autofill — neutralize Chrome's default light-blue bg ═══ */
+/* Padrão claro (dashboard inputs no tema warm forest) */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active,
+textarea:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 1000px oklch(1 0 0 / 0.85) inset !important;
+  -webkit-text-fill-color: var(--foreground) !important;
+  caret-color: var(--foreground);
+  transition: background-color 9999s ease-in-out 0s;
+  border-radius: inherit;
+}
+
+/* Versão dark — para inputs com classe `input-dark` (ex: tela de login) */
+.input-dark:-webkit-autofill,
+.input-dark:-webkit-autofill:hover,
+.input-dark:-webkit-autofill:focus,
+.input-dark:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px oklch(0.18 0.02 158) inset !important;
+  -webkit-text-fill-color: oklch(0.98 0.003 85) !important;
+  caret-color: oklch(0.98 0.003 85);
+  border: 1px solid oklch(1 0 0 / 0.12) !important;
+}
+
 /* ═══ Glassmorphism ═══ */
 .glass {
   background: oklch(1 0 0 / 0.04);

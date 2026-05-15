@@ -243,7 +243,7 @@ export default function LoginPage() {
                           required
                           disabled={isLoading}
                           autoComplete="username"
-                          className="h-12 pl-10 bg-white/[0.04] border-white/10 text-white placeholder:text-white/20 focus:bg-white/[0.06] focus:border-[oklch(0.55_0.13_158)]/40 focus:ring-2 focus:ring-[oklch(0.55_0.13_158)]/15 rounded-xl"
+                          className="input-dark h-12 pl-10 !bg-white/[0.04] !border-white/10 !shadow-none !text-white placeholder:!text-white/20 hover:!border-white/20 focus:!bg-white/[0.06] focus:!border-[oklch(0.55_0.13_158)]/50 focus:!ring-2 focus:!ring-[oklch(0.55_0.13_158)]/20 rounded-xl"
                         />
                       </div>
                     </div>
@@ -262,7 +262,7 @@ export default function LoginPage() {
                           required
                           disabled={isLoading}
                           autoComplete="current-password"
-                          className="h-12 pl-10 pr-11 bg-white/[0.04] border-white/10 text-white placeholder:text-white/20 focus:bg-white/[0.06] focus:border-[oklch(0.55_0.13_158)]/40 focus:ring-2 focus:ring-[oklch(0.55_0.13_158)]/15 rounded-xl"
+                          className="input-dark h-12 pl-10 pr-11 !bg-white/[0.04] !border-white/10 !shadow-none !text-white placeholder:!text-white/20 hover:!border-white/20 focus:!bg-white/[0.06] focus:!border-[oklch(0.55_0.13_158)]/50 focus:!ring-2 focus:!ring-[oklch(0.55_0.13_158)]/20 rounded-xl"
                         />
                         <button
                           type="button"
