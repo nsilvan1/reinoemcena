@@ -1,5 +1,7 @@
 import mongoose, { Schema, Document, Types } from "mongoose";
 
+export type ReviewStatus = "pending" | "approved" | "rejected";
+
 export interface ITaskProgress extends Document {
   _id: Types.ObjectId;
   scaleId: Types.ObjectId;
@@ -9,7 +11,12 @@ export interface ITaskProgress extends Document {
   completed: boolean;
   completedAt?: Date;
   notes?: string;
-  linkUrl?: string; // link externo (Drive, YouTube, etc.)
+  linkUrl?: string;
+  reviewStatus: ReviewStatus;
+  reviewReason?: string;
+  reviewedAt?: Date;
+  reviewedBy?: Types.ObjectId;
+  rejectionCount: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -28,6 +35,15 @@ const TaskProgressSchema = new Schema<ITaskProgress>(
     completedAt: { type: Date },
     notes: { type: String },
     linkUrl: { type: String },
+    reviewStatus: {
+      type: String,
+      enum: ["pending", "approved", "rejected"],
+      default: "pending",
+    },
+    reviewReason: { type: String, maxlength: 1000 },
+    reviewedAt: { type: Date },
+    reviewedBy: { type: Schema.Types.ObjectId, ref: "User" },
+    rejectionCount: { type: Number, default: 0 },
   },
   { timestamps: true }
 );

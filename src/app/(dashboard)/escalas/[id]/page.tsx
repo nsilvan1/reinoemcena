@@ -24,6 +24,7 @@ import { RecordingsUploader } from "@/components/escala/recordings-uploader";
 import { RecordingsOverview } from "@/components/escala/recordings-overview";
 import { EditingUploader } from "@/components/escala/editing-uploader";
 import { EditingOverview } from "@/components/escala/editing-overview";
+import { ReviewByEditor } from "@/components/escala/review-by-editor";
 import { WeekReferences } from "@/components/escala/week-references";
 import { HistoryCardPicker } from "@/components/acervo/history-card-picker";
 import { CharacterPicker } from "@/components/acervo/character-picker";
@@ -687,39 +688,73 @@ export default function ScaleDetailPage() {
                       hasRoteiro={!!currentWeek?.roteiro}
                       notes={myProgress?.notes || ""}
                       completed={!!myProgress?.completed}
+                      reviewStatus={myProgress?.reviewStatus}
+                      reviewReason={myProgress?.reviewReason}
+                      rejectionCount={myProgress?.rejectionCount}
                       onChanged={refreshData}
                     />
                   );
                 })()}
 
-                {weekStatus === "revisao" && canReview && (
-                  <div className={cn("p-3 rounded-lg border space-y-3", STEPS[3].lightBg, STEPS[3].lightBorder, STEPS[3].lightText)}>
-                    <div className="flex items-center gap-2.5">
-                      <Eye className="h-4 w-4" />
-                      <div>
-                        <p className="text-sm font-bold">Revisão</p>
-                        <p className="text-[11px] opacity-60">Assista e aprove ou reprove</p>
+                {weekStatus === "revisao" && canReview && (() => {
+                  const editores = (currentWeek?.assignments?.editores || []).map((u: any) => ({ _id: u._id || u, name: u.name || "?" }));
+                  const approvedCount = progress.filter((p: any) => p.role === "editor" && p.reviewStatus === "approved").length;
+                  const allApproved = editores.length > 0 && approvedCount === editores.length;
+                  return (
+                    <div className={cn("p-3 rounded-lg border space-y-3", STEPS[3].lightBg, STEPS[3].lightBorder)}>
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2.5">
+                          <Eye className={cn("h-4 w-4", STEPS[3].color)} />
+                          <div>
+                            <p className={cn("text-sm font-bold", STEPS[3].lightText)}>Revisão</p>
+                            <p className="text-[11px] text-muted-foreground/70">
+                              {editores.length > 0
+                                ? `${approvedCount}/${editores.length} ${approvedCount === 1 ? "aprovado" : "aprovados"}`
+                                : "Nenhum editor"}
+                            </p>
+                          </div>
+                        </div>
+                        {allApproved && (
+                          <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-emerald-700 bg-emerald-100 px-2 py-1 rounded-md">
+                            <Check className="h-3 w-3" /> Todos aprovados
+                          </span>
+                        )}
+                      </div>
+
+                      <ReviewByEditor
+                        scaleId={String(id)}
+                        weekNumber={selectedWeek}
+                        editores={editores}
+                        progress={progress}
+                        onChanged={refreshData}
+                      />
+
+                      <div className="pt-2 border-t border-dashed space-y-1.5">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                          Ações globais
+                        </p>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            className="h-8 text-xs rounded-lg flex-1"
+                            onClick={() => handleReview(false, "edicao")}
+                          >
+                            <RotateCcw className="h-3.5 w-3.5 mr-1" /> Voltar pra Edição
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-8 text-xs rounded-lg flex-1"
+                            onClick={() => handleReview(false, "gravacao")}
+                          >
+                            <RotateCcw className="h-3.5 w-3.5 mr-1" /> Voltar pra Gravação
+                          </Button>
+                        </div>
                       </div>
                     </div>
-                    <EditingOverview
-                      scaleId={String(id)}
-                      weekNumber={selectedWeek}
-                      editores={(currentWeek?.assignments?.editores || []).map((u: any) => ({ _id: u._id || u, name: u.name || "?" }))}
-                      progress={progress}
-                    />
-                    <div className="flex gap-2">
-                      <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 h-8 text-xs rounded-lg flex-1" onClick={() => handleReview(true)}>
-                        <Check className="h-3.5 w-3.5 mr-1" /> Aprovar
-                      </Button>
-                      <Button size="sm" variant="destructive" className="h-8 text-xs rounded-lg" onClick={() => handleReview(false, "edicao")}>
-                        <RotateCcw className="h-3.5 w-3.5 mr-1" /> Edição
-                      </Button>
-                      <Button size="sm" variant="outline" className="h-8 text-xs rounded-lg" onClick={() => handleReview(false, "gravacao")}>
-                        <RotateCcw className="h-3.5 w-3.5 mr-1" /> Gravação
-                      </Button>
-                    </div>
-                  </div>
-                )}
+                  );
+                })()}
 
                 {weekStatus === "concluido" && (
                   <div className="flex items-center gap-3 p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700">

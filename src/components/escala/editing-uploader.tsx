@@ -34,6 +34,9 @@ interface Props {
   hasRoteiro: boolean;
   notes: string;
   completed: boolean;
+  reviewStatus?: "pending" | "approved" | "rejected";
+  reviewReason?: string;
+  rejectionCount?: number;
   onChanged: () => void;
 }
 
@@ -51,6 +54,9 @@ export function EditingUploader({
   hasRoteiro,
   notes: initialNotes,
   completed,
+  reviewStatus,
+  reviewReason,
+  rejectionCount,
   onChanged,
 }: Props) {
   const [cuts, setCuts] = useState<Cut[]>([]);
@@ -250,6 +256,32 @@ export function EditingUploader({
       {!hasRoteiro && (
         <div className="text-[11px] text-violet-700 bg-violet-100/70 border border-violet-200 rounded-md px-2 py-1.5 flex items-center gap-1.5">
           <AlertCircle className="h-3 w-3 shrink-0" /> Crie o roteiro antes de enviar vídeo
+        </div>
+      )}
+
+      {reviewStatus === "rejected" && reviewReason && (
+        <div className="text-[11px] bg-red-50 border border-red-300 rounded-md px-2.5 py-2 text-red-800 space-y-1">
+          <div className="flex items-center justify-between gap-2">
+            <p className="font-bold text-[10px] uppercase tracking-widest flex items-center gap-1">
+              <AlertCircle className="h-3 w-3" /> Ajuste solicitado
+            </p>
+            {!!rejectionCount && rejectionCount > 0 && (
+              <span className="text-[9px] px-1 py-0 rounded bg-red-200 text-red-800 font-bold uppercase tracking-wider">
+                {rejectionCount}× refeito
+              </span>
+            )}
+          </div>
+          <p className="whitespace-pre-wrap">{reviewReason}</p>
+          <p className="text-[10px] text-red-600/70 italic pt-0.5">
+            Envie um novo corte abaixo para reenviar à revisão
+          </p>
+        </div>
+      )}
+
+      {reviewStatus === "approved" && (
+        <div className="text-[11px] bg-emerald-50 border border-emerald-300 rounded-md px-2.5 py-2 text-emerald-800 flex items-center gap-1.5">
+          <Check className="h-3.5 w-3.5 shrink-0" />
+          <span className="font-medium">Seu vídeo foi aprovado!</span>
         </div>
       )}
 
