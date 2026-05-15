@@ -10,6 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus, Trash2, Pencil, Users } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { PageHeader } from "@/components/layout/page-header";
+import { EmptyState } from "@/components/layout/empty-state";
 
 const ROLE_LABELS: Record<string, string> = {
   admin: "Admin", coordenador: "Coordenador", roteirista: "Roteirista", membro: "Membro",
@@ -96,19 +98,48 @@ export default function MembrosPage() {
     );
   }
 
+  const counts = users.reduce(
+    (acc, u) => {
+      acc[u.role] = (acc[u.role] || 0) + 1;
+      return acc;
+    },
+    {} as Record<string, number>
+  );
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="font-heading text-2xl">Membros</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">{users.length} cadastrados</p>
-        </div>
-        {["admin", "coordenador"].includes(role) && (
-          <Button size="sm" onClick={openCreate}>
-            <Plus className="h-4 w-4 mr-1.5" /> Novo Membro
-          </Button>
-        )}
-      </div>
+      <PageHeader
+        eyebrow="Equipe"
+        title="Membros"
+        description="Todos os voluntários e gestores do ministério"
+        icon={Users}
+        actions={
+          ["admin", "coordenador"].includes(role) && (
+            <Button size="sm" onClick={openCreate} className="h-9 shadow-sm shadow-primary/15">
+              <Plus className="h-4 w-4 mr-1.5" /> Novo membro
+            </Button>
+          )
+        }
+        meta={
+          users.length > 0 && (
+            <div className="flex items-center gap-5 text-xs flex-wrap">
+              <span className="flex items-baseline gap-1.5">
+                <span className="font-heading text-lg font-semibold tabular-nums">{users.length}</span>
+                <span className="text-muted-foreground">no total</span>
+              </span>
+              {(["admin", "coordenador", "roteirista", "membro"] as const).map((r) =>
+                counts[r] ? (
+                  <span key={r} className="flex items-baseline gap-1.5">
+                    <span className="h-3 w-px bg-border" />
+                    <span className="font-heading text-lg font-semibold tabular-nums">{counts[r]}</span>
+                    <span className="text-muted-foreground capitalize">{r}{counts[r] > 1 ? "s" : ""}</span>
+                  </span>
+                ) : null
+              )}
+            </div>
+          )
+        }
+      />
 
       {/* Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -178,52 +209,74 @@ export default function MembrosPage() {
       </Dialog>
 
       {users.length === 0 ? (
-        <div className="border rounded-lg p-16 text-center bg-card">
-          <Users className="h-8 w-8 mx-auto text-muted-foreground/20 mb-2" />
-          <p className="text-sm text-muted-foreground">Nenhum membro</p>
-        </div>
+        <EmptyState
+          icon={Users}
+          tone="primary"
+          title="Nenhum membro ainda"
+          description="Cadastre os voluntários do ministério para começar a montar as escalas."
+          action={
+            ["admin", "coordenador"].includes(role) && (
+              <Button size="sm" onClick={openCreate} className="h-9 shadow-sm shadow-primary/15">
+                <Plus className="h-4 w-4 mr-1.5" /> Cadastrar primeiro membro
+              </Button>
+            )
+          }
+        />
       ) : (
-        <div className="border rounded-lg bg-card overflow-hidden">
+        <div className="card-elevated border rounded-2xl bg-card overflow-hidden animate-in-view">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b text-left bg-muted/30">
-                <th className="px-4 py-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Membro</th>
-                <th className="px-4 py-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider hidden sm:table-cell">Usuário</th>
-                <th className="px-4 py-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Papel</th>
-                <th className="px-4 py-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">Habilidades</th>
-                <th className="px-4 py-3 w-20"></th>
+              <tr className="text-left bg-muted/30 border-b border-border/60">
+                <th className="pl-5 sm:pl-6 pr-3 py-3 text-[10px] font-bold text-muted-foreground/70 uppercase tracking-[0.15em]">Membro</th>
+                <th className="px-3 py-3 text-[10px] font-bold text-muted-foreground/70 uppercase tracking-[0.15em] hidden sm:table-cell">Usuário</th>
+                <th className="px-3 py-3 text-[10px] font-bold text-muted-foreground/70 uppercase tracking-[0.15em]">Papel</th>
+                <th className="px-3 py-3 text-[10px] font-bold text-muted-foreground/70 uppercase tracking-[0.15em] hidden md:table-cell">Habilidades</th>
+                <th className="px-3 sm:pr-6 py-3 w-20"></th>
               </tr>
             </thead>
             <tbody>
               {users.map((u: any) => (
-                <tr key={u._id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2.5">
-                      <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center text-[11px] font-bold text-primary shrink-0">
+                <tr key={u._id} className="border-t border-border/60 hover:bg-primary/[0.025] transition-colors group">
+                  <td className="pl-5 sm:pl-6 pr-3 py-3.5">
+                    <div className="flex items-center gap-3">
+                      <div className="h-9 w-9 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 ring-1 ring-primary/15 flex items-center justify-center text-xs font-bold text-primary shrink-0 shadow-sm">
                         {u.name[0]?.toUpperCase()}
                       </div>
-                      <span className="font-medium">{u.name}</span>
+                      <span className="font-semibold text-foreground/90">{u.name}</span>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell">{u.username}</td>
-                  <td className="px-4 py-3">
-                    <Badge className={cn("text-[10px] border-0", ROLE_STYLES[u.role])}>{ROLE_LABELS[u.role]}</Badge>
+                  <td className="px-3 py-3.5 text-muted-foreground hidden sm:table-cell font-mono text-xs">{u.username}</td>
+                  <td className="px-3 py-3.5">
+                    <Badge className={cn("text-[10px] border-0 font-semibold uppercase tracking-wider", ROLE_STYLES[u.role])}>
+                      {ROLE_LABELS[u.role]}
+                    </Badge>
                   </td>
-                  <td className="px-4 py-3 hidden md:table-cell">
-                    <div className="flex gap-1">
-                      {u.skills?.map((s: string) => (
-                        <Badge key={s} variant="outline" className="text-[10px]">{s}</Badge>
-                      ))}
+                  <td className="px-3 py-3.5 hidden md:table-cell">
+                    <div className="flex gap-1 flex-wrap">
+                      {u.skills?.length ? (
+                        u.skills.map((s: string) => (
+                          <Badge key={s} variant="outline" className="text-[10px] capitalize bg-muted/40">
+                            {s}
+                          </Badge>
+                        ))
+                      ) : (
+                        <span className="text-xs text-muted-foreground/30">—</span>
+                      )}
                     </div>
                   </td>
-                  <td className="px-4 py-3">
-                    <div className="flex gap-1 justify-end">
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(u)}>
-                        <Pencil className="h-3 w-3" />
+                  <td className="px-3 sm:pr-6 py-3.5">
+                    <div className="flex gap-1 justify-end opacity-60 group-hover:opacity-100 transition-opacity">
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(u)}>
+                        <Pencil className="h-3.5 w-3.5" />
                       </Button>
                       {u._id !== (session?.user as any)?.id && (
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => handleDelete(u._id)}>
-                          <Trash2 className="h-3 w-3" />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => handleDelete(u._id)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                       )}
                     </div>
