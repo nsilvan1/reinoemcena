@@ -22,6 +22,8 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { TraitInput } from "./trait-input";
 import { ImageUpload } from "./image-upload";
+import { ImageLightbox } from "./image-lightbox";
+import { Maximize2 } from "lucide-react";
 
 interface HCAttachment {
   url: string;
@@ -87,6 +89,7 @@ export function HistoryCardSheet({
   const [editing, setEditing] = useState(!!isCreate);
   const [saving, setSaving] = useState(false);
   const [attUploading, setAttUploading] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -339,14 +342,22 @@ export function HistoryCardSheet({
               ) : (
                 <>
                   {data.coverImageUrl && (
-                    <div className="aspect-video w-full overflow-hidden rounded-lg border bg-muted">
+                    <button
+                      type="button"
+                      onClick={() => setLightboxOpen(true)}
+                      className="group aspect-video w-full overflow-hidden rounded-lg border bg-muted relative cursor-zoom-in"
+                      title="Ver em tela cheia"
+                    >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={data.coverImageUrl}
                         alt={data.title}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
-                    </div>
+                      <div className="absolute top-2 right-2 h-8 w-8 rounded-full bg-black/50 backdrop-blur-sm text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Maximize2 className="h-3.5 w-3.5" />
+                      </div>
+                    </button>
                   )}
 
                   {data.traits.length > 0 && (
@@ -428,6 +439,15 @@ export function HistoryCardSheet({
           </div>
         )}
       </SheetContent>
+
+      {data.coverImageUrl && (
+        <ImageLightbox
+          open={lightboxOpen}
+          images={[data.coverImageUrl]}
+          altPrefix={data.title}
+          onClose={() => setLightboxOpen(false)}
+        />
+      )}
     </Sheet>
   );
 }

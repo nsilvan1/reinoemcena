@@ -9,6 +9,8 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { TraitInput } from "./trait-input";
 import { ImageUpload } from "./image-upload";
+import { ImageLightbox } from "./image-lightbox";
+import { Maximize2 } from "lucide-react";
 
 interface Character {
   _id: string;
@@ -53,6 +55,12 @@ export function CharacterSheet({
   const [editing, setEditing] = useState(!!isCreate);
   const [saving, setSaving] = useState(false);
   const [galleryUploading, setGalleryUploading] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+
+  const allImages = [
+    ...(data.coverImageUrl ? [data.coverImageUrl] : []),
+    ...data.gallery,
+  ];
 
   useEffect(() => {
     if (!open) return;
@@ -307,14 +315,22 @@ export function CharacterSheet({
               ) : (
                 <>
                   {data.coverImageUrl && (
-                    <div className="aspect-square w-full overflow-hidden rounded-lg border bg-muted">
+                    <button
+                      type="button"
+                      onClick={() => setLightboxIndex(0)}
+                      className="group aspect-square w-full overflow-hidden rounded-lg border bg-muted relative cursor-zoom-in"
+                      title="Ver em tela cheia"
+                    >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={data.coverImageUrl}
                         alt={data.name}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
-                    </div>
+                      <div className="absolute top-2 right-2 h-8 w-8 rounded-full bg-black/50 backdrop-blur-sm text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Maximize2 className="h-3.5 w-3.5" />
+                      </div>
+                    </button>
                   )}
 
                   {data.traits.length > 0 && (
@@ -342,18 +358,24 @@ export function CharacterSheet({
                         Galeria
                       </p>
                       <div className="grid grid-cols-3 gap-1.5">
-                        {data.gallery.map((url) => (
-                          <a
-                            key={url}
-                            href={url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="aspect-square overflow-hidden rounded-md border hover:border-primary/40 transition-colors"
-                          >
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={url} alt="" className="w-full h-full object-cover" />
-                          </a>
-                        ))}
+                        {data.gallery.map((url, i) => {
+                          const lightboxIdx = data.coverImageUrl ? i + 1 : i;
+                          return (
+                            <button
+                              key={url}
+                              type="button"
+                              onClick={() => setLightboxIndex(lightboxIdx)}
+                              className="group aspect-square overflow-hidden rounded-md border hover:border-primary/40 transition-colors relative cursor-zoom-in"
+                              title="Ver em tela cheia"
+                            >
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={url} alt="" className="w-full h-full object-cover" />
+                              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 flex items-center justify-center transition-colors">
+                                <Maximize2 className="h-4 w-4 text-white opacity-0 group-hover:opacity-100" />
+                              </div>
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
                   )}
@@ -390,6 +412,14 @@ export function CharacterSheet({
           </div>
         )}
       </SheetContent>
+
+      <ImageLightbox
+        open={lightboxIndex !== null}
+        images={allImages}
+        startIndex={lightboxIndex ?? 0}
+        altPrefix={data.name}
+        onClose={() => setLightboxIndex(null)}
+      />
     </Sheet>
   );
 }
