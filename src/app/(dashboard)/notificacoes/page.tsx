@@ -7,6 +7,8 @@ import { format, isToday, isYesterday, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { PageHeader } from "@/components/layout/page-header";
+import { EmptyState } from "@/components/layout/empty-state";
 
 const TYPE_ICONS: Record<string, React.ElementType> = {
   escala: Calendar,
@@ -69,8 +71,8 @@ export default function NotificacoesPage() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <div className="h-8 w-40 skeleton rounded-md" />
-        <div className="h-64 skeleton rounded-lg" />
+        <div className="h-24 skeleton rounded-2xl" />
+        <div className="h-64 skeleton rounded-2xl" />
       </div>
     );
   }
@@ -79,23 +81,46 @@ export default function NotificacoesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="font-heading text-2xl">Notificações</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">{unread.length} não lidas</p>
-        </div>
-        {unread.length > 0 && (
-          <Button variant="ghost" size="sm" onClick={() => markAsRead()}>
-            <CheckCheck className="h-4 w-4 mr-1.5" /> Marcar todas
-          </Button>
-        )}
-      </div>
+      <PageHeader
+        eyebrow="Atividade"
+        title="Notificações"
+        description="Atualizações sobre suas escalas e a equipe"
+        icon={Bell}
+        actions={
+          unread.length > 0 && (
+            <Button variant="outline" size="sm" className="h-9" onClick={() => markAsRead()}>
+              <CheckCheck className="h-4 w-4 mr-1.5" /> Marcar todas
+            </Button>
+          )
+        }
+        meta={
+          notifications.length > 0 && (
+            <div className="flex items-center gap-5 text-xs">
+              <span className="flex items-baseline gap-1.5">
+                <span className="font-heading text-lg font-semibold tabular-nums">{notifications.length}</span>
+                <span className="text-muted-foreground">no total</span>
+              </span>
+              {unread.length > 0 && (
+                <>
+                  <span className="h-3 w-px bg-border" />
+                  <span className="flex items-baseline gap-1.5">
+                    <span className="font-heading text-lg font-semibold tabular-nums text-primary">{unread.length}</span>
+                    <span className="text-muted-foreground">não lidas</span>
+                  </span>
+                </>
+              )}
+            </div>
+          )
+        }
+      />
 
       {notifications.length === 0 ? (
-        <div className="border rounded-xl p-16 text-center bg-card">
-          <Bell className="h-8 w-8 mx-auto text-muted-foreground/20 mb-2" />
-          <p className="text-sm text-muted-foreground">Nenhuma notificacao</p>
-        </div>
+        <EmptyState
+          icon={Bell}
+          tone="primary"
+          title="Sem notificações"
+          description="Você verá aqui avisos sobre suas escalas, roteiros e revisões."
+        />
       ) : (
         <div className="space-y-5">
           {groupByDate(notifications).map(({ label, items }) => (

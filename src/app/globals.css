@@ -156,7 +156,7 @@
 .skeleton {
   position: relative;
   overflow: hidden;
-  background: oklch(0.95 0.004 85);
+  background: oklch(0.89 0.006 85);
   border-radius: 0.5rem;
 }
 .skeleton::after {
@@ -166,14 +166,13 @@
   background: linear-gradient(
     90deg,
     transparent 0%,
-    oklch(1 0 0 / 0.55) 30%,
-    oklch(1 0 0 / 0.85) 50%,
-    oklch(1 0 0 / 0.55) 70%,
+    oklch(1 0 0 / 0.4) 40%,
+    oklch(1 0 0 / 0.75) 50%,
+    oklch(1 0 0 / 0.4) 60%,
     transparent 100%
   );
   background-size: 200% 100%;
   animation: shimmer 1.6s ease-in-out infinite;
-  background-position: -200% 0;
 }
 
 @keyframes pulse-ring {
