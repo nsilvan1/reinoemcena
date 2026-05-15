@@ -284,3 +284,110 @@ a:focus-visible {
 button, a, input, textarea, select {
   transition: color 150ms ease, background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
 }
+
+/* ═══ Glassmorphism ═══ */
+.glass {
+  background: oklch(1 0 0 / 0.04);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid oklch(1 0 0 / 0.08);
+  box-shadow:
+    0 8px 32px oklch(0 0 0 / 0.18),
+    inset 0 1px 0 oklch(1 0 0 / 0.06);
+}
+.glass-light {
+  background: oklch(1 0 0 / 0.6);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  border: 1px solid oklch(1 0 0 / 0.4);
+  box-shadow:
+    0 4px 24px oklch(0 0 0 / 0.06),
+    inset 0 1px 0 oklch(1 0 0 / 0.8);
+}
+
+/* ═══ Gradient text shimmer ═══ */
+.text-gradient {
+  background: linear-gradient(135deg, oklch(0.96 0.005 85) 0%, oklch(0.78 0.13 158) 60%, oklch(0.88 0.10 158) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+.text-gradient-shift {
+  background: linear-gradient(135deg, oklch(0.92 0.008 85) 0%, oklch(0.78 0.13 158) 50%, oklch(0.92 0.10 158) 100%);
+  background-size: 180% 180%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: gradient-shift 12s ease-in-out infinite;
+}
+@keyframes gradient-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+/* ═══ Floating orbs ═══ */
+@keyframes orb-float {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(30px, -20px) scale(1.05); }
+  66% { transform: translate(-20px, 25px) scale(0.95); }
+}
+.orb-float-slow { animation: orb-float 18s ease-in-out infinite; }
+.orb-float-fast { animation: orb-float 12s ease-in-out infinite; }
+
+/* ═══ Subtle pulse for status dot ═══ */
+@keyframes status-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+.status-pulse { animation: status-pulse 2.4s ease-in-out infinite; }
+
+/* ═══ Welcome morph animations ═══ */
+@keyframes form-out {
+  0% { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-12px) scale(0.96); filter: blur(4px); }
+}
+@keyframes welcome-in {
+  0% { opacity: 0; transform: translateY(16px) scale(0.94); filter: blur(6px); }
+  60% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+  100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+}
+.form-out { animation: form-out 0.45s ease-in forwards; }
+.welcome-in { animation: welcome-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+/* ═══ Sweep highlight (loading) ═══ */
+@keyframes sweep {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.sweep-glow {
+  background: linear-gradient(110deg, transparent 35%, oklch(0.65 0.13 158 / 0.4) 50%, transparent 65%);
+  background-size: 200% 100%;
+  animation: sweep 1.8s ease-in-out infinite;
+}
+
+/* ═══ Conic gradient border ═══ */
+.gradient-border {
+  position: relative;
+}
+.gradient-border::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: conic-gradient(from 0deg, oklch(0.65 0.13 158 / 0.6), transparent 25%, transparent 50%, oklch(0.65 0.13 158 / 0.3) 75%, transparent);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+/* ═══ Scale + fade in sequence ═══ */
+@keyframes pop-in {
+  0% { opacity: 0; transform: scale(0.85) translateY(8px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+.pop-in { animation: pop-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
