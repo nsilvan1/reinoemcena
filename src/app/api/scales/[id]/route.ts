@@ -6,6 +6,8 @@ import Roteiro from "@/models/Roteiro";
 import TaskProgress from "@/models/TaskProgress";
 import Comment from "@/models/Comment";
 import "@/models/User";
+import "@/models/Character";
+import "@/models/HistoryCard";
 import { requireAuth, requireRole } from "@/lib/auth-helpers";
 
 const MONTH_REGEX = /^\d{4}-\d{2}$/;
@@ -20,6 +22,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const scale = await Scale.findById(id)
     .populate("weeks.assignments.roteiristas weeks.assignments.editores weeks.assignments.narradores", "name username avatar skills")
     .populate("weeks.roteiro")
+    .populate("weeks.historyCardId", "title coverImageUrl traits")
+    .populate("weeks.characterIds", "name coverImageUrl traits")
     .populate("createdBy", "name");
 
   if (!scale) return NextResponse.json({ error: "Escala não encontrada" }, { status: 404 });

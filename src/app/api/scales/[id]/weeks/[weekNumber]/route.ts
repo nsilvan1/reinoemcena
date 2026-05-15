@@ -3,10 +3,12 @@ import mongoose from "mongoose";
 import { connectDB } from "@/lib/mongodb";
 import Scale from "@/models/Scale";
 import TaskProgress from "@/models/TaskProgress";
+import Character from "@/models/Character";
+import HistoryCard from "@/models/HistoryCard";
 import { requireAuth, requireRole } from "@/lib/auth-helpers";
 import { isSafeUrl } from "@/lib/sanitize";
 import { tryAdvanceWeek } from "@/lib/week-advance";
-import { WeekStatus } from "@/types";
+import { WeekStatus, ROLE_HIERARCHY, type Role } from "@/types";
 
 type Params = { params: Promise<{ id: string; weekNumber: string }> };
 
@@ -14,21 +16,74 @@ const VALID_STATUSES: WeekStatus[] = ["roteiro", "gravacao", "edicao", "revisao"
 const VALID_ROLES = ["roteirista", "narrador", "editor"] as const;
 type ProgressRole = (typeof VALID_ROLES)[number];
 
-// PUT /api/scales/[id]/weeks/[weekNumber] — atualizar semana (coordenador+)
+// Campos que roteirista+ pode editar (referências do acervo).
+// Demais campos exigem coordenador+.
+const ROTEIRISTA_FIELDS = new Set(["historyCardId", "characterIds"]);
+
+// PUT /api/scales/[id]/weeks/[weekNumber] — atualizar semana.
+// - Coordenador+: qualquer campo
+// - Roteirista: somente historyCardId/characterIds (vinculação de acervo)
 export async function PUT(req: NextRequest, { params }: Params) {
-  const { error } = await requireRole("coordenador");
-  if (error) return error;
+  const { error: authError, user } = await requireAuth();
+  if (authError) return authError;
 
   await connectDB();
   const { id, weekNumber } = await params;
   const body = await req.json();
   const wNum = parseInt(weekNumber);
 
+  const bodyKeys = Object.keys(body).filter((k) => body[k] !== undefined);
+  const onlyAcervoFields = bodyKeys.length > 0 && bodyKeys.every((k) => ROTEIRISTA_FIELDS.has(k));
+  const userLevel = ROLE_HIERARCHY[user.role as Role] ?? 0;
+
+  if (!onlyAcervoFields && userLevel < ROLE_HIERARCHY.coordenador) {
+    return NextResponse.json({ error: "Permissão de coordenador necessária" }, { status: 403 });
+  }
+  if (onlyAcervoFields && userLevel < ROLE_HIERARCHY.roteirista) {
+    return NextResponse.json({ error: "Permissão de roteirista necessária" }, { status: 403 });
+  }
+
   if (body.status !== undefined && !VALID_STATUSES.includes(body.status)) {
     return NextResponse.json(
       { error: `Status inválido. Valores aceitos: ${VALID_STATUSES.join(", ")}` },
       { status: 400 }
     );
+  }
+
+  // Validações de referências do acervo antes de tocar a escala
+  if (body.historyCardId !== undefined && body.historyCardId !== null) {
+    if (!mongoose.isValidObjectId(body.historyCardId)) {
+      return NextResponse.json({ error: "historyCardId inválido" }, { status: 400 });
+    }
+    const exists = await HistoryCard.exists({ _id: body.historyCardId });
+    if (!exists) {
+      return NextResponse.json({ error: "História não encontrada no acervo" }, { status: 404 });
+    }
+  }
+
+  let characterIdsClean: string[] | undefined;
+  if (body.characterIds !== undefined) {
+    if (!Array.isArray(body.characterIds)) {
+      return NextResponse.json({ error: "characterIds deve ser array" }, { status: 400 });
+    }
+    const valid = body.characterIds.filter(
+      (cid: unknown) => typeof cid === "string" && mongoose.isValidObjectId(cid)
+    ) as string[];
+    if (valid.length > 20) {
+      return NextResponse.json({ error: "Máximo 20 personagens por semana" }, { status: 400 });
+    }
+    if (valid.length > 0) {
+      const existing = await Character.find({ _id: { $in: valid } }).select("_id").lean();
+      const existingSet = new Set(existing.map((c: { _id: { toString(): string } }) => c._id.toString()));
+      const missing = valid.filter((v) => !existingSet.has(v));
+      if (missing.length > 0) {
+        return NextResponse.json(
+          { error: `Personagens não encontrados: ${missing.join(", ")}` },
+          { status: 404 }
+        );
+      }
+    }
+    characterIdsClean = valid;
   }
 
   const scale = await Scale.findById(id);
@@ -41,6 +96,14 @@ export async function PUT(req: NextRequest, { params }: Params) {
   if (body.deadline !== undefined) scale.weeks[weekIdx].deadline = body.deadline;
   if (body.assignments !== undefined) scale.weeks[weekIdx].assignments = body.assignments;
   if (body.status !== undefined) scale.weeks[weekIdx].status = body.status;
+
+  if (body.historyCardId !== undefined) {
+    scale.weeks[weekIdx].historyCardId =
+      body.historyCardId === null || body.historyCardId === "" ? undefined : body.historyCardId;
+  }
+  if (characterIdsClean !== undefined) {
+    scale.weeks[weekIdx].characterIds = characterIdsClean;
+  }
 
   await scale.save();
   return NextResponse.json(scale.weeks[weekIdx]);

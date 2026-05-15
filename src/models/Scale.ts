@@ -11,6 +11,8 @@ export interface IWeek {
     narradores: Types.ObjectId[];
   };
   roteiro?: Types.ObjectId;
+  historyCardId?: Types.ObjectId;
+  characterIds: Types.ObjectId[];
 }
 
 export interface IScale extends Document {
@@ -39,6 +41,15 @@ const WeekSchema = new Schema<IWeek>(
       narradores: [{ type: Schema.Types.ObjectId, ref: "User" }],
     },
     roteiro: { type: Schema.Types.ObjectId, ref: "Roteiro" },
+    historyCardId: { type: Schema.Types.ObjectId, ref: "HistoryCard" },
+    characterIds: {
+      type: [{ type: Schema.Types.ObjectId, ref: "Character" }],
+      default: [],
+      validate: {
+        validator: (arr: unknown[]) => arr.length <= 20,
+        message: "Máximo 20 personagens por semana",
+      },
+    },
   },
   { _id: false }
 );

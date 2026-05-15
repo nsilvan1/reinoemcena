@@ -24,6 +24,9 @@ import { RecordingsUploader } from "@/components/escala/recordings-uploader";
 import { RecordingsOverview } from "@/components/escala/recordings-overview";
 import { EditingUploader } from "@/components/escala/editing-uploader";
 import { EditingOverview } from "@/components/escala/editing-overview";
+import { WeekReferences } from "@/components/escala/week-references";
+import { HistoryCardPicker } from "@/components/acervo/history-card-picker";
+import { CharacterPicker } from "@/components/acervo/character-picker";
 
 const ROLE_TO_STAGE: Record<string, string> = { roteirista: "roteiro", narrador: "gravacao", editor: "edicao" };
 
@@ -56,9 +59,14 @@ export default function ScaleDetailPage() {
   // Admin advance confirmation
   const [confirmAdvance, setConfirmAdvance] = useState<string | null>(null);
 
+  // Acervo pickers
+  const [pickHistoryOpen, setPickHistoryOpen] = useState(false);
+  const [pickCharactersOpen, setPickCharactersOpen] = useState(false);
+
   const userId = (session?.user as any)?.id;
   const role = (session?.user as any)?.role;
   const canReview = ["admin", "coordenador"].includes(role);
+  const canLinkAcervo = ["admin", "coordenador", "roteirista"].includes(role);
 
   useEffect(() => {
     fetch(`/api/scales/${id}`).then((r) => r.ok ? r.json() : null).then((data) => {
@@ -162,6 +170,32 @@ export default function ScaleDetailPage() {
     });
     if (res.ok) { toast.success("Etapa atualizada!"); refreshData(); }
     else toast.error("Erro ao atualizar etapa");
+  }
+
+  async function handlePickHistory(historyCardId: string | null) {
+    const res = await fetch(`/api/scales/${id}/weeks/${selectedWeek}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ historyCardId }),
+    });
+    if (res.ok) { toast.success(historyCardId ? "História vinculada" : "Removido"); refreshData(); }
+    else {
+      const err = await res.json().catch(() => ({}));
+      toast.error((err as { error?: string }).error || "Erro ao vincular");
+    }
+  }
+
+  async function handlePickCharacters(characterIds: string[]) {
+    const res = await fetch(`/api/scales/${id}/weeks/${selectedWeek}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ characterIds }),
+    });
+    if (res.ok) { toast.success("Personagens atualizados"); refreshData(); }
+    else {
+      const err = await res.json().catch(() => ({}));
+      toast.error((err as { error?: string }).error || "Erro ao atualizar");
+    }
   }
 
 
@@ -297,6 +331,15 @@ export default function ScaleDetailPage() {
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
           {/* ═══ LEFT ═══ */}
           <div className="xl:col-span-2 space-y-4">
+
+            <WeekReferences
+              historyCard={currentWeek?.historyCardId || null}
+              characters={currentWeek?.characterIds || []}
+              canEdit={canLinkAcervo}
+              onPickHistory={() => setPickHistoryOpen(true)}
+              onPickCharacters={() => setPickCharactersOpen(true)}
+            />
+
 
             {/* Action — FIRST: user sees their task immediately */}
             <div className="card-elevated border rounded-xl bg-card overflow-hidden">
@@ -1013,6 +1056,19 @@ export default function ScaleDetailPage() {
           </div>
         </div>
       )}
+
+      <HistoryCardPicker
+        open={pickHistoryOpen}
+        onOpenChange={setPickHistoryOpen}
+        selectedId={currentWeek?.historyCardId?._id}
+        onSelect={handlePickHistory}
+      />
+      <CharacterPicker
+        open={pickCharactersOpen}
+        onOpenChange={setPickCharactersOpen}
+        selectedIds={(currentWeek?.characterIds || []).map((c: any) => c._id || c)}
+        onConfirm={handlePickCharacters}
+      />
     </div>
   );
 }
