@@ -84,7 +84,12 @@ export default function ScaleDetailPage() {
   }, [id, selectedWeek, scale]);
 
   useEffect(() => {
-    commentsEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    const el = commentsEndRef.current;
+    if (!el) return;
+    const container = el.parentElement;
+    if (!container) return;
+    // Rola apenas o container interno do chat, nunca a página
+    container.scrollTo({ top: container.scrollHeight, behavior: "smooth" });
   }, [comments]);
 
   useEffect(() => {
@@ -252,8 +257,8 @@ export default function ScaleDetailPage() {
     <div className="space-y-4">
       <div className="h-8 w-52 skeleton rounded-md" />
       <div className="h-10 skeleton rounded-lg" />
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-        <div className="xl:col-span-2 h-80 skeleton rounded-xl" />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-2 h-80 skeleton rounded-xl" />
         <div className="h-80 skeleton rounded-xl" />
       </div>
     </div>
@@ -329,9 +334,9 @@ export default function ScaleDetailPage() {
       </div>
 
       {currentWeek && (
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* ═══ LEFT ═══ */}
-          <div className="xl:col-span-2 space-y-4">
+          <div className="lg:col-span-2 space-y-4">
 
             <WeekReferences
               historyCard={currentWeek?.historyCardId || null}
@@ -1022,8 +1027,8 @@ export default function ScaleDetailPage() {
 
           {/* ═══ RIGHT — Comments ═══ */}
           <div>
-            <div className="card-glass rounded-xl sticky top-20 overflow-hidden">
-              <div className="flex flex-col" style={{ height: "min(calc(100vh - 9rem), 580px)" }}>
+            <div className="card-glass rounded-xl lg:sticky lg:top-6 overflow-hidden">
+              <div className="flex flex-col" style={{ height: "min(calc(100vh - 6rem), 640px)" }}>
                 <div className="px-3 py-2.5 border-b bg-muted/20 flex items-center gap-2">
                   <MessageCircle className="h-3.5 w-3.5 text-primary" />
                   <span className="text-xs font-bold">Comentários</span>
