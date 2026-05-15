@@ -20,7 +20,6 @@ import { cn, parseLocalDate } from "@/lib/utils";
 import { STEPS } from "@/components/pipeline/mini-pipeline";
 import { RichTextEditor } from "@/components/editor/rich-text-editor";
 import { StageAttachments } from "@/components/escala/stage-attachments";
-import { CharactersSection } from "@/components/escala/characters-section";
 import { RecordingsUploader } from "@/components/escala/recordings-uploader";
 import { RecordingsOverview } from "@/components/escala/recordings-overview";
 import { EditingUploader } from "@/components/escala/editing-uploader";
@@ -60,7 +59,6 @@ export default function ScaleDetailPage() {
   const userId = (session?.user as any)?.id;
   const role = (session?.user as any)?.role;
   const canReview = ["admin", "coordenador"].includes(role);
-  const canEditCharacters = ["admin", "coordenador", "roteirista"].includes(role);
 
   useEffect(() => {
     fetch(`/api/scales/${id}`).then((r) => r.ok ? r.json() : null).then((data) => {
@@ -839,13 +837,6 @@ export default function ScaleDetailPage() {
                 </div>
               )}
             </div>
-
-            <CharactersSection
-              scaleId={String(id)}
-              weekNumber={selectedWeek}
-              canEdit={canEditCharacters}
-              currentUserId={userId}
-            />
 
             {/* Team + Progress — collapsible */}
             {(() => {

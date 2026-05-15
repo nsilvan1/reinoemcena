@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
-import Character from "@/models/Character";
+import HistoryCard from "@/models/HistoryCard";
 import { requireAuth, requireRole } from "@/lib/auth-helpers";
 import { isSafeUrl } from "@/lib/sanitize";
 
@@ -10,21 +10,10 @@ function normalizeTraits(input: unknown): string[] | null {
   const cleaned = input
     .map((t) => (typeof t === "string" ? t.trim().slice(0, 30) : ""))
     .filter((t) => t.length > 0);
-  const unique = Array.from(new Set(cleaned));
-  return unique.slice(0, 10);
+  return Array.from(new Set(cleaned)).slice(0, 10);
 }
 
-function normalizeGallery(input: unknown): string[] | null {
-  if (input === undefined) return null;
-  if (!Array.isArray(input)) return null;
-  const cleaned: string[] = [];
-  for (const url of input) {
-    if (typeof url === "string" && isSafeUrl(url)) cleaned.push(url);
-  }
-  return cleaned.slice(0, 20);
-}
-
-// GET /api/characters?search=
+// GET /api/history-cards?search=
 export async function GET(req: NextRequest) {
   const { error } = await requireAuth();
   if (error) return error;
@@ -37,37 +26,37 @@ export async function GET(req: NextRequest) {
   const filter: Record<string, unknown> = {};
   if (search) {
     const safe = search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    filter.$or = [{ name: { $regex: safe, $options: "i" } }, { traits: { $regex: safe, $options: "i" } }];
+    filter.$or = [{ title: { $regex: safe, $options: "i" } }, { traits: { $regex: safe, $options: "i" } }];
   }
 
-  const characters = await Character.find(filter)
+  const cards = await HistoryCard.find(filter)
     .populate("createdBy", "name")
-    .sort({ name: 1 });
+    .sort({ title: 1 });
 
-  return NextResponse.json(characters);
+  return NextResponse.json(cards);
 }
 
-// POST /api/characters
+// POST /api/history-cards
 export async function POST(req: NextRequest) {
   const { error, user } = await requireRole("roteirista");
   if (error) return error;
 
   const body = await req.json();
-  const { name, description, traits, coverImageUrl, gallery } = body;
+  const { title, description, traits, coverImageUrl } = body;
 
-  if (!name || typeof name !== "string") {
-    return NextResponse.json({ error: "name é obrigatório" }, { status: 400 });
+  if (!title || typeof title !== "string") {
+    return NextResponse.json({ error: "title é obrigatório" }, { status: 400 });
   }
-  const trimmedName = name.trim();
-  if (!trimmedName) {
-    return NextResponse.json({ error: "name não pode estar vazio" }, { status: 400 });
+  const trimmedTitle = title.trim();
+  if (!trimmedTitle) {
+    return NextResponse.json({ error: "title não pode estar vazio" }, { status: 400 });
   }
-  if (trimmedName.length > 80) {
-    return NextResponse.json({ error: "name deve ter no máximo 80 caracteres" }, { status: 400 });
+  if (trimmedTitle.length > 120) {
+    return NextResponse.json({ error: "title deve ter no máximo 120 caracteres" }, { status: 400 });
   }
 
   const trimmedDescription =
-    description !== undefined ? String(description).trim().slice(0, 1000) : "";
+    description !== undefined ? String(description).trim().slice(0, 2000) : "";
 
   if (coverImageUrl !== undefined && coverImageUrl !== null && coverImageUrl !== "") {
     if (typeof coverImageUrl !== "string" || !isSafeUrl(coverImageUrl)) {
@@ -76,20 +65,18 @@ export async function POST(req: NextRequest) {
   }
 
   const cleanedTraits = normalizeTraits(traits) ?? [];
-  const cleanedGallery = normalizeGallery(gallery) ?? [];
 
   await connectDB();
 
-  const character = await Character.create({
-    name: trimmedName,
+  const card = await HistoryCard.create({
+    title: trimmedTitle,
     description: trimmedDescription,
     traits: cleanedTraits,
-    gallery: cleanedGallery,
     ...(coverImageUrl ? { coverImageUrl } : {}),
     createdBy: user.id,
   });
 
-  await character.populate("createdBy", "name");
+  await card.populate("createdBy", "name");
 
-  return NextResponse.json(character, { status: 201 });
+  return NextResponse.json(card, { status: 201 });
 }

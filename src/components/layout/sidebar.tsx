@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import {
   LayoutDashboard, Calendar, FileText, Users, Bell, LogOut,
-  Menu, Clapperboard, ChevronRight,
+  Menu, Clapperboard, ChevronRight, Images,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { useNotifications } from "@/hooks/useNotifications";
@@ -16,6 +16,7 @@ const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/escalas", label: "Escalas", icon: Calendar },
   { href: "/roteiros", label: "Roteiros", icon: FileText },
+  { href: "/acervo", label: "Acervo", icon: Images },
   { href: "/membros", label: "Membros", icon: Users, minRole: "coordenador" },
   { href: "/notificacoes", label: "Notificações", icon: Bell },
 ];
