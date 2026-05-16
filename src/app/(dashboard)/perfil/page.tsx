@@ -1,22 +1,21 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { Save, UserCircle } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { PageHeader } from "@/components/layout/page-header";
+import { Button, Card, Input, Badge, Avatar, Field, PageHeader } from "@/components/v2/primitives";
 
 const ROLE_LABELS: Record<string, string> = {
   admin: "Administrador", coordenador: "Coordenador", roteirista: "Roteirista", membro: "Membro",
 };
 
-const ROLE_STYLES: Record<string, string> = {
-  admin: "bg-red-50 text-red-700", coordenador: "bg-blue-50 text-blue-700",
-  roteirista: "bg-violet-50 text-violet-700", membro: "bg-gray-50 text-gray-600",
+const ROLE_TONE: Record<string, "danger" | "info" | "violet" | "neutral"> = {
+  admin: "danger",
+  coordenador: "info",
+  roteirista: "violet",
+  membro: "neutral",
 };
 
 export default function PerfilPage() {
@@ -82,20 +81,16 @@ export default function PerfilPage() {
         icon={UserCircle}
       />
 
-      <div className="card-glass rounded-2xl overflow-hidden">
-        <div className="p-5 sm:p-6">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/10 ring-1 ring-primary/15 flex items-center justify-center text-xl font-bold text-primary shadow-sm">
-              {userData.name[0]?.toUpperCase()}
-            </div>
+      <Card className="overflow-hidden">
+        <div className="p-6">
+          <div className="flex items-center gap-4 mb-7">
+            <Avatar name={userData.name} size="xl" status="online" />
             <div className="min-w-0">
-              <p className="font-heading text-lg font-semibold leading-tight">{userData.name}</p>
-              <div className="flex flex-wrap gap-1.5 mt-1.5">
-                <Badge className={cn("text-[10px] border-0 font-semibold uppercase tracking-wider", ROLE_STYLES[userData.role])}>
-                  {ROLE_LABELS[userData.role]}
-                </Badge>
+              <p className="font-heading text-xl font-semibold leading-tight">{userData.name}</p>
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                <Badge tone={ROLE_TONE[userData.role] || "neutral"}>{ROLE_LABELS[userData.role]}</Badge>
                 {userData.skills?.map((s: string) => (
-                  <Badge key={s} variant="outline" className="text-[10px] capitalize bg-muted/40">
+                  <Badge key={s} tone="neutral">
                     {s}
                   </Badge>
                 ))}
@@ -104,42 +99,38 @@ export default function PerfilPage() {
           </div>
 
           <form onSubmit={handleSave} className="space-y-4">
-            <div className="space-y-1.5">
-              <Label className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground">Nome</Label>
+            <Field label="Nome">
               <Input value={name} onChange={(e) => setName(e.target.value)} required />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground">Usuário</Label>
+            </Field>
+            <Field label="Usuário" hint="Não pode ser alterado">
               <Input value={userData.username} disabled className="font-mono" />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground">Nova senha</Label>
+            </Field>
+            <Field label="Nova senha" hint="Deixe em branco para manter a atual">
               <Input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Manter atual"
+                placeholder="••••••••"
               />
-            </div>
+            </Field>
             {password && (
-              <div className="space-y-1.5">
-                <Label className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground">Confirmar senha</Label>
+              <Field label="Confirmar senha">
                 <Input
                   type="password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                 />
-              </div>
+              </Field>
             )}
           </form>
         </div>
 
-        <div className="px-5 sm:px-6 py-4 border-t bg-muted/20">
-          <Button onClick={handleSave} className="w-full h-10 shadow-sm shadow-primary/15" disabled={saving}>
-            <Save className="h-4 w-4 mr-1.5" /> {saving ? "Salvando..." : "Salvar alterações"}
+        <div className="px-6 py-4 border-t border-border bg-[oklch(0.16_0.010_240)]">
+          <Button onClick={handleSave} size="lg" className="w-full" loading={saving}>
+            <Save className="h-4 w-4" /> {saving ? "Salvando..." : "Salvar alterações"}
           </Button>
         </div>
-      </div>
+      </Card>
     </div>
   );
 }

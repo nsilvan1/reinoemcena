@@ -3,14 +3,12 @@ import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Plus, FileText, Upload } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
-import { PageHeader } from "@/components/layout/page-header";
-import { EmptyState } from "@/components/layout/empty-state";
+import { Button, Card, Badge, Avatar, PageHeader, EmptyState } from "@/components/v2/primitives";
+import { cn } from "@/lib/utils";
 
 export default function RoteirosPage() {
   const { data: session } = useSession();
@@ -50,28 +48,28 @@ export default function RoteirosPage() {
         actions={
           canCreate && (
             <Link href="/roteiros/novo">
-              <Button size="sm" className="h-9 shadow-sm shadow-primary/15">
-                <Plus className="h-4 w-4 mr-1.5" /> Novo roteiro
+              <Button>
+                <Plus className="h-3.5 w-3.5" /> Novo roteiro
               </Button>
             </Link>
           )
         }
         meta={
           roteiros.length > 0 && (
-            <div className="flex items-center gap-5 text-xs">
+            <div className="flex items-center gap-6 text-[12px]">
               <span className="flex items-baseline gap-1.5">
-                <span className="font-heading text-lg font-semibold tabular-nums">{roteiros.length}</span>
-                <span className="text-muted-foreground">no total</span>
+                <span className="font-heading text-xl font-semibold tabular-nums">{roteiros.length}</span>
+                <span className="text-muted-foreground/65 font-mono uppercase tracking-[0.18em] text-[10px]">no total</span>
               </span>
               <span className="h-3 w-px bg-border" />
               <span className="flex items-baseline gap-1.5">
-                <span className="font-heading text-lg font-semibold tabular-nums text-blue-600">{withText}</span>
-                <span className="text-muted-foreground">com texto</span>
+                <span className="font-heading text-xl font-semibold tabular-nums text-[oklch(0.80_0.14_220)]">{withText}</span>
+                <span className="text-muted-foreground/65 font-mono uppercase tracking-[0.18em] text-[10px]">com texto</span>
               </span>
               <span className="h-3 w-px bg-border" />
               <span className="flex items-baseline gap-1.5">
-                <span className="font-heading text-lg font-semibold tabular-nums text-violet-600">{withFile}</span>
-                <span className="text-muted-foreground">com arquivo</span>
+                <span className="font-heading text-xl font-semibold tabular-nums text-[oklch(0.80_0.14_300)]">{withFile}</span>
+                <span className="text-muted-foreground/65 font-mono uppercase tracking-[0.18em] text-[10px]">com arquivo</span>
               </span>
             </div>
           )
@@ -81,74 +79,69 @@ export default function RoteirosPage() {
       {roteiros.length === 0 ? (
         <EmptyState
           icon={FileText}
-          tone="primary"
           title="Nenhum roteiro ainda"
           description="Comece criando o primeiro roteiro ou faça upload de um documento existente."
           action={
             canCreate && (
               <Link href="/roteiros/novo">
-                <Button size="sm" className="h-9 shadow-sm shadow-primary/15">
-                  <Plus className="h-4 w-4 mr-1.5" /> Criar primeiro roteiro
+                <Button>
+                  <Plus className="h-3.5 w-3.5" /> Criar primeiro roteiro
                 </Button>
               </Link>
             )
           }
         />
       ) : (
-        <div className="card-glass rounded-2xl overflow-hidden animate-in-view">
+        <Card className="overflow-hidden animate-in-view">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left bg-muted/30 border-b border-border/60">
-                <th className="pl-5 sm:pl-6 pr-3 py-3 text-[10px] font-bold text-muted-foreground/70 uppercase tracking-[0.15em]">Título</th>
-                <th className="px-3 py-3 text-[10px] font-bold text-muted-foreground/70 uppercase tracking-[0.15em] hidden sm:table-cell">Autor</th>
-                <th className="px-3 py-3 text-[10px] font-bold text-muted-foreground/70 uppercase tracking-[0.15em] hidden md:table-cell">Data</th>
-                <th className="px-3 py-3 text-[10px] font-bold text-muted-foreground/70 uppercase tracking-[0.15em]">Tipo</th>
-                <th className="px-3 sm:pr-6 py-3 text-[10px] font-bold text-muted-foreground/70 uppercase tracking-[0.15em] text-right">Equipe</th>
+              <tr className="text-left bg-[oklch(0.16_0.010_240)] border-b border-border">
+                <th className="pl-6 pr-3 py-3 text-[10px] font-mono uppercase tracking-[0.22em] text-muted-foreground/55">Título</th>
+                <th className="px-3 py-3 text-[10px] font-mono uppercase tracking-[0.22em] text-muted-foreground/55 hidden sm:table-cell">Autor</th>
+                <th className="px-3 py-3 text-[10px] font-mono uppercase tracking-[0.22em] text-muted-foreground/55 hidden md:table-cell">Data</th>
+                <th className="px-3 py-3 text-[10px] font-mono uppercase tracking-[0.22em] text-muted-foreground/55">Tipo</th>
+                <th className="px-3 pr-6 py-3 text-[10px] font-mono uppercase tracking-[0.22em] text-muted-foreground/55 text-right">Equipe</th>
               </tr>
             </thead>
             <tbody>
-              {roteiros.map((r: any) => (
+              {roteiros.map((r: { _id: string; title: string; fileUrl?: string; content?: string; weekNumber?: number; createdBy?: { name?: string }; createdAt: string; assignedNarrators?: Array<{ _id: string; name: string }>; assignedEditors?: Array<{ _id: string; name: string }> }) => (
                 <tr
                   key={r._id}
                   onClick={() => router.push(`/roteiros/${r._id}`)}
-                  className="border-t border-border/60 hover:bg-primary/[0.025] transition-colors group cursor-pointer"
+                  className="border-t border-border/60 hover:bg-[oklch(0.17_0.010_240)] transition-colors group cursor-pointer"
                 >
-                  <td className="pl-5 sm:pl-6 pr-3 py-3.5">
+                  <td className="pl-6 pr-3 py-3.5">
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-primary/15 to-primary/5 border border-primary/15 flex items-center justify-center shrink-0">
-                        {r.fileUrl ? <Upload className="h-4 w-4 text-primary" strokeWidth={1.8} /> : <FileText className="h-4 w-4 text-primary" strokeWidth={1.8} />}
-                      </div>
+                      <span className="h-9 w-9 rounded-lg bg-[oklch(0.18_0.014_158)] ring-1 ring-[oklch(0.28_0.030_158)]/40 flex items-center justify-center shrink-0">
+                        {r.fileUrl ? (
+                          <Upload className="h-4 w-4 text-[oklch(0.80_0.14_158)]" strokeWidth={1.8} />
+                        ) : (
+                          <FileText className="h-4 w-4 text-[oklch(0.80_0.14_158)]" strokeWidth={1.8} />
+                        )}
+                      </span>
                       <div className="min-w-0">
-                        <p className="font-semibold text-foreground/90 group-hover:text-primary transition-colors truncate leading-tight">
+                        <p className="font-semibold truncate leading-tight group-hover:text-[oklch(0.92_0.05_158)] transition-colors">
                           {r.title}
                         </p>
                         {r.weekNumber && (
-                          <p className="text-[10px] text-muted-foreground/70 mt-0.5 uppercase tracking-wider font-semibold">
+                          <p className="text-[10px] text-muted-foreground/55 mt-0.5 uppercase tracking-[0.18em] font-mono">
                             Semana {r.weekNumber}
                           </p>
                         )}
                       </div>
                     </div>
                   </td>
-                  <td className="px-3 py-3.5 text-muted-foreground hidden sm:table-cell">{r.createdBy?.name}</td>
-                  <td className="px-3 py-3.5 text-muted-foreground tabular-nums text-xs hidden md:table-cell">
+                  <td className="px-3 py-3.5 text-muted-foreground hidden sm:table-cell font-mono text-xs">{r.createdBy?.name}</td>
+                  <td className="px-3 py-3.5 text-muted-foreground tabular-nums text-xs hidden md:table-cell font-mono">
                     {format(new Date(r.createdAt), "dd MMM yyyy", { locale: ptBR })}
                   </td>
                   <td className="px-3 py-3.5">
                     <div className="flex flex-wrap gap-1">
-                      {r.fileUrl && (
-                        <Badge variant="secondary" className="text-[10px] bg-violet-50 text-violet-700 border-violet-200/60 font-semibold">
-                          Arquivo
-                        </Badge>
-                      )}
-                      {r.content && (
-                        <Badge variant="secondary" className="text-[10px] bg-blue-50 text-blue-700 border-blue-200/60 font-semibold">
-                          Texto
-                        </Badge>
-                      )}
+                      {r.fileUrl && <Badge tone="violet">Arquivo</Badge>}
+                      {r.content && <Badge tone="info">Texto</Badge>}
                     </div>
                   </td>
-                  <td className="px-3 sm:pr-6 py-3.5">
+                  <td className="px-3 pr-6 py-3.5">
                     <div className="flex items-center justify-end -space-x-1.5">
                       {(() => {
                         const people = [
@@ -156,22 +149,18 @@ export default function RoteirosPage() {
                           ...(r.assignedEditors || []),
                         ];
                         if (people.length === 0)
-                          return <span className="text-xs text-muted-foreground/40">—</span>;
+                          return <span className="text-xs text-muted-foreground/30">—</span>;
                         return (
                           <>
-                            {people.slice(0, 4).map((p: any, i: number) => (
-                              <div
-                                key={p._id || i}
-                                title={p.name}
-                                className="h-7 w-7 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 border-2 border-card flex items-center justify-center text-[10px] font-bold text-primary shadow-sm"
-                              >
-                                {p.name?.charAt(0).toUpperCase() || "?"}
-                              </div>
+                            {people.slice(0, 4).map((p, i: number) => (
+                              <span key={p._id || i} title={p.name} className={cn("ring-2 ring-card", i > 0 && "")}>
+                                <Avatar name={p.name} size="sm" />
+                              </span>
                             ))}
                             {people.length > 4 && (
-                              <div className="h-7 w-7 rounded-full bg-muted border-2 border-card flex items-center justify-center text-[10px] font-bold text-muted-foreground">
+                              <span className="h-8 w-8 rounded-full bg-[oklch(0.20_0.010_240)] border-2 border-card flex items-center justify-center text-[10px] font-mono font-bold text-muted-foreground">
                                 +{people.length - 4}
-                              </div>
+                              </span>
                             )}
                           </>
                         );
@@ -182,7 +171,7 @@ export default function RoteirosPage() {
               ))}
             </tbody>
           </table>
-        </div>
+        </Card>
       )}
     </div>
   );

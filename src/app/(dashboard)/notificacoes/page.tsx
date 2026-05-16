@@ -1,14 +1,12 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
 import { Bell, Check, CheckCheck, Calendar, FileText, Activity, Eye, Bell as BellIcon } from "lucide-react";
 import { format, isToday, isYesterday, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { PageHeader } from "@/components/layout/page-header";
-import { EmptyState } from "@/components/layout/empty-state";
+import { Button, Card, PageHeader, EmptyState } from "@/components/v2/primitives";
 
 const TYPE_ICONS: Record<string, React.ElementType> = {
   escala: Calendar,
@@ -19,11 +17,11 @@ const TYPE_ICONS: Record<string, React.ElementType> = {
 };
 
 const TYPE_BG: Record<string, string> = {
-  escala: "bg-blue-100 text-blue-600",
-  roteiro: "bg-violet-100 text-violet-600",
-  status: "bg-amber-100 text-amber-600",
-  revisao: "bg-orange-100 text-orange-600",
-  geral: "bg-gray-100 text-gray-600",
+  escala: "bg-[oklch(0.22_0.030_220)] text-[oklch(0.80_0.14_220)]",
+  roteiro: "bg-[oklch(0.22_0.030_300)] text-[oklch(0.80_0.14_300)]",
+  status: "bg-[oklch(0.22_0.030_60)] text-[oklch(0.80_0.14_60)]",
+  revisao: "bg-[oklch(0.22_0.030_25)] text-[oklch(0.80_0.14_25)]",
+  geral: "bg-[oklch(0.20_0.010_240)] text-muted-foreground",
 };
 
 function groupByDate(items: any[]) {
@@ -88,8 +86,8 @@ export default function NotificacoesPage() {
         icon={Bell}
         actions={
           unread.length > 0 && (
-            <Button variant="outline" size="sm" className="h-9" onClick={() => markAsRead()}>
-              <CheckCheck className="h-4 w-4 mr-1.5" /> Marcar todas
+            <Button variant="outline" onClick={() => markAsRead()}>
+              <CheckCheck className="h-3.5 w-3.5" /> Marcar todas
             </Button>
           )
         }
@@ -117,7 +115,6 @@ export default function NotificacoesPage() {
       {notifications.length === 0 ? (
         <EmptyState
           icon={Bell}
-          tone="primary"
           title="Sem notificações"
           description="Você verá aqui avisos sobre suas escalas, roteiros e revisões."
         />
@@ -125,10 +122,10 @@ export default function NotificacoesPage() {
         <div className="space-y-5">
           {groupByDate(notifications).map(({ label, items }) => (
             <div key={label}>
-              <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-1 mb-2">
+              <p className="text-[10px] font-mono uppercase tracking-[0.22em] text-muted-foreground/55 px-1 mb-2">
                 {label}
               </p>
-              <div className="card-glass rounded-xl overflow-hidden divide-y">
+              <Card className="overflow-hidden">
                 {items.map((n: any) => {
                   const NIcon = TYPE_ICONS[n.type] || TYPE_ICONS.geral;
                   const iconBg = TYPE_BG[n.type] || TYPE_BG.geral;
@@ -174,7 +171,7 @@ export default function NotificacoesPage() {
                     </div>
                   );
                 })}
-              </div>
+              </Card>
             </div>
           ))}
         </div>

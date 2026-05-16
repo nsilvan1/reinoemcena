@@ -3,8 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
 import { Drama, BookOpen, Plus, Search, Images, X } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { Button, Input, PageHeader } from "@/components/v2/primitives";
 import { CharacterCard, type CharacterSummary } from "@/components/acervo/character-card";
 import { HistoryCardItem, type HistoryCardSummary } from "@/components/acervo/history-card-item";
 import { CharacterSheet } from "@/components/acervo/character-sheet";
@@ -85,67 +84,55 @@ export default function AcervoPage() {
   }
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="h-10 w-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
-          <Images className="h-5 w-5 text-primary" />
-        </div>
-        <div className="min-w-0">
-          <h1 className="font-heading text-xl">Acervo</h1>
-          <p className="text-xs text-muted-foreground">
-            Banco visual de personagens e histórias
-          </p>
-        </div>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        eyebrow="Banco visual"
+        title="Acervo"
+        description="Personagens e histórias para usar nas escalas."
+        icon={Images}
+        actions={
+          canEdit && (
+            <Button onClick={tab === "personagens" ? openNewCharacter : openNewHistoryCard}>
+              <Plus className="h-3.5 w-3.5" />
+              Novo
+            </Button>
+          )
+        }
+      />
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as "personagens" | "historias")}>
-        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:justify-between">
-          <TabsList className="h-9">
-            <TabsTrigger value="personagens" className="text-xs px-3">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
+          <TabsList className="h-9 bg-[oklch(0.16_0.010_240)] border border-border p-1 rounded-lg">
+            <TabsTrigger value="personagens" className="text-xs px-3 rounded-md data-active:bg-[oklch(0.22_0.030_158)] data-active:text-[oklch(0.85_0.14_158)]">
               <Drama className="h-3.5 w-3.5" />
               Personagens
               {tab === "personagens" && characters && (
-                <span className="ml-1 text-[10px] text-muted-foreground/60">({filteredCount})</span>
+                <span className="ml-1 text-[10px] font-mono text-muted-foreground/55">({filteredCount})</span>
               )}
             </TabsTrigger>
-            <TabsTrigger value="historias" className="text-xs px-3">
+            <TabsTrigger value="historias" className="text-xs px-3 rounded-md data-active:bg-[oklch(0.22_0.030_158)] data-active:text-[oklch(0.85_0.14_158)]">
               <BookOpen className="h-3.5 w-3.5" />
               Histórias
               {tab === "historias" && historyCards && (
-                <span className="ml-1 text-[10px] text-muted-foreground/60">({filteredCount})</span>
+                <span className="ml-1 text-[10px] font-mono text-muted-foreground/55">({filteredCount})</span>
               )}
             </TabsTrigger>
           </TabsList>
 
-          <div className="flex items-center gap-2">
-            <div className="relative flex-1 sm:flex-none sm:w-64">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/50" />
-              <Input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder={tab === "personagens" ? "Buscar personagem…" : "Buscar história…"}
-                className="h-9 pl-8 pr-8 text-xs"
-              />
-              {search && (
-                <button
-                  onClick={() => setSearch("")}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 h-5 w-5 rounded-full hover:bg-muted flex items-center justify-center"
-                >
-                  <X className="h-3 w-3 text-muted-foreground" />
-                </button>
-              )}
-            </div>
-            {canEdit && (
-              <Button
-                size="sm"
-                className="h-9 text-xs shrink-0"
-                onClick={tab === "personagens" ? openNewCharacter : openNewHistoryCard}
-              >
-                <Plus className="h-3.5 w-3.5 mr-1" />
-                Novo
-              </Button>
-            )}
+          <div className="sm:w-72">
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={tab === "personagens" ? "Buscar personagem…" : "Buscar história…"}
+              leading={<Search className="h-3.5 w-3.5" />}
+              trailing={
+                search ? (
+                  <button onClick={() => setSearch("")} className="h-6 w-6 rounded-md hover:bg-[oklch(0.20_0.010_240)] flex items-center justify-center">
+                    <X className="h-3 w-3 text-muted-foreground/65" />
+                  </button>
+                ) : null
+              }
+            />
           </div>
         </div>
 
