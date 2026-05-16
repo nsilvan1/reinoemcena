@@ -13,6 +13,7 @@ import {
   Clapperboard,
   Images,
   Search,
+  HelpCircle,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { useNotifications } from "@/hooks/useNotifications";
@@ -28,6 +29,7 @@ const navItems = [
   { href: "/acervo", label: "Acervo", icon: Images, shortcut: "G A" },
   { href: "/membros", label: "Membros", icon: Users, minRole: "coordenador", shortcut: "G M" },
   { href: "/notificacoes", label: "Notificações", icon: Bell, shortcut: "G N" },
+  { href: "/ajuda", label: "Ajuda", icon: HelpCircle, shortcut: "G ?" },
 ];
 
 function NavContent({ onClose }: { onClose?: () => void }) {

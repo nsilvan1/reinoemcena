@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { SidebarV2 } from "@/components/v2/sidebar";
 import { Providers } from "@/components/providers";
 import { Toaster } from "@/components/ui/sonner";
+import { WelcomeTutorialModal } from "@/components/welcome-tutorial-modal";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions);
@@ -22,6 +23,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           </div>
         </main>
       </div>
+      <WelcomeTutorialModal autoOpen />
       <Toaster />
     </Providers>
   );
