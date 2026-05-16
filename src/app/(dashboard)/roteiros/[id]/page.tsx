@@ -2,9 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, FileText, Film, Mic, Save, Check, AlertCircle, Loader2 } from "lucide-react";
+import { FileText, Film, Mic, Save, Check, AlertCircle, Loader2 } from "lucide-react";
 import { format, formatDistanceToNowStrict } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
@@ -12,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { RichTextEditor, RichTextViewer } from "@/components/editor/rich-text-editor";
 import { VersionHistory } from "@/components/roteiro/version-history";
 import { RoteiroFiles } from "@/components/roteiro/roteiro-files";
+import { Button, Card, PageHeader } from "@/components/v2/primitives";
 
 type SaveState = "idle" | "saving" | "error";
 
@@ -151,98 +150,86 @@ export default function RoteiroDetailPage() {
   const assignedNarratorIds = (roteiro.assignedNarrators || []).map((u: any) => u._id || u);
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2 min-w-0">
-          <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => router.back()}>
-            <ArrowLeft className="h-3.5 w-3.5" />
-          </Button>
-          <div className="min-w-0">
-            <h1 className="font-heading text-xl truncate">{roteiro.title}</h1>
-            <p className="text-[11px] text-muted-foreground">
-              Por {roteiro.createdBy?.name} · {format(new Date(roteiro.createdAt), "dd/MM/yyyy")}
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-1.5 shrink-0">
-          {canEdit && (
-            <SaveStatusPill
-              state={saveState}
-              dirty={isDirty}
-              lastSavedAt={lastSavedAt}
-              now={now}
-              onRetry={() => saveContent(false)}
+    <div className="space-y-6">
+      <PageHeader
+        eyebrow={`Por ${roteiro.createdBy?.name} · ${format(new Date(roteiro.createdAt), "dd 'de' MMMM", { locale: ptBR })}`}
+        title={roteiro.title}
+        icon={FileText}
+        back={{ href: "/roteiros", label: "Roteiros" }}
+        actions={
+          <div className="flex items-center gap-2">
+            {canEdit && (
+              <SaveStatusPill
+                state={saveState}
+                dirty={isDirty}
+                lastSavedAt={lastSavedAt}
+                now={now}
+                onRetry={() => saveContent(false)}
+              />
+            )}
+            <VersionHistory
+              roteiroId={String(id)}
+              canEdit={canEdit}
+              onRestore={(data) => {
+                setRoteiro({ ...roteiro, title: data.title, content: data.content });
+                setContent(data.content || "");
+                setLastSavedContent(data.content || "");
+                setLastSavedAt(new Date());
+              }}
             />
-          )}
-          <VersionHistory
-            roteiroId={String(id)}
-            canEdit={canEdit}
-            onRestore={(data) => {
-              setRoteiro({ ...roteiro, title: data.title, content: data.content });
-              setContent(data.content || "");
-              setLastSavedContent(data.content || "");
-              setLastSavedAt(new Date());
-            }}
-          />
-          {canEdit && (
-            <Button
-              size="sm"
-              onClick={handleSave}
-              disabled={saveState === "saving" || !isDirty}
-              className="h-8 text-xs"
-            >
-              <Save className="h-3.5 w-3.5 mr-1" />{" "}
-              {saveState === "saving" ? "Salvando..." : "Salvar"}
-            </Button>
-          )}
-        </div>
-      </div>
+            {canEdit && (
+              <Button onClick={handleSave} disabled={saveState === "saving" || !isDirty}>
+                <Save className="h-3.5 w-3.5" />
+                {saveState === "saving" ? "Salvando..." : "Salvar"}
+              </Button>
+            )}
+          </div>
+        }
+      />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* ═══ Left — Content ═══ */}
-        <div className="lg:col-span-2 space-y-4">
-          {/* Rich Text Editor */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <div className="lg:col-span-2 space-y-5">
           <div>
-            <div className="flex items-center gap-2 mb-2">
-              <FileText className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Conteúdo</span>
+            <div className="flex items-center gap-2 mb-2.5">
+              <FileText className="h-3.5 w-3.5 text-muted-foreground/65" />
+              <span className="text-[10px] font-mono uppercase tracking-[0.22em] text-muted-foreground/55">
+                Conteúdo
+              </span>
             </div>
             {canEdit ? (
               <RichTextEditor content={content} onChange={setContent} placeholder="Escreva o roteiro aqui..." />
             ) : content ? (
               <RichTextViewer content={content} />
             ) : (
-              <div className="border rounded-lg bg-card p-8 text-center">
-                <FileText className="h-6 w-6 mx-auto text-muted-foreground/15 mb-1.5" />
-                <p className="text-xs text-muted-foreground/40">Sem conteúdo</p>
-              </div>
+              <Card className="p-8 text-center">
+                <FileText className="h-6 w-6 mx-auto text-muted-foreground/25 mb-2" />
+                <p className="text-xs text-muted-foreground/45">Sem conteúdo</p>
+              </Card>
             )}
           </div>
 
-          {/* Arquivos (múltiplos) */}
           <RoteiroFiles roteiroId={String(id)} canEdit={canEdit} />
         </div>
 
-        {/* ═══ Right — Assignments ═══ */}
         <div>
-          <div className="card-glass rounded-xl overflow-hidden sticky top-20">
-            {/* Editors */}
-            <div className="px-4 py-2.5 border-b bg-muted/20 flex items-center gap-2">
-              <div className="h-5 w-5 rounded bg-violet-100 flex items-center justify-center">
-                <Film className="h-3 w-3 text-violet-600" />
-              </div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Editores</p>
-              <span className="text-[10px] font-bold bg-violet-100 text-violet-700 rounded-full h-4 min-w-4 flex items-center justify-center px-1 ml-auto">
+          <Card className="overflow-hidden lg:sticky lg:top-6">
+            <div className="px-4 py-2.5 border-b border-border bg-[oklch(0.16_0.010_240)] flex items-center gap-2">
+              <span className="h-5 w-5 rounded-md bg-[oklch(0.22_0.030_300)] flex items-center justify-center">
+                <Film className="h-3 w-3 text-[oklch(0.80_0.14_300)]" />
+              </span>
+              <p className="text-[10px] font-mono uppercase tracking-[0.22em] text-muted-foreground/55">
+                Editores
+              </p>
+              <span className="text-[10px] font-mono font-bold tabular-nums bg-[oklch(0.22_0.030_300)] text-[oklch(0.80_0.14_300)] rounded-md h-4 min-w-4 flex items-center justify-center px-1.5 ml-auto">
                 {assignedEditorIds.length}
               </span>
             </div>
             <div className="p-3">
               {editors.length === 0 ? (
-                <p className="text-[11px] text-muted-foreground/30 px-1">Nenhum editor cadastrado</p>
+                <p className="text-[11px] text-muted-foreground/30 px-1 italic">Nenhum editor cadastrado</p>
               ) : (
                 <div className="space-y-0.5">
-                  {editors.map((u: any) => {
+                  {editors.map((u: { _id: string; name: string }) => {
                     const isAssigned = assignedEditorIds.includes(u._id);
                     return (
                       <button
@@ -250,16 +237,25 @@ export default function RoteiroDetailPage() {
                         onClick={() => canManageAssignments && toggleAssignment(u._id, "assignedEditors")}
                         disabled={!canManageAssignments}
                         className={cn(
-                          "w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm transition-all",
-                          isAssigned ? "bg-violet-50 text-violet-700 ring-1 ring-violet-200" : "hover:bg-muted/50",
+                          "w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm transition-all",
+                          isAssigned
+                            ? "bg-[oklch(0.22_0.030_300)] text-[oklch(0.85_0.14_300)] ring-1 ring-[oklch(0.32_0.060_300)]"
+                            : "hover:bg-[oklch(0.17_0.010_240)]",
                           !canManageAssignments && "cursor-default"
                         )}
                       >
-                        <div className={cn("h-5 w-5 rounded-full flex items-center justify-center text-[9px] font-bold", isAssigned ? "bg-violet-200 text-violet-700" : "bg-muted text-muted-foreground")}>
+                        <span
+                          className={cn(
+                            "h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-bold ring-1",
+                            isAssigned
+                              ? "bg-[oklch(0.28_0.040_300)] text-[oklch(0.90_0.10_300)] ring-[oklch(0.40_0.060_300)]/50"
+                              : "bg-[oklch(0.20_0.010_240)] text-muted-foreground ring-border"
+                          )}
+                        >
                           {u.name[0]}
-                        </div>
-                        <span className="flex-1 text-left text-xs font-medium">{u.name}</span>
-                        {isAssigned && <div className="h-1.5 w-1.5 rounded-full bg-violet-500" />}
+                        </span>
+                        <span className="flex-1 text-left text-[12.5px] font-medium">{u.name}</span>
+                        {isAssigned && <span className="h-1.5 w-1.5 rounded-full bg-[oklch(0.78_0.16_300)]" />}
                       </button>
                     );
                   })}
@@ -267,24 +263,23 @@ export default function RoteiroDetailPage() {
               )}
             </div>
 
-            <Separator />
-
-            {/* Narrators */}
-            <div className="px-4 py-2.5 border-b bg-muted/20 flex items-center gap-2">
-              <div className="h-5 w-5 rounded bg-amber-100 flex items-center justify-center">
-                <Mic className="h-3 w-3 text-amber-600" />
-              </div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Narradores</p>
-              <span className="text-[10px] font-bold bg-amber-100 text-amber-700 rounded-full h-4 min-w-4 flex items-center justify-center px-1 ml-auto">
+            <div className="px-4 py-2.5 border-y border-border bg-[oklch(0.16_0.010_240)] flex items-center gap-2">
+              <span className="h-5 w-5 rounded-md bg-[oklch(0.22_0.030_60)] flex items-center justify-center">
+                <Mic className="h-3 w-3 text-[oklch(0.80_0.14_60)]" />
+              </span>
+              <p className="text-[10px] font-mono uppercase tracking-[0.22em] text-muted-foreground/55">
+                Narradores
+              </p>
+              <span className="text-[10px] font-mono font-bold tabular-nums bg-[oklch(0.22_0.030_60)] text-[oklch(0.80_0.14_60)] rounded-md h-4 min-w-4 flex items-center justify-center px-1.5 ml-auto">
                 {assignedNarratorIds.length}
               </span>
             </div>
             <div className="p-3">
               {narrators.length === 0 ? (
-                <p className="text-[11px] text-muted-foreground/30 px-1">Nenhum narrador cadastrado</p>
+                <p className="text-[11px] text-muted-foreground/30 px-1 italic">Nenhum narrador cadastrado</p>
               ) : (
                 <div className="space-y-0.5">
-                  {narrators.map((u: any) => {
+                  {narrators.map((u: { _id: string; name: string }) => {
                     const isAssigned = assignedNarratorIds.includes(u._id);
                     return (
                       <button
@@ -292,23 +287,32 @@ export default function RoteiroDetailPage() {
                         onClick={() => canManageAssignments && toggleAssignment(u._id, "assignedNarrators")}
                         disabled={!canManageAssignments}
                         className={cn(
-                          "w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm transition-all",
-                          isAssigned ? "bg-amber-50 text-amber-700 ring-1 ring-amber-200" : "hover:bg-muted/50",
+                          "w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm transition-all",
+                          isAssigned
+                            ? "bg-[oklch(0.22_0.030_60)] text-[oklch(0.85_0.14_60)] ring-1 ring-[oklch(0.32_0.060_60)]"
+                            : "hover:bg-[oklch(0.17_0.010_240)]",
                           !canManageAssignments && "cursor-default"
                         )}
                       >
-                        <div className={cn("h-5 w-5 rounded-full flex items-center justify-center text-[9px] font-bold", isAssigned ? "bg-amber-200 text-amber-700" : "bg-muted text-muted-foreground")}>
+                        <span
+                          className={cn(
+                            "h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-bold ring-1",
+                            isAssigned
+                              ? "bg-[oklch(0.28_0.040_60)] text-[oklch(0.90_0.10_60)] ring-[oklch(0.40_0.060_60)]/50"
+                              : "bg-[oklch(0.20_0.010_240)] text-muted-foreground ring-border"
+                          )}
+                        >
                           {u.name[0]}
-                        </div>
-                        <span className="flex-1 text-left text-xs font-medium">{u.name}</span>
-                        {isAssigned && <div className="h-1.5 w-1.5 rounded-full bg-amber-500" />}
+                        </span>
+                        <span className="flex-1 text-left text-[12.5px] font-medium">{u.name}</span>
+                        {isAssigned && <span className="h-1.5 w-1.5 rounded-full bg-[oklch(0.78_0.16_60)]" />}
                       </button>
                     );
                   })}
                 </div>
               )}
             </div>
-          </div>
+          </Card>
         </div>
       </div>
     </div>
@@ -326,8 +330,8 @@ interface SaveStatusPillProps {
 function SaveStatusPill({ state, dirty, lastSavedAt, now, onRetry }: SaveStatusPillProps) {
   if (state === "saving") {
     return (
-      <span className="flex items-center gap-1 text-[11px] text-muted-foreground bg-muted/50 px-2 py-1 rounded-md">
-        <Loader2 className="h-3 w-3 animate-spin" /> Salvando…
+      <span className="flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-wider text-muted-foreground bg-[oklch(0.20_0.010_240)] border border-border px-2.5 py-1 rounded-md">
+        <Loader2 className="h-3 w-3 animate-spin" /> Salvando
       </span>
     );
   }
@@ -335,17 +339,17 @@ function SaveStatusPill({ state, dirty, lastSavedAt, now, onRetry }: SaveStatusP
     return (
       <button
         onClick={onRetry}
-        className="flex items-center gap-1 text-[11px] text-red-600 bg-red-50 hover:bg-red-100 px-2 py-1 rounded-md font-medium"
+        className="flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-wider text-[oklch(0.85_0.14_25)] bg-[oklch(0.22_0.030_25)] hover:bg-[oklch(0.26_0.040_25)] border border-[oklch(0.32_0.060_25)] px-2.5 py-1 rounded-md font-medium"
         title="Tentar salvar novamente"
       >
-        <AlertCircle className="h-3 w-3" /> Erro · Tentar
+        <AlertCircle className="h-3 w-3" /> Erro
       </button>
     );
   }
   if (dirty) {
     return (
-      <span className="flex items-center gap-1 text-[11px] text-amber-700 bg-amber-50 px-2 py-1 rounded-md">
-        <span className="h-1.5 w-1.5 rounded-full bg-amber-500" /> Não salvo
+      <span className="flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-wider text-[oklch(0.85_0.14_60)] bg-[oklch(0.22_0.030_60)] border border-[oklch(0.32_0.060_60)] px-2.5 py-1 rounded-md">
+        <span className="h-1.5 w-1.5 rounded-full bg-[oklch(0.78_0.16_60)] status-pulse" /> Não salvo
       </span>
     );
   }
@@ -356,8 +360,8 @@ function SaveStatusPill({ state, dirty, lastSavedAt, now, onRetry }: SaveStatusP
         ? "agora"
         : `há ${formatDistanceToNowStrict(lastSavedAt, { locale: ptBR })}`;
     return (
-      <span className="flex items-center gap-1 text-[11px] text-muted-foreground/70 px-2 py-1">
-        <Check className="h-3 w-3 text-emerald-600" /> Salvo {label}
+      <span className="flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-wider text-muted-foreground/65 px-2.5 py-1">
+        <Check className="h-3 w-3 text-[oklch(0.80_0.14_158)]" /> {label}
       </span>
     );
   }

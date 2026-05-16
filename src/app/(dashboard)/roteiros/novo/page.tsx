@@ -1,25 +1,30 @@
 "use client";
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  ArrowLeft, FileText, Upload, X, File, FileAudio,
-  CalendarDays, CheckCircle2, PenLine, Paperclip, Calendar,
+  FileText,
+  Upload,
+  X,
+  File as FileIcon,
+  FileAudio,
+  CheckCircle2,
+  PenLine,
+  Paperclip,
+  Calendar,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn, parseLocalDate } from "@/lib/utils";
 import { RichTextEditor } from "@/components/editor/rich-text-editor";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { Button, Card, Input, Field, PageHeader, SectionHeading } from "@/components/v2/primitives";
 
 function getFileIcon(name: string) {
   const ext = name.split(".").pop()?.toLowerCase() || "";
   if (["pdf"].includes(ext)) return FileText;
   if (["mp3", "wav", "m4a"].includes(ext)) return FileAudio;
-  return File;
+  return FileIcon;
 }
 
 function formatFileSize(bytes: number) {
@@ -31,7 +36,7 @@ function formatFileSize(bytes: number) {
 export default function NovoRoteiroPage() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [scales, setScales] = useState<any[]>([]);
+  const [scales, setScales] = useState<Array<{ _id: string; title: string; month: string; weeks: Array<{ number: number; theme: string; deadline: string; roteiro?: unknown }> }>>([]);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [scaleId, setScaleId] = useState("");
@@ -46,8 +51,9 @@ export default function NovoRoteiroPage() {
       .then(setScales)
       .catch(() => toast.error("Erro ao carregar escalas"));
   }, []);
+
   const selectedScale = scales.find((s) => s._id === scaleId);
-  const selectedWeek = selectedScale?.weeks?.find((w: any) => String(w.number) === weekNumber);
+  const selectedWeek = selectedScale?.weeks?.find((w) => String(w.number) === weekNumber);
 
   function handleFileClick() {
     fileInputRef.current?.click();
@@ -56,13 +62,13 @@ export default function NovoRoteiroPage() {
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
     if (!f) return;
-    if (f.size > 10 * 1024 * 1024) { toast.error("Arquivo muito grande (max 10MB)"); return; }
-    setFile(f);
-    if (f.type === "application/pdf") {
-      setFilePreviewUrl(URL.createObjectURL(f));
-    } else {
-      setFilePreviewUrl(null);
+    if (f.size > 10 * 1024 * 1024) {
+      toast.error("Arquivo muito grande (max 10MB)");
+      return;
     }
+    setFile(f);
+    if (f.type === "application/pdf") setFilePreviewUrl(URL.createObjectURL(f));
+    else setFilePreviewUrl(null);
   }
 
   function removeFile() {
@@ -73,8 +79,14 @@ export default function NovoRoteiroPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!scaleId || !weekNumber) { toast.error("Selecione escala e semana"); return; }
-    if (!title.trim()) { toast.error("Preencha o título"); return; }
+    if (!scaleId || !weekNumber) {
+      toast.error("Selecione escala e semana");
+      return;
+    }
+    if (!title.trim()) {
+      toast.error("Preencha o título");
+      return;
+    }
     setLoading(true);
     try {
       const res = await fetch("/api/roteiros", {
@@ -97,8 +109,8 @@ export default function NovoRoteiroPage() {
 
       toast.success("Roteiro criado!");
       router.push(`/roteiros/${roteiro._id}`);
-    } catch (err: any) {
-      toast.error(err.message || "Erro ao criar");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao criar");
     } finally {
       setLoading(false);
     }
@@ -112,27 +124,34 @@ export default function NovoRoteiroPage() {
   const filledCount = filledSteps.filter((s) => s.done).length;
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2 min-w-0">
-          <Link href="/roteiros">
-            <Button variant="ghost" size="icon" className="h-7 w-7"><ArrowLeft className="h-3.5 w-3.5" /></Button>
-          </Link>
-          <div className="min-w-0">
-            <h1 className="font-heading text-xl">Novo Roteiro</h1>
-            <p className="text-xs text-muted-foreground">Crie e vincule a uma semana</p>
+    <div className="space-y-6">
+      <PageHeader
+        eyebrow="Documentos"
+        title="Novo roteiro"
+        description="Escreva o roteiro e vincule a uma semana da escala."
+        icon={FileText}
+        back={{ href: "/roteiros", label: "Roteiros" }}
+        actions={
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-mono uppercase tracking-[0.18em] text-muted-foreground/55 tabular-nums">
+              {filledCount}/3
+            </span>
+            <div className="flex gap-1">
+              {filledSteps.map((s, i) => (
+                <span
+                  key={i}
+                  className={cn(
+                    "h-1.5 w-7 rounded-full transition-all",
+                    s.done ? "bg-[oklch(0.74_0.16_158)] shadow-[0_0_6px_oklch(0.74_0.16_158)]" : "bg-[oklch(0.20_0.010_240)]"
+                  )}
+                  title={s.label}
+                />
+              ))}
+            </div>
           </div>
-        </div>
-        <div className="flex items-center gap-1.5 shrink-0">
-          {filledSteps.map((s, i) => (
-            <div key={i} className={cn("h-1.5 w-6 rounded-full transition-all", s.done ? "bg-primary" : "bg-muted")} title={s.label} />
-          ))}
-          <span className="text-[10px] font-bold text-muted-foreground ml-1">{filledCount}/3</span>
-        </div>
-      </div>
+        }
+      />
 
-      {/* Hidden file input */}
       <input
         ref={fileInputRef}
         type="file"
@@ -142,62 +161,70 @@ export default function NovoRoteiroPage() {
       />
 
       <form onSubmit={handleSubmit}>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          {/* ═══ Left — Info + Editor ═══ */}
-          <div className="lg:col-span-2 space-y-4">
-            {/* Title + Scale selection */}
-            <div className="card-glass rounded-xl overflow-hidden">
-              <div className="px-4 py-2.5 border-b bg-muted/20">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Informações</p>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+          <div className="lg:col-span-2 space-y-5">
+            <Card className="overflow-hidden">
+              <div className="px-4 py-2.5 border-b border-border bg-[oklch(0.16_0.010_240)]">
+                <p className="text-[10px] font-mono uppercase tracking-[0.22em] text-muted-foreground/55">
+                  Informações
+                </p>
               </div>
-              <div className="p-4 space-y-4">
-                <div>
-                  <Label className="text-[11px] font-semibold text-muted-foreground mb-1 block">Título do Roteiro</Label>
+              <div className="p-5 space-y-5">
+                <Field label="Título do roteiro">
                   <Input
-                    placeholder="Ex: Semana 2 - Joao 21:1-14"
+                    placeholder="Ex: Semana 2 — João 21:1-14"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     required
-                    className="h-9 text-sm"
                   />
-                </div>
+                </Field>
 
-                {/* Scale picker — card grid */}
                 <div>
-                  <Label className="text-[11px] font-semibold text-muted-foreground mb-2 block">Escala</Label>
+                  <Label className="text-[10px] font-mono uppercase tracking-[0.22em] text-muted-foreground/85 block mb-2">
+                    Escala
+                  </Label>
                   {scales.length === 0 ? (
-                    <p className="text-xs text-muted-foreground/40">Nenhuma escala disponível</p>
+                    <p className="text-xs text-muted-foreground/40 italic">Nenhuma escala disponível</p>
                   ) : (
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                      {scales.map((s: any) => (
-                        <button
-                          key={s._id}
-                          type="button"
-                          onClick={() => { setScaleId(s._id); setWeekNumber(""); }}
-                          className={cn(
-                            "text-left p-3 rounded-lg border transition-all",
-                            scaleId === s._id
-                              ? "border-primary bg-primary/5 ring-1 ring-primary/20"
-                              : "hover:border-primary/20 hover:bg-muted/30"
-                          )}
-                        >
-                          <div className="flex items-center gap-2 mb-1">
-                            <Calendar className={cn("h-3.5 w-3.5", scaleId === s._id ? "text-primary" : "text-muted-foreground/40")} />
-                            <span className={cn("text-xs font-bold", scaleId === s._id ? "text-primary" : "text-foreground")}>{s.title}</span>
-                          </div>
-                          <span className="text-[10px] text-muted-foreground">{s.month} · {s.weeks.length} sem.</span>
-                        </button>
-                      ))}
+                      {scales.map((s) => {
+                        const sel = scaleId === s._id;
+                        return (
+                          <button
+                            key={s._id}
+                            type="button"
+                            onClick={() => {
+                              setScaleId(s._id);
+                              setWeekNumber("");
+                            }}
+                            className={cn(
+                              "text-left p-3 rounded-lg border transition-all",
+                              sel
+                                ? "border-[oklch(0.50_0.13_158)] bg-[oklch(0.18_0.020_158)] ring-1 ring-[oklch(0.50_0.13_158)]/40"
+                                : "border-border bg-[oklch(0.16_0.010_240)] hover:border-[oklch(0.30_0.010_240)]"
+                            )}
+                          >
+                            <div className="flex items-center gap-2 mb-1">
+                              <Calendar className={cn("h-3.5 w-3.5", sel ? "text-[oklch(0.80_0.14_158)]" : "text-muted-foreground/45")} />
+                              <span className={cn("text-xs font-semibold truncate", sel && "text-[oklch(0.92_0.05_158)]")}>{s.title}</span>
+                            </div>
+                            <span className="text-[10px] font-mono text-muted-foreground/55 uppercase tracking-wider">
+                              {s.month} · {s.weeks.length} sem
+                            </span>
+                          </button>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
 
-                {/* Week picker — appears after scale selection */}
                 {selectedScale && (
                   <div>
-                    <Label className="text-[11px] font-semibold text-muted-foreground mb-2 block">Semana</Label>
+                    <Label className="text-[10px] font-mono uppercase tracking-[0.22em] text-muted-foreground/85 block mb-2">
+                      Semana
+                    </Label>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                      {selectedScale.weeks.map((w: any) => {
+                      {selectedScale.weeks.map((w) => {
                         const sel = weekNumber === String(w.number);
                         const hasRoteiro = !!w.roteiro;
                         return (
@@ -208,19 +235,19 @@ export default function NovoRoteiroPage() {
                             disabled={hasRoteiro}
                             className={cn(
                               "text-left p-2.5 rounded-lg border transition-all",
-                              hasRoteiro && "opacity-40 cursor-not-allowed",
+                              hasRoteiro && "opacity-30 cursor-not-allowed",
                               sel
-                                ? "border-primary bg-primary/5 ring-1 ring-primary/20"
-                                : !hasRoteiro && "hover:border-primary/20 hover:bg-muted/30"
+                                ? "border-[oklch(0.50_0.13_158)] bg-[oklch(0.18_0.020_158)] ring-1 ring-[oklch(0.50_0.13_158)]/40"
+                                : !hasRoteiro && "border-border bg-[oklch(0.16_0.010_240)] hover:border-[oklch(0.30_0.010_240)]"
                             )}
                           >
-                            <div className="flex items-center justify-between mb-0.5">
-                              <span className={cn("text-xs font-bold", sel ? "text-primary" : "text-foreground")}>S{w.number}</span>
-                              {hasRoteiro && <span className="text-[8px] bg-muted text-muted-foreground rounded px-1 py-px font-semibold">Vinculado</span>}
-                              {sel && <CheckCircle2 className="h-3 w-3 text-primary" />}
+                            <div className="flex items-center justify-between mb-1">
+                              <span className={cn("text-[11px] font-mono font-bold", sel ? "text-[oklch(0.92_0.05_158)]" : "text-foreground")}>S{w.number}</span>
+                              {hasRoteiro && <span className="text-[8px] font-mono uppercase tracking-wider bg-[oklch(0.20_0.010_240)] text-muted-foreground rounded px-1 py-px">Já tem</span>}
+                              {sel && <CheckCircle2 className="h-3 w-3 text-[oklch(0.80_0.14_158)]" />}
                             </div>
-                            <p className="text-[10px] text-muted-foreground truncate">{w.theme}</p>
-                            <p className="text-[9px] text-muted-foreground/50 mt-0.5">
+                            <p className="text-[11px] text-foreground/80 truncate leading-tight">{w.theme}</p>
+                            <p className="text-[9px] font-mono text-muted-foreground/55 mt-1 uppercase tracking-wider">
                               {format(parseLocalDate(w.deadline), "dd MMM", { locale: ptBR })}
                             </p>
                           </button>
@@ -230,131 +257,172 @@ export default function NovoRoteiroPage() {
                   </div>
                 )}
 
-                {/* Selected summary */}
-                {selectedWeek && (
-                  <div className="flex items-center gap-2 p-2.5 rounded-lg bg-primary/5 border border-primary/10">
-                    <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
-                    <span className="text-xs">
-                      <span className="font-semibold text-primary">{selectedScale.title} — Semana {selectedWeek.number}</span>
-                      <span className="text-muted-foreground"> · {selectedWeek.theme}</span>
+                {selectedWeek && selectedScale && (
+                  <div className="flex items-center gap-2 p-3 rounded-lg bg-[oklch(0.18_0.020_158)] border border-[oklch(0.30_0.040_158)]">
+                    <CheckCircle2 className="h-4 w-4 text-[oklch(0.80_0.14_158)] shrink-0" />
+                    <span className="text-[12px]">
+                      <span className="font-semibold text-[oklch(0.92_0.05_158)]">
+                        {selectedScale.title} — S{selectedWeek.number}
+                      </span>
+                      <span className="text-muted-foreground/65"> · {selectedWeek.theme}</span>
                     </span>
                   </div>
                 )}
               </div>
-            </div>
+            </Card>
 
-            {/* Content — Rich Editor */}
             <div>
-              <div className="flex items-center gap-2 mb-2">
-                <PenLine className="h-3.5 w-3.5 text-muted-foreground" />
-                <Label className="text-[11px] font-semibold text-muted-foreground">Conteúdo do Roteiro</Label>
-              </div>
+              <SectionHeading
+                eyebrow="Conteúdo"
+                title="Roteiro"
+                action={
+                  <span className="text-[10px] font-mono uppercase tracking-[0.18em] text-muted-foreground/45 inline-flex items-center gap-1">
+                    <PenLine className="h-3 w-3" /> rich text
+                  </span>
+                }
+              />
               <RichTextEditor
                 content={content}
                 onChange={setContent}
-                placeholder="Comece a escrever o roteiro... Use a barra de ferramentas para formatar."
+                placeholder="Comece a escrever o roteiro… Use a barra para formatar."
               />
             </div>
           </div>
 
-          {/* ═══ Right — File + Summary ═══ */}
-          <div className="space-y-4">
-            {/* File upload */}
-            <div className="card-glass rounded-xl overflow-hidden">
-              <div className="px-4 py-2.5 border-b bg-muted/20 flex items-center gap-2">
-                <Paperclip className="h-3.5 w-3.5 text-muted-foreground" />
-                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Arquivo</p>
-                <span className="text-[10px] text-muted-foreground/40 ml-auto">Opcional</span>
+          <div className="space-y-5">
+            <Card className="overflow-hidden">
+              <div className="px-4 py-2.5 border-b border-border bg-[oklch(0.16_0.010_240)] flex items-center gap-2">
+                <Paperclip className="h-3.5 w-3.5 text-muted-foreground/65" />
+                <p className="text-[10px] font-mono uppercase tracking-[0.22em] text-muted-foreground/55">
+                  Anexo
+                </p>
+                <span className="text-[9px] font-mono uppercase tracking-wider text-muted-foreground/35 ml-auto">
+                  opcional
+                </span>
               </div>
               <div className="p-4">
                 {file ? (
                   <div className="space-y-3">
-                    <div className="flex items-center gap-3 p-3 rounded-lg bg-blue-50 border border-blue-100">
-                      {(() => { const Icon = getFileIcon(file.name); return <div className="h-9 w-9 rounded-lg bg-blue-100 flex items-center justify-center shrink-0"><Icon className="h-4.5 w-4.5 text-blue-600" /></div>; })()}
+                    <div className="flex items-center gap-3 p-3 rounded-lg bg-[oklch(0.18_0.020_220)] border border-[oklch(0.30_0.040_220)]">
+                      {(() => {
+                        const Icon = getFileIcon(file.name);
+                        return (
+                          <div className="h-9 w-9 rounded-lg bg-[oklch(0.22_0.030_220)] flex items-center justify-center shrink-0">
+                            <Icon className="h-4 w-4 text-[oklch(0.80_0.14_220)]" />
+                          </div>
+                        );
+                      })()}
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{file.name}</p>
-                        <p className="text-[11px] text-muted-foreground">{formatFileSize(file.size)}</p>
+                        <p className="text-[12.5px] font-medium truncate">{file.name}</p>
+                        <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground/55">
+                          {formatFileSize(file.size)}
+                        </p>
                       </div>
-                      <button type="button" onClick={removeFile} className="h-6 w-6 rounded-md flex items-center justify-center hover:bg-blue-100 transition-colors">
-                        <X className="h-3.5 w-3.5 text-blue-600" />
+                      <button
+                        type="button"
+                        onClick={removeFile}
+                        className="h-7 w-7 rounded-md flex items-center justify-center hover:bg-[oklch(0.24_0.040_220)] transition-colors"
+                      >
+                        <X className="h-3.5 w-3.5 text-[oklch(0.80_0.14_220)]" />
                       </button>
                     </div>
 
-                    {/* PDF Preview */}
                     {filePreviewUrl && (
-                      <div className="rounded-lg overflow-hidden border bg-muted/30">
+                      <div className="rounded-lg overflow-hidden border border-border bg-[oklch(0.13_0.008_240)]">
                         <iframe src={filePreviewUrl} className="w-full h-48" title="Preview" />
                       </div>
                     )}
 
-                    {/* Audio preview */}
                     {file.type.startsWith("audio/") && (
                       <audio controls className="w-full h-10 rounded-lg" src={URL.createObjectURL(file)}>
                         Audio
                       </audio>
                     )}
 
-                    <button type="button" onClick={handleFileClick} className="text-xs text-primary hover:underline font-medium">
-                      Trocar arquivo
+                    <button
+                      type="button"
+                      onClick={handleFileClick}
+                      className="text-[11px] font-mono uppercase tracking-[0.18em] text-[oklch(0.78_0.16_158)] hover:text-[oklch(0.85_0.14_158)] transition-colors"
+                    >
+                      Trocar arquivo →
                     </button>
                   </div>
                 ) : (
                   <button type="button" onClick={handleFileClick} className="w-full">
-                    <div className="border-2 border-dashed rounded-xl p-6 text-center hover:bg-accent/30 hover:border-primary/30 transition-all group cursor-pointer">
-                      <div className="h-10 w-10 rounded-lg bg-muted/50 flex items-center justify-center mx-auto mb-2 group-hover:bg-primary/10 transition-colors">
-                        <Upload className="h-5 w-5 text-muted-foreground/30 group-hover:text-primary/50 transition-colors" />
+                    <div className="border-2 border-dashed border-border rounded-xl p-6 text-center hover:bg-[oklch(0.17_0.010_240)] hover:border-[oklch(0.30_0.030_158)] transition-all group cursor-pointer">
+                      <div className="h-10 w-10 rounded-lg bg-[oklch(0.20_0.010_240)] flex items-center justify-center mx-auto mb-2 group-hover:bg-[oklch(0.22_0.030_158)] transition-colors">
+                        <Upload className="h-5 w-5 text-muted-foreground/45 group-hover:text-[oklch(0.78_0.16_158)] transition-colors" />
                       </div>
-                      <p className="text-sm font-medium text-muted-foreground/50 group-hover:text-muted-foreground transition-colors">
+                      <p className="text-[12px] font-medium text-muted-foreground/65 group-hover:text-foreground transition-colors">
                         Clique para enviar
                       </p>
-                      <p className="text-[11px] text-muted-foreground/30 mt-1">PDF, Word, MP3, WAV</p>
-                      <p className="text-[10px] text-muted-foreground/20 mt-0.5">Max 10MB</p>
+                      <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground/35 mt-1">
+                        PDF · DOC · MP3 · WAV · 10MB
+                      </p>
                     </div>
                   </button>
                 )}
               </div>
-            </div>
+            </Card>
 
-            {/* Summary + Actions */}
-            <div className="card-glass rounded-xl overflow-hidden sticky top-20">
-              <div className="px-4 py-2.5 border-b bg-muted/20">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Resumo</p>
+            <Card className="overflow-hidden lg:sticky lg:top-6">
+              <div className="px-4 py-2.5 border-b border-border bg-[oklch(0.16_0.010_240)]">
+                <p className="text-[10px] font-mono uppercase tracking-[0.22em] text-muted-foreground/55">
+                  Resumo
+                </p>
               </div>
               <div className="p-4 space-y-3">
                 {filledSteps.map((s, i) => (
-                  <div key={i} className="flex items-center gap-2">
-                    <div className={cn("h-4.5 w-4.5 rounded-full flex items-center justify-center transition-colors", s.done ? "bg-emerald-100 text-emerald-600" : "bg-muted text-muted-foreground/15")}>
+                  <div key={i} className="flex items-center gap-2.5">
+                    <span
+                      className={cn(
+                        "h-5 w-5 rounded-full flex items-center justify-center shrink-0 transition-colors",
+                        s.done
+                          ? "bg-[oklch(0.22_0.030_158)] text-[oklch(0.85_0.14_158)]"
+                          : "bg-[oklch(0.20_0.010_240)] text-muted-foreground/30"
+                      )}
+                    >
                       <CheckCircle2 className="h-3 w-3" />
-                    </div>
-                    <span className={cn("text-xs", s.done ? "font-semibold" : "text-muted-foreground/30")}>{s.label}</span>
-                    {s.done && <span className="text-[9px] text-emerald-600 ml-auto font-medium">OK</span>}
+                    </span>
+                    <span className={cn("text-[12.5px]", s.done ? "font-semibold" : "text-muted-foreground/45")}>
+                      {s.label}
+                    </span>
+                    {s.done && (
+                      <span className="text-[9px] font-mono uppercase tracking-wider text-[oklch(0.80_0.14_158)] ml-auto">
+                        OK
+                      </span>
+                    )}
                   </div>
                 ))}
 
                 {file && (
-                  <div className="flex items-center gap-2 pt-1">
-                    <div className="h-4.5 w-4.5 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
+                  <div className="flex items-center gap-2.5 pt-2 border-t border-border">
+                    <span className="h-5 w-5 rounded-full bg-[oklch(0.22_0.030_220)] text-[oklch(0.80_0.14_220)] flex items-center justify-center shrink-0">
                       <Paperclip className="h-3 w-3" />
-                    </div>
-                    <span className="text-xs font-semibold">Arquivo anexado</span>
-                    <span className="text-[9px] text-blue-600 ml-auto font-medium">{formatFileSize(file.size)}</span>
+                    </span>
+                    <span className="text-[12.5px] font-semibold">Arquivo anexado</span>
+                    <span className="text-[10px] font-mono uppercase tracking-wider text-[oklch(0.80_0.14_220)] ml-auto">
+                      {formatFileSize(file.size)}
+                    </span>
                   </div>
                 )}
 
                 <div className="pt-2 space-y-2">
                   <Button
                     type="submit"
+                    size="lg"
+                    className="w-full"
+                    loading={loading}
                     disabled={loading || !title.trim() || !scaleId || !weekNumber}
-                    className="w-full h-9 text-sm"
                   >
-                    {loading ? "Criando..." : "Criar Roteiro"}
+                    {loading ? "Criando…" : "Criar roteiro"}
                   </Button>
-                  <Button type="button" variant="ghost" className="w-full h-8 text-xs" onClick={() => router.back()}>
+                  <Button type="button" variant="ghost" className="w-full" onClick={() => router.back()}>
                     Cancelar
                   </Button>
                 </div>
               </div>
-            </div>
+            </Card>
           </div>
         </div>
       </form>

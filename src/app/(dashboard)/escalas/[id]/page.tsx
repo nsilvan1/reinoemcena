@@ -283,15 +283,24 @@ export default function ScaleDetailPage() {
   const viewingStep = viewingStage ? STEPS.find(s => s.key === viewingStage) : null;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {/* Header */}
-      <div className="flex items-center gap-2">
-        <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => router.back()}>
-          <ArrowLeft className="h-3.5 w-3.5" />
-        </Button>
-        <div className="min-w-0">
-          <h1 className="font-heading text-xl truncate">{scale.title}</h1>
-          <p className="text-xs text-muted-foreground">{scale.month} · {scale.weeks.length} semanas</p>
+      <div>
+        <Link
+          href="/escalas"
+          className="inline-flex items-center gap-1 text-[11px] font-mono uppercase tracking-[0.18em] text-muted-foreground hover:text-foreground transition-colors mb-3"
+        >
+          ← Escalas
+        </Link>
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div>
+            <p className="text-[10px] font-mono uppercase tracking-[0.22em] text-[oklch(0.65_0.12_158)] mb-1">
+              {scale.month} · {scale.weeks.length} semanas
+            </p>
+            <h1 className="font-heading text-3xl sm:text-4xl font-semibold leading-[1.05] tracking-[-0.03em]">
+              {scale.title}
+            </h1>
+          </div>
         </div>
       </div>
 
