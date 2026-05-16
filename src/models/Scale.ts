@@ -13,6 +13,8 @@ export interface IWeek {
   roteiro?: Types.ObjectId;
   historyCardId?: Types.ObjectId;
   characterIds: Types.ObjectId[];
+  /** URL do vídeo final entregue para revisão (Drive, YouTube ou upload). */
+  reviewVideoUrl?: string;
 }
 
 export interface IScale extends Document {
@@ -50,6 +52,7 @@ const WeekSchema = new Schema<IWeek>(
         message: "Máximo 20 personagens por semana",
       },
     },
+    reviewVideoUrl: { type: String, trim: true, maxlength: 2048 },
   },
   { _id: false }
 );

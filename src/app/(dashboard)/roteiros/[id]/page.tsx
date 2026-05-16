@@ -213,7 +213,7 @@ export default function RoteiroDetailPage() {
 
         <div>
           <Card className="overflow-hidden lg:sticky lg:top-6">
-            <div className="px-4 py-2.5 border-b border-border bg-[oklch(0.16_0.010_240)] flex items-center gap-2">
+            <div className="px-4 py-2.5 border-b border-border bg-[oklch(0.205_0.016_172)] flex items-center gap-2">
               <span className="h-5 w-5 rounded-md bg-[oklch(0.22_0.030_300)] flex items-center justify-center">
                 <Film className="h-3 w-3 text-[oklch(0.80_0.14_300)]" />
               </span>
@@ -240,7 +240,7 @@ export default function RoteiroDetailPage() {
                           "w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm transition-all",
                           isAssigned
                             ? "bg-[oklch(0.22_0.030_300)] text-[oklch(0.85_0.14_300)] ring-1 ring-[oklch(0.32_0.060_300)]"
-                            : "hover:bg-[oklch(0.17_0.010_240)]",
+                            : "hover:bg-[oklch(0.225_0.016_172)]",
                           !canManageAssignments && "cursor-default"
                         )}
                       >
@@ -249,7 +249,7 @@ export default function RoteiroDetailPage() {
                             "h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-bold ring-1",
                             isAssigned
                               ? "bg-[oklch(0.28_0.040_300)] text-[oklch(0.90_0.10_300)] ring-[oklch(0.40_0.060_300)]/50"
-                              : "bg-[oklch(0.20_0.010_240)] text-muted-foreground ring-border"
+                              : "bg-[oklch(0.255_0.016_170)] text-muted-foreground ring-border"
                           )}
                         >
                           {u.name[0]}
@@ -263,7 +263,7 @@ export default function RoteiroDetailPage() {
               )}
             </div>
 
-            <div className="px-4 py-2.5 border-y border-border bg-[oklch(0.16_0.010_240)] flex items-center gap-2">
+            <div className="px-4 py-2.5 border-y border-border bg-[oklch(0.205_0.016_172)] flex items-center gap-2">
               <span className="h-5 w-5 rounded-md bg-[oklch(0.22_0.030_60)] flex items-center justify-center">
                 <Mic className="h-3 w-3 text-[oklch(0.80_0.14_60)]" />
               </span>
@@ -290,7 +290,7 @@ export default function RoteiroDetailPage() {
                           "w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm transition-all",
                           isAssigned
                             ? "bg-[oklch(0.22_0.030_60)] text-[oklch(0.85_0.14_60)] ring-1 ring-[oklch(0.32_0.060_60)]"
-                            : "hover:bg-[oklch(0.17_0.010_240)]",
+                            : "hover:bg-[oklch(0.225_0.016_172)]",
                           !canManageAssignments && "cursor-default"
                         )}
                       >
@@ -299,7 +299,7 @@ export default function RoteiroDetailPage() {
                             "h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-bold ring-1",
                             isAssigned
                               ? "bg-[oklch(0.28_0.040_60)] text-[oklch(0.90_0.10_60)] ring-[oklch(0.40_0.060_60)]/50"
-                              : "bg-[oklch(0.20_0.010_240)] text-muted-foreground ring-border"
+                              : "bg-[oklch(0.255_0.016_170)] text-muted-foreground ring-border"
                           )}
                         >
                           {u.name[0]}
@@ -330,7 +330,7 @@ interface SaveStatusPillProps {
 function SaveStatusPill({ state, dirty, lastSavedAt, now, onRetry }: SaveStatusPillProps) {
   if (state === "saving") {
     return (
-      <span className="flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-wider text-muted-foreground bg-[oklch(0.20_0.010_240)] border border-border px-2.5 py-1 rounded-md">
+      <span className="flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-wider text-muted-foreground bg-[oklch(0.255_0.016_170)] border border-border px-2.5 py-1 rounded-md">
         <Loader2 className="h-3 w-3 animate-spin" /> Salvando
       </span>
     );

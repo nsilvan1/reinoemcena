@@ -142,7 +142,7 @@ export default function NovoRoteiroPage() {
                   key={i}
                   className={cn(
                     "h-1.5 w-7 rounded-full transition-all",
-                    s.done ? "bg-[oklch(0.74_0.16_158)] shadow-[0_0_6px_oklch(0.74_0.16_158)]" : "bg-[oklch(0.20_0.010_240)]"
+                    s.done ? "bg-[oklch(0.74_0.16_158)] shadow-[0_0_6px_oklch(0.74_0.16_158)]" : "bg-[oklch(0.255_0.016_170)]"
                   )}
                   title={s.label}
                 />
@@ -164,7 +164,7 @@ export default function NovoRoteiroPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           <div className="lg:col-span-2 space-y-5">
             <Card className="overflow-hidden">
-              <div className="px-4 py-2.5 border-b border-border bg-[oklch(0.16_0.010_240)]">
+              <div className="px-4 py-2.5 border-b border-border bg-[oklch(0.205_0.016_172)]">
                 <p className="text-[10px] font-mono uppercase tracking-[0.22em] text-muted-foreground/55">
                   Informações
                 </p>
@@ -201,7 +201,7 @@ export default function NovoRoteiroPage() {
                               "text-left p-3 rounded-lg border transition-all",
                               sel
                                 ? "border-[oklch(0.50_0.13_158)] bg-[oklch(0.18_0.020_158)] ring-1 ring-[oklch(0.50_0.13_158)]/40"
-                                : "border-border bg-[oklch(0.16_0.010_240)] hover:border-[oklch(0.30_0.010_240)]"
+                                : "border-border bg-[oklch(0.205_0.016_172)] hover:border-[oklch(0.34_0.018_170)]"
                             )}
                           >
                             <div className="flex items-center gap-2 mb-1">
@@ -238,12 +238,12 @@ export default function NovoRoteiroPage() {
                               hasRoteiro && "opacity-30 cursor-not-allowed",
                               sel
                                 ? "border-[oklch(0.50_0.13_158)] bg-[oklch(0.18_0.020_158)] ring-1 ring-[oklch(0.50_0.13_158)]/40"
-                                : !hasRoteiro && "border-border bg-[oklch(0.16_0.010_240)] hover:border-[oklch(0.30_0.010_240)]"
+                                : !hasRoteiro && "border-border bg-[oklch(0.205_0.016_172)] hover:border-[oklch(0.34_0.018_170)]"
                             )}
                           >
                             <div className="flex items-center justify-between mb-1">
                               <span className={cn("text-[11px] font-mono font-bold", sel ? "text-[oklch(0.92_0.05_158)]" : "text-foreground")}>S{w.number}</span>
-                              {hasRoteiro && <span className="text-[8px] font-mono uppercase tracking-wider bg-[oklch(0.20_0.010_240)] text-muted-foreground rounded px-1 py-px">Já tem</span>}
+                              {hasRoteiro && <span className="text-[8px] font-mono uppercase tracking-wider bg-[oklch(0.255_0.016_170)] text-muted-foreground rounded px-1 py-px">Já tem</span>}
                               {sel && <CheckCircle2 className="h-3 w-3 text-[oklch(0.80_0.14_158)]" />}
                             </div>
                             <p className="text-[11px] text-foreground/80 truncate leading-tight">{w.theme}</p>
@@ -291,7 +291,7 @@ export default function NovoRoteiroPage() {
 
           <div className="space-y-5">
             <Card className="overflow-hidden">
-              <div className="px-4 py-2.5 border-b border-border bg-[oklch(0.16_0.010_240)] flex items-center gap-2">
+              <div className="px-4 py-2.5 border-b border-border bg-[oklch(0.205_0.016_172)] flex items-center gap-2">
                 <Paperclip className="h-3.5 w-3.5 text-muted-foreground/65" />
                 <p className="text-[10px] font-mono uppercase tracking-[0.22em] text-muted-foreground/55">
                   Anexo
@@ -328,7 +328,7 @@ export default function NovoRoteiroPage() {
                     </div>
 
                     {filePreviewUrl && (
-                      <div className="rounded-lg overflow-hidden border border-border bg-[oklch(0.13_0.008_240)]">
+                      <div className="rounded-lg overflow-hidden border border-border bg-[oklch(0.175_0.014_172)]">
                         <iframe src={filePreviewUrl} className="w-full h-48" title="Preview" />
                       </div>
                     )}
@@ -349,8 +349,8 @@ export default function NovoRoteiroPage() {
                   </div>
                 ) : (
                   <button type="button" onClick={handleFileClick} className="w-full">
-                    <div className="border-2 border-dashed border-border rounded-xl p-6 text-center hover:bg-[oklch(0.17_0.010_240)] hover:border-[oklch(0.30_0.030_158)] transition-all group cursor-pointer">
-                      <div className="h-10 w-10 rounded-lg bg-[oklch(0.20_0.010_240)] flex items-center justify-center mx-auto mb-2 group-hover:bg-[oklch(0.22_0.030_158)] transition-colors">
+                    <div className="border-2 border-dashed border-border rounded-xl p-6 text-center hover:bg-[oklch(0.225_0.016_172)] hover:border-[oklch(0.30_0.030_158)] transition-all group cursor-pointer">
+                      <div className="h-10 w-10 rounded-lg bg-[oklch(0.255_0.016_170)] flex items-center justify-center mx-auto mb-2 group-hover:bg-[oklch(0.22_0.030_158)] transition-colors">
                         <Upload className="h-5 w-5 text-muted-foreground/45 group-hover:text-[oklch(0.78_0.16_158)] transition-colors" />
                       </div>
                       <p className="text-[12px] font-medium text-muted-foreground/65 group-hover:text-foreground transition-colors">
@@ -366,7 +366,7 @@ export default function NovoRoteiroPage() {
             </Card>
 
             <Card className="overflow-hidden lg:sticky lg:top-6">
-              <div className="px-4 py-2.5 border-b border-border bg-[oklch(0.16_0.010_240)]">
+              <div className="px-4 py-2.5 border-b border-border bg-[oklch(0.205_0.016_172)]">
                 <p className="text-[10px] font-mono uppercase tracking-[0.22em] text-muted-foreground/55">
                   Resumo
                 </p>
@@ -379,7 +379,7 @@ export default function NovoRoteiroPage() {
                         "h-5 w-5 rounded-full flex items-center justify-center shrink-0 transition-colors",
                         s.done
                           ? "bg-[oklch(0.22_0.030_158)] text-[oklch(0.85_0.14_158)]"
-                          : "bg-[oklch(0.20_0.010_240)] text-muted-foreground/30"
+                          : "bg-[oklch(0.255_0.016_170)] text-muted-foreground/30"
                       )}
                     >
                       <CheckCircle2 className="h-3 w-3" />

@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { X, ChevronLeft, ChevronRight, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -13,6 +14,9 @@ interface Props {
 
 export function ImageLightbox({ open, images, startIndex = 0, altPrefix = "", onClose }: Props) {
   const [index, setIndex] = useState(startIndex);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
 
   useEffect(() => {
     if (open) setIndex(startIndex);
@@ -46,7 +50,7 @@ export function ImageLightbox({ open, images, startIndex = 0, altPrefix = "", on
     };
   }, [open]);
 
-  if (!open || images.length === 0) return null;
+  if (!open || images.length === 0 || !mounted) return null;
 
   const currentUrl = images[index];
   const isMulti = images.length > 1;
@@ -69,9 +73,9 @@ export function ImageLightbox({ open, images, startIndex = 0, altPrefix = "", on
     }
   }
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center backdrop-blur-sm"
+      className="fixed inset-0 z-[2147483600] bg-black/90 flex items-center justify-center backdrop-blur-sm"
       onClick={onClose}
     >
       {/* Top bar */}
@@ -182,6 +186,7 @@ export function ImageLightbox({ open, images, startIndex = 0, altPrefix = "", on
           </div>
         </div>
       )}
-    </div>
+    </div>,
+    document.body
   );
 }

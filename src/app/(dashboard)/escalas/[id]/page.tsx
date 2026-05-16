@@ -25,6 +25,9 @@ import { RecordingsOverview } from "@/components/escala/recordings-overview";
 import { EditingUploader } from "@/components/escala/editing-uploader";
 import { EditingOverview } from "@/components/escala/editing-overview";
 import { ReviewByEditor } from "@/components/escala/review-by-editor";
+import { ReviewVideoPanel } from "@/components/escala/review-video-panel";
+import { RoteiroPreview } from "@/components/escala/roteiro-preview";
+import { AddEditingMediaSheet } from "@/components/escala/add-editing-media-sheet";
 import { WeekReferences } from "@/components/escala/week-references";
 import { HistoryCardPicker } from "@/components/acervo/history-card-picker";
 import { CharacterPicker } from "@/components/acervo/character-picker";
@@ -64,6 +67,15 @@ export default function ScaleDetailPage() {
   const [pickHistoryOpen, setPickHistoryOpen] = useState(false);
   const [pickCharactersOpen, setPickCharactersOpen] = useState(false);
 
+  // Roteiro: alterna preview <-> editor TipTap quando já existe roteiro vinculado
+  const [editingRoteiroId, setEditingRoteiroId] = useState<string | null>(null);
+  const [editingRoteiroTitle, setEditingRoteiroTitle] = useState("");
+  const [editingRoteiroContent, setEditingRoteiroContent] = useState("");
+  const [savingEditedRoteiro, setSavingEditedRoteiro] = useState(false);
+
+  // Edição: sheet "Adicionar mídia" (acervo + upload com push opcional)
+  const [addMediaOpen, setAddMediaOpen] = useState(false);
+
   const userId = (session?.user as any)?.id;
   const role = (session?.user as any)?.role;
   const canReview = ["admin", "coordenador"].includes(role);
@@ -102,6 +114,10 @@ export default function ScaleDetailPage() {
     setInlineTitle("");
     setInlineContent("");
     setInlineFile(null);
+    setEditingRoteiroId(null);
+    setEditingRoteiroTitle("");
+    setEditingRoteiroContent("");
+    setAddMediaOpen(false);
   }, [selectedWeek]);
 
   useEffect(() => {
@@ -152,21 +168,51 @@ export default function ScaleDetailPage() {
     } finally { setSavingRoteiro(false); }
   }
 
+  function startEditRoteiro(r: { _id: string; title?: string; content?: string }) {
+    setEditingRoteiroId(r._id);
+    setEditingRoteiroTitle(r.title || "");
+    setEditingRoteiroContent(r.content || "");
+  }
+
+  function cancelEditRoteiro() {
+    setEditingRoteiroId(null);
+    setEditingRoteiroTitle("");
+    setEditingRoteiroContent("");
+  }
+
+  async function saveEditedRoteiro() {
+    if (!editingRoteiroId) return;
+    if (!editingRoteiroTitle.trim()) { toast.error("Informe o título"); return; }
+    setSavingEditedRoteiro(true);
+    try {
+      const res = await fetch(`/api/roteiros/${editingRoteiroId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: editingRoteiroTitle.trim(),
+          content: editingRoteiroContent,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error((err as { error?: string }).error || "Erro ao salvar");
+      }
+      toast.success("Roteiro atualizado");
+      cancelEditRoteiro();
+      refreshData();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Erro ao salvar");
+    } finally {
+      setSavingEditedRoteiro(false);
+    }
+  }
+
   async function markComplete(taskRole: string, linkUrl?: string) {
     const res = await fetch(`/api/scales/${id}/weeks/${selectedWeek}`, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ role: taskRole, completed: true, linkUrl }),
     });
     if (res.ok) { toast.success("Concluído!"); refreshData(); } else toast.error("Erro");
-  }
-
-  async function handleReview(approve: boolean, rejectTo?: string) {
-    const status = approve ? "concluido" : (rejectTo || "edicao");
-    const res = await fetch(`/api/scales/${id}/weeks/${selectedWeek}`, {
-      method: "PUT", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
-    });
-    if (res.ok) { toast.success(approve ? "Aprovado!" : "Reprovado"); refreshData(); }
   }
 
   async function setWeekStatus(newStatus: string) {
@@ -275,9 +321,9 @@ export default function ScaleDetailPage() {
   const isRoteirista = currentWeek?.assignments?.roteiristas?.some((u: any) => (u._id || u) === userId);
 
   const teamGroups = [
-    { key: "roteiristas", label: "Roteirista", icon: PenLine, members: currentWeek?.assignments?.roteiristas || [], tagBg: "bg-blue-100 text-blue-700" },
-    { key: "narradores", label: "Narrador", icon: Mic, members: currentWeek?.assignments?.narradores || [], tagBg: "bg-amber-100 text-amber-700" },
-    { key: "editores", label: "Editor", icon: Film, members: currentWeek?.assignments?.editores || [], tagBg: "bg-violet-100 text-violet-700" },
+    { key: "roteiristas", label: "Roteirista", icon: PenLine, members: currentWeek?.assignments?.roteiristas || [], tagBg: "bg-[oklch(0.22_0.030_220)] text-[oklch(0.82_0.13_220)]" },
+    { key: "narradores", label: "Narrador", icon: Mic, members: currentWeek?.assignments?.narradores || [], tagBg: "bg-[oklch(0.22_0.030_60)] text-[oklch(0.82_0.13_60)]" },
+    { key: "editores", label: "Editor", icon: Film, members: currentWeek?.assignments?.editores || [], tagBg: "bg-[oklch(0.22_0.025_300)] text-[oklch(0.82_0.13_300)]" },
   ];
 
   const viewingStep = viewingStage ? STEPS.find(s => s.key === viewingStage) : null;
@@ -388,7 +434,7 @@ export default function ScaleDetailPage() {
                         {nextStep && (
                           confirmAdvance === nextStep.key ? (
                             <div className="flex items-center gap-1.5 shrink-0">
-                              <span className="text-[10px] text-amber-600 font-medium">{advanceWarning}</span>
+                              <span className="text-[10px] text-[oklch(0.82_0.13_60)] font-medium">{advanceWarning}</span>
                               <Button size="sm" variant="destructive" className="h-8 text-xs rounded-lg"
                                 onClick={() => { setConfirmAdvance(null); setWeekStatus(nextStep.key); }}>
                                 Avançar mesmo assim
@@ -401,7 +447,7 @@ export default function ScaleDetailPage() {
                           ) : (
                             <Button size="sm" variant="outline"
                               className={cn("h-8 text-xs rounded-lg shrink-0 border",
-                                advanceWarning ? "border-amber-300 text-amber-700 hover:bg-amber-50" : cn(STEPS[0].lightBorder, STEPS[0].lightText)
+                                advanceWarning ? "border-[oklch(0.40_0.08_60)] text-[oklch(0.82_0.13_60)] hover:bg-[oklch(0.22_0.030_60)]" : cn(STEPS[0].lightBorder, STEPS[0].lightText)
                               )}
                               onClick={() => {
                                 if (advanceWarning) setConfirmAdvance(nextStep.key);
@@ -414,34 +460,68 @@ export default function ScaleDetailPage() {
                         )}
                       </div>
                       {!currentWeek.roteiro && !showInlineRoteiro && (
-                        <Button size="sm" className="bg-blue-600 hover:bg-blue-700 h-8 text-xs rounded-lg w-full"
+                        <Button size="sm" className="bg-[oklch(0.55_0.17_220)] hover:bg-[oklch(0.48_0.17_220)] h-8 text-xs rounded-lg w-full"
                           onClick={() => setShowInlineRoteiro(true)}>
                           <PenLine className="h-3.5 w-3.5 mr-1" /> Escrever roteiro agora
                         </Button>
                       )}
+                      {currentWeek.roteiro && !showInlineRoteiro && (
+                        editingRoteiroId === (currentWeek.roteiro._id || currentWeek.roteiro) ? (
+                          <div className="space-y-3 pt-1">
+                            <div className="flex items-center justify-between gap-2">
+                              <p className={cn("text-[10px] font-bold uppercase tracking-widest", STEPS[0].lightText)}>
+                                Editando roteiro
+                              </p>
+                              <Button size="sm" variant="ghost" className="h-7 text-[11px] rounded-md"
+                                onClick={cancelEditRoteiro}>
+                                <X className="h-3 w-3 mr-1" /> Cancelar
+                              </Button>
+                            </div>
+                            <Input placeholder="Título do roteiro" value={editingRoteiroTitle}
+                              onChange={(e) => setEditingRoteiroTitle(e.target.value)}
+                              className="h-9 text-sm bg-[oklch(0.235_0.015_172)]" />
+                            <RichTextEditor content={editingRoteiroContent}
+                              onChange={setEditingRoteiroContent} placeholder="Escreva o roteiro..." />
+                            <div className="flex gap-2">
+                              <Button size="sm" className="bg-[oklch(0.55_0.17_220)] hover:bg-[oklch(0.48_0.17_220)] h-8 text-xs rounded-lg flex-1"
+                                disabled={savingEditedRoteiro || !editingRoteiroTitle.trim()}
+                                onClick={saveEditedRoteiro}>
+                                {savingEditedRoteiro ? "Salvando…" : "Salvar alterações"}
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <RoteiroPreview
+                            roteiro={currentWeek.roteiro}
+                            canEdit={canReview}
+                            onEdit={() => startEditRoteiro(currentWeek.roteiro)}
+                            accentText={STEPS[0].lightText}
+                          />
+                        )
+                      )}
                       {showInlineRoteiro && (
                         <div className="space-y-3 pt-1">
                           <Input placeholder="Título do roteiro" value={inlineTitle}
-                            onChange={(e) => setInlineTitle(e.target.value)} className="h-9 text-sm bg-white" />
+                            onChange={(e) => setInlineTitle(e.target.value)} className="h-9 text-sm bg-[oklch(0.235_0.015_172)]" />
                           <RichTextEditor content={inlineContent} onChange={setInlineContent} placeholder="Escreva o roteiro..." />
                           <div className="flex items-center gap-2">
                             <input ref={inlineFileRef} type="file" className="hidden" accept=".pdf,.doc,.docx,.mp3,.wav"
                               onChange={(e) => setInlineFile(e.target.files?.[0] || null)} />
                             {inlineFile ? (
-                              <div className="flex items-center gap-2 text-[11px] text-blue-700 bg-blue-50 border border-blue-100 rounded-lg px-2 py-1 flex-1">
+                              <div className="flex items-center gap-2 text-[11px] text-[oklch(0.82_0.13_220)] bg-[oklch(0.22_0.030_220)] border border-[oklch(0.35_0.06_220)] rounded-lg px-2 py-1 flex-1">
                                 <FileText className="h-3 w-3 shrink-0" />
                                 <span className="truncate">{inlineFile.name}</span>
                                 <button onClick={() => setInlineFile(null)} className="ml-auto"><X className="h-3 w-3" /></button>
                               </div>
                             ) : (
                               <button type="button" onClick={() => inlineFileRef.current?.click()}
-                                className="text-[11px] text-blue-600 hover:underline flex items-center gap-1">
+                                className="text-[11px] text-[oklch(0.78_0.13_220)] hover:underline flex items-center gap-1">
                                 <Paperclip className="h-3 w-3" /> Anexar arquivo (opcional)
                               </button>
                             )}
                           </div>
                           <div className="flex gap-2">
-                            <Button size="sm" className="bg-blue-600 hover:bg-blue-700 h-8 text-xs rounded-lg flex-1"
+                            <Button size="sm" className="bg-[oklch(0.55_0.17_220)] hover:bg-[oklch(0.48_0.17_220)] h-8 text-xs rounded-lg flex-1"
                               disabled={savingRoteiro || !inlineTitle.trim() || (!inlineContent.trim() && !inlineFile)}
                               onClick={handleInlineRoteiroSave}>
                               {savingRoteiro ? "Salvando..." : "Salvar Roteiro"}
@@ -459,38 +539,61 @@ export default function ScaleDetailPage() {
 
                 {weekStatus === "roteiro" && isRoteirista && (
                   currentWeek.roteiro ? (
-                    <div className={cn("p-3 rounded-lg border space-y-2.5", STEPS[0].lightBg, STEPS[0].lightBorder)}>
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex items-center gap-2.5">
-                          <PenLine className="h-4 w-4 text-blue-600" />
-                          <div>
-                            <p className="text-sm font-bold text-blue-700">Roteiro vinculado</p>
-                            <p className="text-[11px] text-muted-foreground/70">{currentWeek.roteiro.title || "Sem título"}</p>
+                    <div className={cn("p-3 rounded-lg border space-y-3", STEPS[0].lightBg, STEPS[0].lightBorder)}>
+                      {editingRoteiroId === (currentWeek.roteiro._id || currentWeek.roteiro) ? (
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className={cn("text-[10px] font-bold uppercase tracking-widest", STEPS[0].lightText)}>
+                              Editando roteiro
+                            </p>
+                            <Button size="sm" variant="ghost" className="h-7 text-[11px] rounded-md"
+                              onClick={cancelEditRoteiro}>
+                              <X className="h-3 w-3 mr-1" /> Cancelar
+                            </Button>
+                          </div>
+                          <Input placeholder="Título do roteiro" value={editingRoteiroTitle}
+                            onChange={(e) => setEditingRoteiroTitle(e.target.value)}
+                            className="h-9 text-sm bg-[oklch(0.235_0.015_172)]" />
+                          <RichTextEditor content={editingRoteiroContent}
+                            onChange={setEditingRoteiroContent} placeholder="Escreva o roteiro..." />
+                          <div className="flex gap-2">
+                            <Button size="sm" className="bg-[oklch(0.55_0.17_220)] hover:bg-[oklch(0.48_0.17_220)] h-8 text-xs rounded-lg flex-1"
+                              disabled={savingEditedRoteiro || !editingRoteiroTitle.trim()}
+                              onClick={saveEditedRoteiro}>
+                              {savingEditedRoteiro ? "Salvando…" : "Salvar alterações"}
+                            </Button>
                           </div>
                         </div>
-                        <Button size="sm" onClick={() => markComplete("roteirista")}
-                          className="bg-blue-600 hover:bg-blue-700 h-8 text-xs rounded-lg shrink-0">
-                          <Check className="h-3.5 w-3.5 mr-1" /> Concluir
-                        </Button>
-                      </div>
-                      <Link href={`/roteiros/${currentWeek.roteiro._id || currentWeek.roteiro}`}
-                        className="text-[11px] text-blue-600 hover:underline flex items-center gap-1">
-                        <ExternalLink className="h-3 w-3" /> Abrir roteiro completo
-                      </Link>
+                      ) : (
+                        <>
+                          <RoteiroPreview
+                            roteiro={currentWeek.roteiro}
+                            canEdit
+                            onEdit={() => startEditRoteiro(currentWeek.roteiro)}
+                            accentText={STEPS[0].lightText}
+                          />
+                          <div className="pt-2 border-t border-dashed flex justify-end">
+                            <Button size="sm" onClick={() => markComplete("roteirista")}
+                              className="bg-[oklch(0.55_0.17_220)] hover:bg-[oklch(0.48_0.17_220)] h-8 text-xs rounded-lg">
+                              <Check className="h-3.5 w-3.5 mr-1" /> Marcar como concluído
+                            </Button>
+                          </div>
+                        </>
+                      )}
                     </div>
                   ) : (
                     <div className={cn("p-3 rounded-lg border space-y-3", STEPS[0].lightBg, STEPS[0].lightBorder)}>
                       {!showInlineRoteiro ? (
                         <div className="space-y-2">
                           <div className="flex items-center gap-2.5">
-                            <PenLine className="h-4 w-4 text-blue-600" />
+                            <PenLine className="h-4 w-4 text-[oklch(0.78_0.13_220)]" />
                             <div>
-                              <p className="text-sm font-bold text-blue-700">Criar roteiro</p>
+                              <p className="text-sm font-bold text-[oklch(0.86_0.13_220)]">Criar roteiro</p>
                               <p className="text-[11px] text-muted-foreground/70">Escreva o roteiro ou anexe o arquivo aqui mesmo</p>
                             </div>
                           </div>
                           <div className="flex gap-2 pt-1">
-                            <Button size="sm" className="bg-blue-600 hover:bg-blue-700 h-8 text-xs rounded-lg flex-1"
+                            <Button size="sm" className="bg-[oklch(0.55_0.17_220)] hover:bg-[oklch(0.48_0.17_220)] h-8 text-xs rounded-lg flex-1"
                               onClick={() => setShowInlineRoteiro(true)}>
                               <PenLine className="h-3.5 w-3.5 mr-1" /> Escrever agora
                             </Button>
@@ -507,7 +610,7 @@ export default function ScaleDetailPage() {
                             placeholder="Título do roteiro"
                             value={inlineTitle}
                             onChange={(e) => setInlineTitle(e.target.value)}
-                            className="h-9 text-sm bg-white"
+                            className="h-9 text-sm bg-[oklch(0.235_0.015_172)]"
                           />
                           <RichTextEditor
                             content={inlineContent}
@@ -523,7 +626,7 @@ export default function ScaleDetailPage() {
                               onChange={(e) => setInlineFile(e.target.files?.[0] || null)}
                             />
                             {inlineFile ? (
-                              <div className="flex items-center gap-2 text-[11px] text-blue-700 bg-blue-50 border border-blue-100 rounded-lg px-2 py-1 flex-1">
+                              <div className="flex items-center gap-2 text-[11px] text-[oklch(0.82_0.13_220)] bg-[oklch(0.22_0.030_220)] border border-[oklch(0.35_0.06_220)] rounded-lg px-2 py-1 flex-1">
                                 <FileText className="h-3 w-3 shrink-0" />
                                 <span className="truncate">{inlineFile.name}</span>
                                 <button onClick={() => setInlineFile(null)} className="ml-auto">
@@ -534,7 +637,7 @@ export default function ScaleDetailPage() {
                               <button
                                 type="button"
                                 onClick={() => inlineFileRef.current?.click()}
-                                className="text-[11px] text-blue-600 hover:underline flex items-center gap-1"
+                                className="text-[11px] text-[oklch(0.78_0.13_220)] hover:underline flex items-center gap-1"
                               >
                                 <Paperclip className="h-3 w-3" /> Anexar arquivo (opcional)
                               </button>
@@ -543,7 +646,7 @@ export default function ScaleDetailPage() {
                           <div className="flex gap-2">
                             <Button
                               size="sm"
-                              className="bg-blue-600 hover:bg-blue-700 h-8 text-xs rounded-lg flex-1"
+                              className="bg-[oklch(0.55_0.17_220)] hover:bg-[oklch(0.48_0.17_220)] h-8 text-xs rounded-lg flex-1"
                               disabled={savingRoteiro || !inlineTitle.trim() || (!inlineContent.trim() && !inlineFile)}
                               onClick={handleInlineRoteiroSave}
                             >
@@ -588,7 +691,7 @@ export default function ScaleDetailPage() {
                         {nextStep && (
                           confirmAdvance === nextStep.key ? (
                             <div className="flex items-center gap-1.5 shrink-0">
-                              <span className="text-[10px] text-amber-600 font-medium">{advanceWarning}</span>
+                              <span className="text-[10px] text-[oklch(0.82_0.13_60)] font-medium">{advanceWarning}</span>
                               <Button size="sm" variant="destructive" className="h-8 text-xs rounded-lg"
                                 onClick={() => { setConfirmAdvance(null); setWeekStatus(nextStep.key); }}>
                                 Avançar mesmo assim
@@ -601,7 +704,7 @@ export default function ScaleDetailPage() {
                           ) : (
                             <Button size="sm" variant="outline"
                               className={cn("h-8 text-xs rounded-lg shrink-0 border",
-                                advanceWarning ? "border-amber-300 text-amber-700 hover:bg-amber-50" : cn(STEPS[1].lightBorder, STEPS[1].lightText)
+                                advanceWarning ? "border-[oklch(0.40_0.08_60)] text-[oklch(0.82_0.13_60)] hover:bg-[oklch(0.22_0.030_60)]" : cn(STEPS[1].lightBorder, STEPS[1].lightText)
                               )}
                               onClick={() => {
                                 if (advanceWarning) setConfirmAdvance(nextStep.key);
@@ -630,6 +733,7 @@ export default function ScaleDetailPage() {
                       scaleId={String(id)}
                       weekNumber={selectedWeek}
                       currentUserId={String(userId)}
+                      currentUserName={(session?.user as any)?.name || "narrador"}
                       hasRoteiro={!!currentWeek?.roteiro}
                       notes={myProgress?.notes || ""}
                       completed={!!myProgress?.completed}
@@ -657,7 +761,7 @@ export default function ScaleDetailPage() {
                         {nextStep && (
                           confirmAdvance === nextStep.key ? (
                             <div className="flex items-center gap-1.5 shrink-0">
-                              <span className="text-[10px] text-amber-600 font-medium">{advanceWarning}</span>
+                              <span className="text-[10px] text-[oklch(0.82_0.13_60)] font-medium">{advanceWarning}</span>
                               <Button size="sm" variant="destructive" className="h-8 text-xs rounded-lg"
                                 onClick={() => { setConfirmAdvance(null); setWeekStatus(nextStep.key); }}>
                                 Avançar mesmo assim
@@ -670,7 +774,7 @@ export default function ScaleDetailPage() {
                           ) : (
                             <Button size="sm" variant="outline"
                               className={cn("h-8 text-xs rounded-lg shrink-0 border",
-                                advanceWarning ? "border-amber-300 text-amber-700 hover:bg-amber-50" : cn(STEPS[2].lightBorder, STEPS[2].lightText)
+                                advanceWarning ? "border-[oklch(0.40_0.08_60)] text-[oklch(0.82_0.13_60)] hover:bg-[oklch(0.22_0.030_60)]" : cn(STEPS[2].lightBorder, STEPS[2].lightText)
                               )}
                               onClick={() => {
                                 if (advanceWarning) setConfirmAdvance(nextStep.key);
@@ -695,18 +799,30 @@ export default function ScaleDetailPage() {
                 {weekStatus === "edicao" && isEditor && (() => {
                   const myProgress = progress.find((p: any) => p.role === "editor" && (p.userId?._id || p.userId) === userId);
                   return (
-                    <EditingUploader
-                      scaleId={String(id)}
-                      weekNumber={selectedWeek}
-                      currentUserId={String(userId)}
-                      hasRoteiro={!!currentWeek?.roteiro}
-                      notes={myProgress?.notes || ""}
-                      completed={!!myProgress?.completed}
-                      reviewStatus={myProgress?.reviewStatus}
-                      reviewReason={myProgress?.reviewReason}
-                      rejectionCount={myProgress?.rejectionCount}
-                      onChanged={refreshData}
-                    />
+                    <div className="space-y-3">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-9 text-xs w-full border-dashed border-[oklch(0.40_0.06_300)] text-[oklch(0.82_0.13_300)] hover:bg-[oklch(0.22_0.025_300)]"
+                        onClick={() => setAddMediaOpen(true)}
+                      >
+                        <Paperclip className="h-3.5 w-3.5 mr-1.5" />
+                        Adicionar mídia (Acervo ou upload)
+                      </Button>
+                      <EditingUploader
+                        scaleId={String(id)}
+                        weekNumber={selectedWeek}
+                        currentUserId={String(userId)}
+                        hasRoteiro={!!currentWeek?.roteiro}
+                        notes={myProgress?.notes || ""}
+                        completed={!!myProgress?.completed}
+                        reviewStatus={myProgress?.reviewStatus}
+                        reviewReason={myProgress?.reviewReason}
+                        rejectionCount={myProgress?.rejectionCount}
+                        onChanged={refreshData}
+                      />
+                    </div>
                   );
                 })()}
 
@@ -729,11 +845,19 @@ export default function ScaleDetailPage() {
                           </div>
                         </div>
                         {allApproved && (
-                          <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-emerald-700 bg-emerald-100 px-2 py-1 rounded-md">
+                          <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-[oklch(0.82_0.13_158)] bg-[oklch(0.22_0.030_158)] px-2 py-1 rounded-md">
                             <Check className="h-3 w-3" /> Todos aprovados
                           </span>
                         )}
                       </div>
+
+                      <ReviewVideoPanel
+                        scaleId={String(id)}
+                        weekNumber={selectedWeek}
+                        initialUrl={currentWeek.reviewVideoUrl || ""}
+                        canReview={canReview}
+                        onChanged={refreshData}
+                      />
 
                       <ReviewByEditor
                         scaleId={String(id)}
@@ -742,36 +866,22 @@ export default function ScaleDetailPage() {
                         progress={progress}
                         onChanged={refreshData}
                       />
-
-                      <div className="pt-2 border-t border-dashed space-y-1.5">
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                          Ações globais
-                        </p>
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            className="h-8 text-xs rounded-lg flex-1"
-                            onClick={() => handleReview(false, "edicao")}
-                          >
-                            <RotateCcw className="h-3.5 w-3.5 mr-1" /> Voltar pra Edição
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-8 text-xs rounded-lg flex-1"
-                            onClick={() => handleReview(false, "gravacao")}
-                          >
-                            <RotateCcw className="h-3.5 w-3.5 mr-1" /> Voltar pra Gravação
-                          </Button>
-                        </div>
-                      </div>
                     </div>
                   );
                 })()}
 
-                {weekStatus === "concluido" && (
-                  <div className="flex items-center gap-3 p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700">
+                {/* Visualização retroativa de gravações quando a fase já passou */}
+                {viewingStage === "gravacao" && weekStatus !== "gravacao" && (
+                  <RecordingsOverview
+                    scaleId={String(id)}
+                    weekNumber={selectedWeek}
+                    narradores={(currentWeek?.assignments?.narradores || []).map((u: any) => ({ _id: u._id || u, name: u.name || "?" }))}
+                    progress={progress}
+                  />
+                )}
+
+                {weekStatus === "concluido" && !viewingStage && (
+                  <div className="flex items-center gap-3 p-3 rounded-lg bg-[oklch(0.22_0.030_158)] border border-[oklch(0.35_0.06_158)] text-[oklch(0.82_0.13_158)]">
                     <CircleCheck className="h-5 w-5 shrink-0" />
                     <div>
                       <p className="text-sm font-bold">Semana concluída</p>
@@ -835,9 +945,9 @@ export default function ScaleDetailPage() {
                         >
                           <div className={cn(
                             "h-8 w-8 rounded-lg flex items-center justify-center transition-all relative",
-                            active ? `bg-gradient-to-br ${s.gradient} text-white shadow-sm` :
-                            done ? "bg-emerald-100 text-emerald-600" :
-                            "bg-background text-muted-foreground/15 border",
+                            active ? `bg-gradient-to-br ${s.gradient} text-[oklch(0.10_0.012_158)] shadow-sm` :
+                            done ? "bg-[oklch(0.22_0.030_158)] text-[oklch(0.78_0.13_158)]" :
+                            "bg-[oklch(0.200_0.016_172)] text-muted-foreground/15 border border-border",
                             clickable && !viewing && "hover:ring-2 hover:ring-primary/20",
                             viewing && "ring-2 ring-primary ring-offset-1"
                           )}>
@@ -846,7 +956,7 @@ export default function ScaleDetailPage() {
                           <span className={cn(
                             "text-[9px] font-bold uppercase tracking-wider transition-colors",
                             viewing ? "text-primary" :
-                            active ? s.color : done ? "text-emerald-600/70" : "text-muted-foreground/15"
+                            active ? s.color : done ? "text-[oklch(0.65_0.12_158)]" : "text-muted-foreground/15"
                           )}>{s.label}</span>
                           {clickable && (
                             <span className={cn("text-[8px] font-medium transition-opacity", viewing ? "text-primary opacity-100" : "opacity-0 group-hover:opacity-60 text-muted-foreground")}>
@@ -854,7 +964,7 @@ export default function ScaleDetailPage() {
                             </span>
                           )}
                         </button>
-                        {i < STEPS.length - 1 && <div className={cn("flex-1 h-px mx-1 -mt-6", i < stepIdx ? "bg-emerald-300" : "bg-border")} />}
+                        {i < STEPS.length - 1 && <div className={cn("flex-1 h-px mx-1 -mt-6", i < stepIdx ? "bg-[oklch(0.45_0.12_158)]" : "bg-border")} />}
                       </Fragment>
                     );
                   })}
@@ -884,8 +994,8 @@ export default function ScaleDetailPage() {
                           <div key={idx} className="flex items-start gap-2 py-1.5 border-b border-black/[0.03] last:border-0">
                             {/* Icon */}
                             <div className={cn("h-5 w-5 rounded flex items-center justify-center shrink-0 mt-0.5",
-                              item.type === "completion" ? "bg-emerald-100 text-emerald-600" :
-                              item.type === "link" ? "bg-blue-100 text-blue-600" :
+                              item.type === "completion" ? "bg-[oklch(0.22_0.030_158)] text-[oklch(0.78_0.13_158)]" :
+                              item.type === "link" ? "bg-[oklch(0.22_0.030_220)] text-[oklch(0.78_0.13_220)]" :
                               "bg-muted text-muted-foreground"
                             )}>
                               {item.type === "completion" ? <CheckCircle2 className="h-3 w-3" /> :
@@ -999,7 +1109,7 @@ export default function ScaleDetailPage() {
                                   <td className="px-4 py-2 text-right">
                                     {mp ? (
                                       <span className={cn("text-[10px] font-bold px-1.5 py-0.5 rounded-full",
-                                        mp.completed ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+                                        mp.completed ? "bg-[oklch(0.22_0.030_158)] text-[oklch(0.82_0.13_158)]" : "bg-[oklch(0.22_0.030_60)] text-[oklch(0.82_0.13_60)]"
                                       )}>{mp.completed ? "Concluído" : "Pendente"}</span>
                                     ) : (() => {
                                       const activeInPhase =
@@ -1008,7 +1118,7 @@ export default function ScaleDetailPage() {
                                         (weekStatus === "edicao" && group.key === "editores") ||
                                         weekStatus === "revisao";
                                       return activeInPhase ? (
-                                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-orange-50 text-orange-600">
+                                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-[oklch(0.22_0.030_25)] text-[oklch(0.82_0.13_25)]">
                                           Pendente
                                         </span>
                                       ) : (
@@ -1117,6 +1227,13 @@ export default function ScaleDetailPage() {
         onOpenChange={setPickCharactersOpen}
         selectedIds={(currentWeek?.characterIds || []).map((c: any) => c._id || c)}
         onConfirm={handlePickCharacters}
+      />
+      <AddEditingMediaSheet
+        open={addMediaOpen}
+        onOpenChange={setAddMediaOpen}
+        scaleId={String(id)}
+        weekNumber={selectedWeek}
+        onChanged={refreshData}
       />
     </div>
   );

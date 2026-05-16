@@ -105,6 +105,17 @@ export async function PUT(req: NextRequest, { params }: Params) {
   if (body.assignments !== undefined) scale.weeks[weekIdx].assignments = body.assignments;
   if (body.status !== undefined) scale.weeks[weekIdx].status = body.status;
 
+  // reviewVideoUrl — exige coordenador+, valida via isSafeUrl
+  if (body.reviewVideoUrl !== undefined) {
+    if (body.reviewVideoUrl === null || body.reviewVideoUrl === "") {
+      scale.weeks[weekIdx].reviewVideoUrl = undefined;
+    } else if (typeof body.reviewVideoUrl === "string" && isSafeUrl(body.reviewVideoUrl.trim())) {
+      scale.weeks[weekIdx].reviewVideoUrl = body.reviewVideoUrl.trim().slice(0, 2048);
+    } else {
+      return NextResponse.json({ error: "reviewVideoUrl inválido" }, { status: 400 });
+    }
+  }
+
   if (body.historyCardId !== undefined) {
     scale.weeks[weekIdx].historyCardId =
       body.historyCardId === null || body.historyCardId === "" ? undefined : body.historyCardId;

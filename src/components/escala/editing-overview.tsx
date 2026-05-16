@@ -112,8 +112,8 @@ export function EditingOverview({ scaleId, weekNumber, editores, progress }: Pro
               className={cn(
                 "rounded-lg border overflow-hidden transition-colors",
                 isCompleted
-                  ? "border-emerald-200 bg-emerald-50/30"
-                  : "border-violet-200/60 bg-white"
+                  ? "border-[oklch(0.35_0.06_158)] bg-[oklch(0.20_0.025_158)]"
+                  : "border-[oklch(0.35_0.05_300)] bg-[oklch(0.22_0.025_300)]"
               )}
             >
               <button
@@ -125,8 +125,8 @@ export function EditingOverview({ scaleId, weekNumber, editores, progress }: Pro
                   className={cn(
                     "h-7 w-7 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0",
                     isCompleted
-                      ? "bg-emerald-200 text-emerald-700"
-                      : "bg-violet-100 text-violet-700"
+                      ? "bg-[oklch(0.30_0.040_158)] text-[oklch(0.86_0.13_158)]"
+                      : "bg-[oklch(0.28_0.035_300)] text-[oklch(0.86_0.13_300)]"
                   )}
                 >
                   {e.name.charAt(0).toUpperCase()}
@@ -221,7 +221,7 @@ export function EditingOverview({ scaleId, weekNumber, editores, progress }: Pro
       </ul>
 
       {pending.length > 0 && (
-        <div className="flex items-center gap-1.5 text-[10px] text-violet-700/80 bg-violet-50 border border-violet-200/50 rounded-md px-2 py-1.5">
+        <div className="flex items-center gap-1.5 text-[10px] text-[oklch(0.82_0.13_300)] bg-[oklch(0.22_0.025_300)] border border-[oklch(0.35_0.05_300)] rounded-md px-2 py-1.5">
           <AlertTriangle className="h-3 w-3 shrink-0" />
           <span>
             {pending.length} {pending.length === 1 ? "editor pendente" : "editores pendentes"}:{" "}

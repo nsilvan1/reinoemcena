@@ -131,7 +131,7 @@ export default function EscalasPage() {
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 mb-1.5">
-                          <span className="text-[10px] font-mono uppercase tracking-[0.22em] px-1.5 py-0.5 rounded-md bg-[oklch(0.20_0.010_240)] text-muted-foreground border border-border">
+                          <span className="text-[10px] font-mono uppercase tracking-[0.22em] px-1.5 py-0.5 rounded-md bg-[oklch(0.255_0.016_170)] text-muted-foreground border border-border">
                             {scale.month}
                           </span>
                           <span className="text-[10px] font-mono uppercase tracking-[0.18em] text-muted-foreground/45">
@@ -157,7 +157,7 @@ export default function EscalasPage() {
                         <ArrowRight className="h-4 w-4 text-muted-foreground/30 group-hover:text-foreground group-hover:translate-x-0.5 transition-all" />
                       </div>
                     </div>
-                    <div className="mt-4 h-1 rounded-full bg-[oklch(0.18_0.010_240)] overflow-hidden">
+                    <div className="mt-4 h-1 rounded-full bg-[oklch(0.235_0.016_172)] overflow-hidden">
                       <div
                         className="h-full rounded-full bg-gradient-to-r from-[oklch(0.55_0.18_158)] to-[oklch(0.78_0.16_158)] transition-all duration-700 shadow-[0_0_8px_oklch(0.74_0.16_158)]"
                         style={{ width: `${progress}%` }}
@@ -165,9 +165,10 @@ export default function EscalasPage() {
                     </div>
                   </div>
 
-                  <table className="w-full text-sm">
+                  <div className="overflow-x-auto">
+                  <table className="w-full text-sm min-w-[320px]">
                     <thead>
-                      <tr className="text-left bg-[oklch(0.16_0.010_240)] border-b border-border">
+                      <tr className="text-left bg-[oklch(0.205_0.016_172)] border-b border-border">
                         <th className="pl-6 pr-2 py-2.5 text-[10px] font-mono uppercase tracking-[0.22em] text-muted-foreground/55 w-14">#</th>
                         <th className="px-2 py-2.5 text-[10px] font-mono uppercase tracking-[0.22em] text-muted-foreground/55">Tema</th>
                         <th className="px-2 py-2.5 text-[10px] font-mono uppercase tracking-[0.22em] text-muted-foreground/55 hidden sm:table-cell w-20">Prazo</th>
@@ -180,9 +181,9 @@ export default function EscalasPage() {
                         const StepIcon = step.icon;
                         const overdue = isBefore(parseLocalDate(week.deadline), new Date());
                         return (
-                          <tr key={week.number} className="border-t border-border/60 hover:bg-[oklch(0.17_0.010_240)] transition-colors">
+                          <tr key={week.number} className="border-t border-border/60 hover:bg-[oklch(0.225_0.016_172)] transition-colors">
                             <td className="pl-6 pr-2 py-3">
-                              <span className="text-[11px] font-mono font-bold text-muted-foreground bg-[oklch(0.20_0.010_240)] rounded-md px-1.5 py-0.5 tabular-nums border border-border">
+                              <span className="text-[11px] font-mono font-bold text-muted-foreground bg-[oklch(0.255_0.016_170)] rounded-md px-1.5 py-0.5 tabular-nums border border-border">
                                 S{week.number}
                               </span>
                             </td>
@@ -202,6 +203,7 @@ export default function EscalasPage() {
                       })}
                     </tbody>
                   </table>
+                  </div>
                 </Card>
               </Link>
             );

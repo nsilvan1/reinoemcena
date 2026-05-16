@@ -82,7 +82,15 @@ export async function GET(req: NextRequest) {
   return NextResponse.json(attachments);
 }
 
-// POST /api/attachments — multipart/form-data
+// POST /api/attachments
+//
+// Aceita dois formatos:
+// 1) multipart/form-data { file, scaleId, weekNumber, stage } — upload novo
+// 2) application/json { url, name?, mimeType?, scaleId, weekNumber, stage } —
+//    referência a um arquivo já hospedado em /uploads/ (ex.: importar imagem
+//    do Acervo). Bloqueia URLs externas pra evitar SSRF e divergência de
+//    metadados.
+//
 // TODO PROD: o filesystem do Next/Vercel é efêmero — arquivos em /public/uploads
 // são perdidos a cada deploy/cold start. Antes de produção, migrar para storage
 // externo (S3, R2, Vercel Blob, GCS) e remover a escrita local abaixo. Mantemos
@@ -90,6 +98,11 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const { error, user } = await requireAuth();
   if (error) return error;
+
+  const contentType = req.headers.get("content-type") || "";
+  if (contentType.includes("application/json")) {
+    return handleReferenceUpload(req, user);
+  }
 
   const formData = await req.formData();
   const file = formData.get("file");
@@ -155,6 +168,88 @@ export async function POST(req: NextRequest) {
     name: displayName,
     mimeType: file.type,
     size: file.size,
+    uploadedBy: user.id,
+  });
+
+  await attachment.populate("uploadedBy", "name");
+
+  return NextResponse.json(attachment, { status: 201 });
+}
+
+// Cria um Attachment como referência a um arquivo já hospedado localmente.
+// Aceita apenas URLs relativas começando com "/uploads/" para evitar SSRF e
+// hot-linking externo. Não copia o arquivo: o arquivo é compartilhado entre
+// o registro original (Character) e essa referência (Attachment).
+async function handleReferenceUpload(
+  req: NextRequest,
+  user: { id: string }
+): Promise<NextResponse> {
+  let body: Record<string, unknown>;
+  try {
+    body = (await req.json()) as Record<string, unknown>;
+  } catch {
+    return NextResponse.json({ error: "JSON inválido" }, { status: 400 });
+  }
+
+  const scaleId = body.scaleId;
+  const weekNumber = body.weekNumber;
+  const stage = body.stage;
+  const url = typeof body.url === "string" ? body.url.trim() : "";
+  const rawName = typeof body.name === "string" ? body.name.trim() : "";
+  const rawMime = typeof body.mimeType === "string" ? body.mimeType.trim() : "";
+
+  if (!scaleId || typeof scaleId !== "string" || !mongoose.isValidObjectId(scaleId)) {
+    return NextResponse.json({ error: "scaleId inválido" }, { status: 400 });
+  }
+  if (typeof weekNumber !== "number" || !Number.isFinite(weekNumber) || weekNumber < 1) {
+    return NextResponse.json({ error: "weekNumber inválido" }, { status: 400 });
+  }
+  if (!stage || typeof stage !== "string" || !VALID_STAGES.includes(stage as (typeof VALID_STAGES)[number])) {
+    return NextResponse.json({ error: "stage inválido" }, { status: 400 });
+  }
+
+  // Somente URLs locais ao próprio servidor (/uploads/...) — sem barra dupla.
+  if (!/^\/uploads\/[A-Za-z0-9._-]+$/.test(url)) {
+    return NextResponse.json(
+      { error: "url deve ser um caminho local /uploads/..." },
+      { status: 400 }
+    );
+  }
+
+  // Inferir mimeType pela extensão se cliente não enviar (suporta apenas imagens).
+  const ext = url.split(".").pop()?.toLowerCase() || "";
+  const extToMime: Record<string, string> = {
+    jpg: "image/jpeg",
+    jpeg: "image/jpeg",
+    png: "image/png",
+    webp: "image/webp",
+    gif: "image/gif",
+  };
+  const mimeType = rawMime || extToMime[ext] || "application/octet-stream";
+
+  // Restringe importação por referência a tipos seguros (imagens do acervo).
+  if (!mimeType.startsWith("image/")) {
+    return NextResponse.json(
+      { error: "Referência só aceita imagens" },
+      { status: 400 }
+    );
+  }
+
+  const safeName = (rawName || url.split("/").pop() || "imagem")
+    .replace(/[^\x20-\x7E -￿]/g, "")
+    .trim()
+    .slice(0, 120);
+
+  await connectDB();
+
+  const attachment = await Attachment.create({
+    scaleId,
+    weekNumber,
+    stage,
+    url,
+    name: safeName,
+    mimeType,
+    size: 0, // tamanho real desconhecido — só referência
     uploadedBy: user.id,
   });
 

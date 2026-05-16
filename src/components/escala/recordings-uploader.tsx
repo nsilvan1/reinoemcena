@@ -17,6 +17,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { LiveRecorder } from "@/components/escala/live-recorder";
 
 interface Take {
   _id: string;
@@ -30,6 +31,8 @@ interface Props {
   scaleId: string;
   weekNumber: number;
   currentUserId: string;
+  /** Nome do usuário logado — usado pra nomear o arquivo gerado pelo gravador in-browser. */
+  currentUserName?: string;
   hasRoteiro: boolean;
   notes: string;
   completed: boolean;
@@ -46,6 +49,7 @@ export function RecordingsUploader({
   scaleId,
   weekNumber,
   currentUserId,
+  currentUserName,
   hasRoteiro,
   notes: initialNotes,
   completed,
@@ -223,30 +227,30 @@ export function RecordingsUploader({
   const notesDirty = notes.trim() !== (initialNotes || "").trim();
 
   return (
-    <div className="p-3 rounded-lg border border-amber-200/60 bg-amber-50/30 space-y-3">
+    <div className="p-3 rounded-lg border border-[oklch(0.35_0.06_60)] bg-[oklch(0.22_0.030_60)] space-y-3">
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2.5">
-          <Mic className="h-4 w-4 text-amber-600" />
+          <Mic className="h-4 w-4 text-[oklch(0.82_0.13_60)]" />
           <div>
-            <p className="text-sm font-bold text-amber-800">Minhas tomadas</p>
+            <p className="text-sm font-bold text-[oklch(0.88_0.13_60)]">Minhas tomadas</p>
             <p className="text-[11px] text-muted-foreground/70">
               Envie quantas precisar — a última conta como entrega
             </p>
           </div>
         </div>
         {completed ? (
-          <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-emerald-700 bg-emerald-100 px-2 py-1 rounded-md shrink-0">
+          <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-[oklch(0.82_0.13_158)] bg-[oklch(0.22_0.030_158)] px-2 py-1 rounded-md shrink-0">
             <Check className="h-3 w-3" /> Concluído
           </span>
         ) : (
-          <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-amber-700 bg-amber-100 px-2 py-1 rounded-md shrink-0">
+          <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-[oklch(0.82_0.13_60)] bg-[oklch(0.28_0.040_60)] px-2 py-1 rounded-md shrink-0">
             <AlertCircle className="h-3 w-3" /> Pendente
           </span>
         )}
       </div>
 
       {!hasRoteiro && (
-        <div className="text-[11px] text-amber-700 bg-amber-100/70 border border-amber-200 rounded-md px-2 py-1.5 flex items-center gap-1.5">
+        <div className="text-[11px] text-[oklch(0.82_0.13_60)] bg-[oklch(0.28_0.040_60)] border border-[oklch(0.40_0.07_60)] rounded-md px-2 py-1.5 flex items-center gap-1.5">
           <AlertCircle className="h-3 w-3 shrink-0" /> Crie o roteiro antes de enviar áudio
         </div>
       )}
@@ -259,10 +263,10 @@ export function RecordingsUploader({
           {takes.map((t, idx) => (
             <li
               key={t._id}
-              className="p-2 rounded-lg bg-white border border-amber-100 space-y-2"
+              className="p-2 rounded-lg bg-[oklch(0.200_0.016_172)] border border-[oklch(0.30_0.04_60)] space-y-2"
             >
               <div className="flex items-center gap-2 text-xs">
-                <FileAudio className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+                <FileAudio className="h-3.5 w-3.5 text-[oklch(0.78_0.13_60)] shrink-0" />
                 <div className="min-w-0 flex-1">
                   <p className="font-medium truncate">
                     Tomada {takes.length - idx} · {t.name}
@@ -274,7 +278,7 @@ export function RecordingsUploader({
                 </div>
                 <button
                   onClick={() => handleDeleteTake(t)}
-                  className="h-6 w-6 rounded-md hover:bg-red-50 hover:text-red-600 flex items-center justify-center text-muted-foreground shrink-0"
+                  className="h-6 w-6 rounded-md hover:bg-[oklch(0.22_0.030_25)] hover:text-[oklch(0.82_0.14_25)] flex items-center justify-center text-muted-foreground shrink-0"
                   title="Remover"
                 >
                   <Trash2 className="h-3 w-3" />
@@ -292,9 +296,20 @@ export function RecordingsUploader({
         </p>
       )}
 
-      {/* Upload */}
+      {/* Gravar in-browser */}
+      <LiveRecorder
+        uploadEndpoint={`/api/scales/${scaleId}/weeks/${weekNumber}/audio`}
+        username={currentUserName || "narrador"}
+        disabled={!hasRoteiro || uploading}
+        onUploaded={() => {
+          loadTakes();
+          onChanged();
+        }}
+      />
+
+      {/* Upload arquivo já gravado */}
       <label className={cn("cursor-pointer block", (!hasRoteiro || uploading) && "pointer-events-none opacity-50")}>
-        <div className="flex items-center justify-center gap-2 p-2.5 rounded-lg border-2 border-dashed border-amber-300/60 hover:border-amber-400 hover:bg-amber-50 transition-colors text-xs font-semibold text-amber-700">
+        <div className="flex items-center justify-center gap-2 p-2.5 rounded-lg border-2 border-dashed border-[oklch(0.40_0.07_60)] hover:border-[oklch(0.55_0.10_60)] hover:bg-[oklch(0.25_0.035_60)] transition-colors text-xs font-semibold text-[oklch(0.82_0.13_60)]">
           {uploading ? (
             <>
               <Upload className="h-3.5 w-3.5 animate-pulse" /> Enviando...
@@ -302,7 +317,7 @@ export function RecordingsUploader({
           ) : (
             <>
               <Plus className="h-3.5 w-3.5" />{" "}
-              {takes.length > 0 ? "Adicionar nova tomada" : "Enviar primeira tomada"}
+              {takes.length > 0 ? "Anexar arquivo existente" : "Anexar arquivo"}
             </>
           )}
         </div>
@@ -318,7 +333,7 @@ export function RecordingsUploader({
 
       {/* Link externo opcional */}
       <details className="group">
-        <summary className="cursor-pointer text-[11px] text-amber-700 hover:underline list-none flex items-center gap-1">
+        <summary className="cursor-pointer text-[11px] text-[oklch(0.78_0.13_60)] hover:underline list-none flex items-center gap-1">
           <Link2 className="h-3 w-3" /> Ou colar link externo (Drive, SoundCloud…)
         </summary>
         <div className="flex gap-2 mt-2">
@@ -331,7 +346,7 @@ export function RecordingsUploader({
           />
           <Button
             size="sm"
-            className="bg-amber-600 hover:bg-amber-700 h-8 text-xs"
+            className="bg-[oklch(0.55_0.15_60)] hover:bg-[oklch(0.48_0.15_60)] h-8 text-xs"
             disabled={!linkUrl.trim() || !hasRoteiro || submittingLink}
             onClick={handleSubmitLink}
           >
@@ -349,7 +364,7 @@ export function RecordingsUploader({
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           placeholder="Ex: gravei só a primeira parte, refaço amanhã"
-          className="text-xs min-h-[60px] bg-white"
+          className="text-xs min-h-[60px] bg-[oklch(0.235_0.015_172)]"
           maxLength={2000}
         />
         {notesDirty && (
@@ -374,7 +389,7 @@ export function RecordingsUploader({
           variant={completed ? "outline" : "default"}
           className={cn(
             "w-full h-9 text-xs",
-            !completed && "bg-amber-600 hover:bg-amber-700"
+            !completed && "bg-[oklch(0.55_0.15_60)] hover:bg-[oklch(0.48_0.15_60)]"
           )}
           onClick={handleToggleComplete}
         >

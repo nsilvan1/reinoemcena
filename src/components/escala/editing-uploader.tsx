@@ -231,42 +231,42 @@ export function EditingUploader({
   const notesDirty = notes.trim() !== (initialNotes || "").trim();
 
   return (
-    <div className="p-3 rounded-lg border border-violet-200/60 bg-violet-50/30 space-y-3">
+    <div className="p-3 rounded-lg border border-[oklch(0.35_0.05_300)] bg-[oklch(0.22_0.025_300)] space-y-3">
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2.5">
-          <Film className="h-4 w-4 text-violet-600" />
+          <Film className="h-4 w-4 text-[oklch(0.82_0.13_300)]" />
           <div>
-            <p className="text-sm font-bold text-violet-800">Meus cortes</p>
+            <p className="text-sm font-bold text-[oklch(0.88_0.13_300)]">Meus cortes</p>
             <p className="text-[11px] text-muted-foreground/70">
               Envie quantos precisar — o último conta como entrega
             </p>
           </div>
         </div>
         {completed ? (
-          <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-emerald-700 bg-emerald-100 px-2 py-1 rounded-md shrink-0">
+          <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-[oklch(0.82_0.13_158)] bg-[oklch(0.22_0.030_158)] px-2 py-1 rounded-md shrink-0">
             <Check className="h-3 w-3" /> Concluído
           </span>
         ) : (
-          <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-violet-700 bg-violet-100 px-2 py-1 rounded-md shrink-0">
+          <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-[oklch(0.82_0.13_300)] bg-[oklch(0.28_0.035_300)] px-2 py-1 rounded-md shrink-0">
             <AlertCircle className="h-3 w-3" /> Pendente
           </span>
         )}
       </div>
 
       {!hasRoteiro && (
-        <div className="text-[11px] text-violet-700 bg-violet-100/70 border border-violet-200 rounded-md px-2 py-1.5 flex items-center gap-1.5">
+        <div className="text-[11px] text-[oklch(0.82_0.13_300)] bg-[oklch(0.28_0.035_300)] border border-[oklch(0.38_0.05_300)] rounded-md px-2 py-1.5 flex items-center gap-1.5">
           <AlertCircle className="h-3 w-3 shrink-0" /> Crie o roteiro antes de enviar vídeo
         </div>
       )}
 
       {reviewStatus === "rejected" && reviewReason && (
-        <div className="text-[11px] bg-red-50 border border-red-300 rounded-md px-2.5 py-2 text-red-800 space-y-1">
+        <div className="text-[11px] bg-[oklch(0.22_0.030_25)] border border-[oklch(0.38_0.07_25)] rounded-md px-2.5 py-2 text-[oklch(0.86_0.14_25)] space-y-1">
           <div className="flex items-center justify-between gap-2">
             <p className="font-bold text-[10px] uppercase tracking-widest flex items-center gap-1">
               <AlertCircle className="h-3 w-3" /> Ajuste solicitado
             </p>
             {!!rejectionCount && rejectionCount > 0 && (
-              <span className="text-[9px] px-1 py-0 rounded bg-red-200 text-red-800 font-bold uppercase tracking-wider">
+              <span className="text-[9px] px-1 py-0 rounded bg-[oklch(0.30_0.050_25)] text-[oklch(0.86_0.14_25)] font-bold uppercase tracking-wider">
                 {rejectionCount}× refeito
               </span>
             )}
@@ -279,7 +279,7 @@ export function EditingUploader({
       )}
 
       {reviewStatus === "approved" && (
-        <div className="text-[11px] bg-emerald-50 border border-emerald-300 rounded-md px-2.5 py-2 text-emerald-800 flex items-center gap-1.5">
+        <div className="text-[11px] bg-[oklch(0.22_0.030_158)] border border-[oklch(0.38_0.06_158)] rounded-md px-2.5 py-2 text-[oklch(0.86_0.13_158)] flex items-center gap-1.5">
           <Check className="h-3.5 w-3.5 shrink-0" />
           <span className="font-medium">Seu vídeo foi aprovado!</span>
         </div>
@@ -293,7 +293,7 @@ export function EditingUploader({
           {cuts.map((c, idx) => (
             <li
               key={c._id}
-              className="p-2 rounded-lg bg-white border border-violet-100 space-y-2"
+              className="p-2 rounded-lg bg-[oklch(0.200_0.016_172)] border border-[oklch(0.30_0.04_300)] space-y-2"
             >
               <div className="flex items-center gap-2 text-xs">
                 <FileVideo className="h-3.5 w-3.5 text-violet-600 shrink-0" />
@@ -308,7 +308,7 @@ export function EditingUploader({
                 </div>
                 <button
                   onClick={() => handleDeleteCut(c)}
-                  className="h-6 w-6 rounded-md hover:bg-red-50 hover:text-red-600 flex items-center justify-center text-muted-foreground shrink-0"
+                  className="h-6 w-6 rounded-md hover:bg-[oklch(0.22_0.030_25)] hover:text-[oklch(0.82_0.14_25)] flex items-center justify-center text-muted-foreground shrink-0"
                   title="Remover"
                 >
                   <Trash2 className="h-3 w-3" />
@@ -328,7 +328,7 @@ export function EditingUploader({
 
       {/* Upload */}
       <label className={cn("cursor-pointer block", (!hasRoteiro || uploading) && "pointer-events-none opacity-50")}>
-        <div className="flex items-center justify-center gap-2 p-2.5 rounded-lg border-2 border-dashed border-violet-300/60 hover:border-violet-400 hover:bg-violet-50 transition-colors text-xs font-semibold text-violet-700">
+        <div className="flex items-center justify-center gap-2 p-2.5 rounded-lg border-2 border-dashed border-[oklch(0.38_0.05_300)] hover:border-[oklch(0.52_0.08_300)] hover:bg-[oklch(0.25_0.030_300)] transition-colors text-xs font-semibold text-[oklch(0.82_0.13_300)]">
           {uploading ? (
             <>
               <Upload className="h-3.5 w-3.5 animate-pulse" /> Enviando...
@@ -352,7 +352,7 @@ export function EditingUploader({
 
       {/* Link externo opcional */}
       <details className="group">
-        <summary className="cursor-pointer text-[11px] text-violet-700 hover:underline list-none flex items-center gap-1">
+        <summary className="cursor-pointer text-[11px] text-[oklch(0.78_0.13_300)] hover:underline list-none flex items-center gap-1">
           <Link2 className="h-3 w-3" /> Ou colar link externo (Drive, YouTube…)
         </summary>
         <div className="flex gap-2 mt-2">
@@ -365,7 +365,7 @@ export function EditingUploader({
           />
           <Button
             size="sm"
-            className="bg-violet-600 hover:bg-violet-700 h-8 text-xs"
+            className="bg-[oklch(0.52_0.14_300)] hover:bg-[oklch(0.45_0.14_300)] h-8 text-xs"
             disabled={!linkUrl.trim() || !hasRoteiro || submittingLink}
             onClick={handleSubmitLink}
           >
@@ -383,7 +383,7 @@ export function EditingUploader({
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           placeholder="Ex: render em baixa qualidade, posso refazer em 4K"
-          className="text-xs min-h-[60px] bg-white"
+          className="text-xs min-h-[60px] bg-[oklch(0.235_0.015_172)]"
           maxLength={2000}
         />
         {notesDirty && (
@@ -408,7 +408,7 @@ export function EditingUploader({
           variant={completed ? "outline" : "default"}
           className={cn(
             "w-full h-9 text-xs",
-            !completed && "bg-violet-600 hover:bg-violet-700"
+            !completed && "bg-[oklch(0.52_0.14_300)] hover:bg-[oklch(0.45_0.14_300)]"
           )}
           onClick={handleToggleComplete}
         >

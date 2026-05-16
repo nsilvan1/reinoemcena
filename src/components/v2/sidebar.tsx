@@ -39,7 +39,13 @@ function NavContent({ onClose }: { onClose?: () => void }) {
   const userName = session?.user?.name || "Usuário";
 
   return (
-    <div className="relative flex flex-col h-full bg-sidebar text-sidebar-foreground border-r border-sidebar-border">
+    <div
+      className="relative flex flex-col h-full text-sidebar-foreground border-r border-sidebar-border"
+      style={{
+        backgroundImage:
+          "linear-gradient(180deg, oklch(0.165 0.020 168) 0%, oklch(0.135 0.016 168) 55%, oklch(0.115 0.014 168) 100%)",
+      }}
+    >
       {/* Brand */}
       <div className="px-4 pt-4 pb-3">
         <Link href="/" onClick={onClose} className="inline-flex items-center gap-2.5 group">
@@ -62,7 +68,7 @@ function NavContent({ onClose }: { onClose?: () => void }) {
       <div className="px-3 mb-2">
         <button
           type="button"
-          className="w-full h-8 rounded-lg bg-[oklch(0.12_0.010_240)] border border-sidebar-border flex items-center px-2.5 gap-2 text-[11px] text-sidebar-foreground/45 hover:text-sidebar-foreground/70 hover:border-[oklch(0.24_0.010_240)] transition-colors"
+          className="w-full h-8 rounded-lg bg-[oklch(0.165_0.014_172)] border border-sidebar-border flex items-center px-2.5 gap-2 text-[11px] text-sidebar-foreground/45 hover:text-sidebar-foreground/70 hover:border-[oklch(0.295_0.016_170)] transition-colors"
         >
           <Search className="h-3 w-3" />
           <span className="flex-1 text-left">Buscar</span>

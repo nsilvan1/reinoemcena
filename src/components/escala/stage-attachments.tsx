@@ -174,7 +174,7 @@ export function StageAttachments({
             return (
               <div
                 key={a._id}
-                className="flex items-center gap-2 p-2 rounded-lg bg-white/50 border hover:border-primary/30 transition-colors text-xs"
+                className="flex items-center gap-2 p-2 rounded-lg bg-[oklch(0.235_0.015_172)] border border-border hover:border-primary/30 transition-colors text-xs"
               >
                 <Icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                 <a
@@ -205,7 +205,7 @@ export function StageAttachments({
                 {canDelete && (
                   <button
                     onClick={() => handleDelete(a._id)}
-                    className="h-6 w-6 rounded-md hover:bg-red-50 hover:text-red-600 flex items-center justify-center text-muted-foreground"
+                    className="h-6 w-6 rounded-md hover:bg-[oklch(0.22_0.030_25)] hover:text-[oklch(0.82_0.14_25)] flex items-center justify-center text-muted-foreground"
                     title="Remover"
                   >
                     <Trash2 className="h-3 w-3" />

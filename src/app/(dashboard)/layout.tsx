@@ -11,7 +11,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   return (
     <Providers>
-      <div className="relative min-h-screen bg-background text-foreground">
+      <div className="relative min-h-screen text-foreground">
         <div className="ambient-shell" />
         <SidebarV2 />
         <main className="relative lg:pl-60 z-10">

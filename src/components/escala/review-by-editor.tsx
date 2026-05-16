@@ -150,9 +150,9 @@ export function ReviewByEditor({ scaleId, weekNumber, editores, progress, onChan
             key={ed._id}
             className={cn(
               "rounded-lg border overflow-hidden transition-colors",
-              reviewStatus === "approved" && "border-emerald-300 bg-emerald-50/40",
-              reviewStatus === "rejected" && "border-red-300 bg-red-50/40",
-              reviewStatus === "pending" && "border-orange-200/60 bg-white"
+              reviewStatus === "approved" && "border-[oklch(0.38_0.06_158)] bg-[oklch(0.20_0.025_158)]",
+              reviewStatus === "rejected" && "border-[oklch(0.40_0.08_25)] bg-[oklch(0.22_0.030_25)]",
+              reviewStatus === "pending" && "border-[oklch(0.35_0.06_25)] bg-[oklch(0.22_0.030_25)]"
             )}
           >
             <button
@@ -163,9 +163,9 @@ export function ReviewByEditor({ scaleId, weekNumber, editores, progress, onChan
               <div
                 className={cn(
                   "h-7 w-7 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0",
-                  reviewStatus === "approved" && "bg-emerald-200 text-emerald-700",
-                  reviewStatus === "rejected" && "bg-red-200 text-red-700",
-                  reviewStatus === "pending" && "bg-orange-100 text-orange-700"
+                  reviewStatus === "approved" && "bg-[oklch(0.30_0.040_158)] text-[oklch(0.86_0.13_158)]",
+                  reviewStatus === "rejected" && "bg-[oklch(0.30_0.050_25)] text-[oklch(0.86_0.14_25)]",
+                  reviewStatus === "pending" && "bg-[oklch(0.28_0.040_25)] text-[oklch(0.86_0.13_25)]"
                 )}
               >
                 {ed.name.charAt(0).toUpperCase()}
@@ -174,7 +174,7 @@ export function ReviewByEditor({ scaleId, weekNumber, editores, progress, onChan
                 <div className="flex items-center gap-1.5">
                   <p className="text-sm font-medium truncate">{ed.name}</p>
                   {!!userProgress?.rejectionCount && userProgress.rejectionCount > 0 && (
-                    <span className="text-[9px] px-1 py-0 rounded bg-red-100 text-red-700 font-bold uppercase tracking-wider">
+                    <span className="text-[9px] px-1 py-0 rounded bg-[oklch(0.28_0.040_25)] text-[oklch(0.86_0.14_25)] font-bold uppercase tracking-wider">
                       Refeito {userProgress.rejectionCount}×
                     </span>
                   )}
@@ -262,7 +262,7 @@ export function ReviewByEditor({ scaleId, weekNumber, editores, progress, onChan
                 )}
 
                 {reviewStatus === "rejected" && userProgress?.reviewReason && (
-                  <div className="text-[11px] bg-red-50 border border-red-200 rounded-md px-2 py-1.5 text-red-800">
+                  <div className="text-[11px] bg-[oklch(0.22_0.030_25)] border border-[oklch(0.38_0.07_25)] rounded-md px-2 py-1.5 text-[oklch(0.86_0.14_25)]">
                     <p className="font-bold text-[10px] uppercase tracking-wider mb-0.5">
                       Motivo da rejeição
                     </p>
@@ -286,7 +286,7 @@ export function ReviewByEditor({ scaleId, weekNumber, editores, progress, onChan
                         <Button
                           size="sm"
                           variant="outline"
-                          className="h-8 text-xs flex-1 border-red-300 text-red-700 hover:bg-red-50"
+                          className="h-8 text-xs flex-1 border-[oklch(0.40_0.08_25)] text-[oklch(0.82_0.14_25)] hover:bg-[oklch(0.22_0.030_25)]"
                           onClick={() => setReasonOpen((s) => ({ ...s, [ed._id]: true }))}
                         >
                           <ThumbsDown className="h-3.5 w-3.5 mr-1" /> Pedir ajuste
@@ -295,8 +295,8 @@ export function ReviewByEditor({ scaleId, weekNumber, editores, progress, onChan
                     )}
 
                     {isReasonOpen && (
-                      <div className="space-y-1.5 p-2 rounded-lg bg-red-50/50 border border-red-200">
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-red-700 flex items-center gap-1">
+                      <div className="space-y-1.5 p-2 rounded-lg bg-[oklch(0.22_0.030_25)] border border-[oklch(0.38_0.07_25)]">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-[oklch(0.82_0.14_25)] flex items-center gap-1">
                           <Pencil className="h-3 w-3" /> Motivo do ajuste
                         </p>
                         <Textarea
@@ -305,7 +305,7 @@ export function ReviewByEditor({ scaleId, weekNumber, editores, progress, onChan
                             setReasonDraft((s) => ({ ...s, [ed._id]: e.target.value }))
                           }
                           placeholder="Ex: trocar trilha aos 0:23, cortar 3 segundos do final…"
-                          className="text-xs min-h-[60px] bg-white"
+                          className="text-xs min-h-[60px] bg-[oklch(0.235_0.015_172)]"
                           maxLength={1000}
                         />
                         <div className="flex gap-1.5">

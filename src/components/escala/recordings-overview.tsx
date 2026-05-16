@@ -113,8 +113,8 @@ export function RecordingsOverview({ scaleId, weekNumber, narradores, progress }
               className={cn(
                 "rounded-lg border overflow-hidden transition-colors",
                 isCompleted
-                  ? "border-emerald-200 bg-emerald-50/30"
-                  : "border-amber-200/60 bg-white"
+                  ? "border-[oklch(0.35_0.06_158)] bg-[oklch(0.20_0.025_158)]"
+                  : "border-[oklch(0.35_0.06_60)] bg-[oklch(0.22_0.030_60)]"
               )}
             >
               <button
@@ -126,8 +126,8 @@ export function RecordingsOverview({ scaleId, weekNumber, narradores, progress }
                   className={cn(
                     "h-7 w-7 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0",
                     isCompleted
-                      ? "bg-emerald-200 text-emerald-700"
-                      : "bg-amber-100 text-amber-700"
+                      ? "bg-[oklch(0.30_0.040_158)] text-[oklch(0.86_0.13_158)]"
+                      : "bg-[oklch(0.28_0.040_60)] text-[oklch(0.86_0.13_60)]"
                   )}
                 >
                   {n.name.charAt(0).toUpperCase()}
@@ -218,7 +218,7 @@ export function RecordingsOverview({ scaleId, weekNumber, narradores, progress }
       </ul>
 
       {pending.length > 0 && (
-        <div className="flex items-center gap-1.5 text-[10px] text-amber-700/80 bg-amber-50 border border-amber-200/50 rounded-md px-2 py-1.5">
+        <div className="flex items-center gap-1.5 text-[10px] text-[oklch(0.82_0.13_60)] bg-[oklch(0.22_0.030_60)] border border-[oklch(0.35_0.06_60)] rounded-md px-2 py-1.5">
           <AlertTriangle className="h-3 w-3 shrink-0" />
           <span>
             {pending.length} {pending.length === 1 ? "narrador pendente" : "narradores pendentes"}:{" "}

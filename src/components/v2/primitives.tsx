@@ -19,11 +19,11 @@ const BTN_VARIANTS: Record<ButtonVariant, string> = {
   primary:
     "bg-primary text-primary-foreground hover:bg-primary/90 shadow-[0_1px_0_oklch(1_0_0_/_0.15)_inset,0_2px_8px_oklch(0_0_0_/_0.4)] hover:shadow-[0_1px_0_oklch(1_0_0_/_0.2)_inset,0_4px_12px_oklch(0.74_0.16_158_/_0.3)]",
   secondary:
-    "bg-surface-2 text-foreground border border-border hover:bg-[oklch(0.20_0.010_240)] hover:border-[oklch(0.30_0.010_240)]",
+    "bg-surface-2 text-foreground border border-border hover:bg-[oklch(0.255_0.016_170)] hover:border-[oklch(0.34_0.018_170)]",
   ghost:
-    "text-muted-foreground hover:text-foreground hover:bg-[oklch(0.18_0.010_240)]",
+    "text-muted-foreground hover:text-foreground hover:bg-[oklch(0.235_0.016_172)]",
   outline:
-    "border border-border text-foreground hover:bg-[oklch(0.18_0.010_240)] hover:border-[oklch(0.30_0.010_240)]",
+    "border border-border text-foreground hover:bg-[oklch(0.235_0.016_172)] hover:border-[oklch(0.34_0.018_170)]",
   destructive:
     "bg-destructive text-white hover:bg-destructive/90",
 };
@@ -130,11 +130,11 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
         ref={ref}
         {...props}
         className={cn(
-          "h-10 w-full rounded-lg bg-[oklch(0.16_0.010_240)] border border-border px-3 text-sm text-foreground",
+          "h-10 w-full rounded-lg bg-[oklch(0.205_0.016_172)] border border-border px-3 text-sm text-foreground",
           "placeholder:text-muted-foreground/40",
           "outline-none transition-[border-color,box-shadow,background-color] duration-150",
-          "hover:border-[oklch(0.30_0.010_240)]",
-          "focus:border-primary/60 focus:bg-[oklch(0.18_0.012_240)] focus:ring-4 focus:ring-primary/15",
+          "hover:border-[oklch(0.34_0.018_170)]",
+          "focus:border-primary/60 focus:bg-[oklch(0.245_0.018_172)] focus:ring-4 focus:ring-primary/15",
           "disabled:opacity-50 disabled:cursor-not-allowed",
           leading && "pl-10",
           trailing && "pr-10",
@@ -154,7 +154,7 @@ Input.displayName = "Input";
 type BadgeTone = "neutral" | "primary" | "success" | "warning" | "danger" | "info" | "violet" | "amber";
 
 const BADGE_TONES: Record<BadgeTone, string> = {
-  neutral: "bg-[oklch(0.22_0.010_240)] text-[oklch(0.85_0.005_240)] border-[oklch(0.28_0.010_240)]",
+  neutral: "bg-[oklch(0.275_0.016_170)] text-[oklch(0.86_0.008_172)] border-[oklch(0.32_0.018_170)]",
   primary: "bg-[oklch(0.24_0.030_158)] text-[oklch(0.86_0.12_158)] border-[oklch(0.30_0.050_158)]",
   success: "bg-[oklch(0.22_0.030_158)] text-[oklch(0.86_0.14_158)] border-[oklch(0.28_0.060_158)]",
   warning: "bg-[oklch(0.22_0.030_60)] text-[oklch(0.86_0.14_60)] border-[oklch(0.30_0.060_60)]",
@@ -183,37 +183,81 @@ export function Badge({
 
 // ─── Avatar ─────────────────────────────────────────────────────────
 
+/** Derives a stable gradient + ring from a name string via simple hash. */
+export function getAvatarColor(name: string): {
+  from: string;
+  to: string;
+  ring: string;
+  text: string;
+} {
+  // Hue palette: 12 well-distributed hues, skipping near-black ranges
+  const HUES = [158, 175, 210, 240, 270, 300, 330, 25, 50, 70, 100, 130];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
+  }
+  const hue = HUES[hash % HUES.length];
+  return {
+    from: `oklch(0.34 0.055 ${hue})`,
+    to: `oklch(0.20 0.028 ${hue})`,
+    ring: `oklch(0.42 0.070 ${hue} / 0.35)`,
+    text: `oklch(0.92 0.10 ${hue})`,
+  };
+}
+
 interface AvatarProps {
   name?: string;
   src?: string;
-  size?: "xs" | "sm" | "md" | "lg" | "xl";
+  size?: "xs" | "sm" | "md" | "lg" | "xl" | "2xl";
   status?: "online" | "offline" | "away" | null;
+  icon?: React.ComponentType<{ className?: string; strokeWidth?: number }>;
   className?: string;
 }
 
-const AVA_SIZES = {
+const AVA_SIZES: Record<NonNullable<AvatarProps["size"]>, string> = {
   xs: "h-6 w-6 text-[9px]",
   sm: "h-8 w-8 text-[10px]",
   md: "h-9 w-9 text-xs",
   lg: "h-11 w-11 text-sm",
   xl: "h-14 w-14 text-base",
+  "2xl": "h-20 w-20 text-xl",
 };
 
-export function Avatar({ name, src, size = "md", status, className }: AvatarProps) {
-  const initial = (name || "?").charAt(0).toUpperCase();
+export function Avatar({ name, src, size = "md", status, icon: Icon, className }: AvatarProps) {
+  const [imgError, setImgError] = React.useState(false);
+  const displayName = name || "";
+  const initial = displayName ? displayName.charAt(0).toUpperCase() : "?";
+  const colors = getAvatarColor(displayName || "?");
+  const showImg = src && !imgError;
+
   return (
     <span className={cn("relative inline-flex shrink-0", className)}>
       <span
         className={cn(
           "inline-flex items-center justify-center rounded-full font-semibold overflow-hidden",
-          "bg-gradient-to-br from-[oklch(0.32_0.045_158)] to-[oklch(0.20_0.020_158)] text-[oklch(0.92_0.10_158)]",
-          "ring-1 ring-[oklch(0.40_0.060_158)]/30",
           AVA_SIZES[size]
         )}
+        style={
+          showImg
+            ? {}
+            : {
+                background: `linear-gradient(135deg, ${colors.from}, ${colors.to})`,
+                color: colors.text,
+                boxShadow: `0 0 0 1px ${colors.ring}`,
+              }
+        }
       >
-        {src ? (
+        {showImg ? (
           /* eslint-disable-next-line @next/next/no-img-element */
-          <img src={src} alt={name || ""} className="w-full h-full object-cover" />
+          <img
+            src={src}
+            alt={displayName}
+            loading="lazy"
+            className="w-full h-full object-cover"
+            onError={() => setImgError(true)}
+          />
+        ) : Icon ? (
+          <Icon className="h-[40%] w-[40%]" strokeWidth={1.8} />
         ) : (
           initial
         )}
@@ -363,7 +407,7 @@ export function EmptyState({ icon: Icon, title, description, action, className }
     <Card className={cn("p-10 sm:p-14 flex flex-col items-center text-center relative overflow-hidden", className)}>
       <div className="absolute inset-0 bg-dots-faint opacity-50 pointer-events-none" />
       <div className="relative">
-        <div className="h-14 w-14 rounded-2xl bg-[oklch(0.18_0.014_158)] ring-8 ring-[oklch(0.16_0.010_240)] flex items-center justify-center mx-auto">
+        <div className="h-14 w-14 rounded-2xl bg-[oklch(0.18_0.014_158)] ring-8 ring-[oklch(0.205_0.016_172)] flex items-center justify-center mx-auto">
           <Icon className="h-6 w-6 text-[oklch(0.78_0.13_158)]" strokeWidth={1.6} />
         </div>
         <h3 className="font-heading text-xl font-semibold mt-5 tracking-tight">{title}</h3>

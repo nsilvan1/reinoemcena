@@ -21,7 +21,7 @@ const TYPE_BG: Record<string, string> = {
   roteiro: "bg-[oklch(0.22_0.030_300)] text-[oklch(0.80_0.14_300)]",
   status: "bg-[oklch(0.22_0.030_60)] text-[oklch(0.80_0.14_60)]",
   revisao: "bg-[oklch(0.22_0.030_25)] text-[oklch(0.80_0.14_25)]",
-  geral: "bg-[oklch(0.20_0.010_240)] text-muted-foreground",
+  geral: "bg-[oklch(0.255_0.016_170)] text-muted-foreground",
 };
 
 function groupByDate(items: any[]) {

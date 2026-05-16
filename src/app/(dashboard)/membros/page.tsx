@@ -221,7 +221,7 @@ export default function MembrosPage() {
         <Card className="overflow-hidden animate-in-view">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left bg-[oklch(0.16_0.010_240)] border-b border-border">
+              <tr className="text-left bg-[oklch(0.205_0.016_172)] border-b border-border">
                 <th className="pl-6 pr-3 py-3 text-[10px] font-mono uppercase tracking-[0.22em] text-muted-foreground/55">Membro</th>
                 <th className="px-3 py-3 text-[10px] font-mono uppercase tracking-[0.22em] text-muted-foreground/55 hidden sm:table-cell">Usuário</th>
                 <th className="px-3 py-3 text-[10px] font-mono uppercase tracking-[0.22em] text-muted-foreground/55">Papel</th>
@@ -231,7 +231,7 @@ export default function MembrosPage() {
             </thead>
             <tbody>
               {users.map((u: { _id: string; name: string; username: string; role: string; skills?: string[] }) => (
-                <tr key={u._id} className="border-t border-border/60 hover:bg-[oklch(0.17_0.010_240)] transition-colors group">
+                <tr key={u._id} className="border-t border-border/60 hover:bg-[oklch(0.225_0.016_172)] transition-colors group">
                   <td className="pl-6 pr-3 py-3.5">
                     <div className="flex items-center gap-3">
                       <Avatar name={u.name} size="md" />

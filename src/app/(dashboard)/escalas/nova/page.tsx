@@ -102,7 +102,7 @@ export default function NovaEscalaPage() {
                     key={i}
                     className="grid grid-cols-[3rem_1fr_10rem_2rem] gap-2 items-center"
                   >
-                    <span className="text-[11px] font-mono font-bold text-muted-foreground bg-[oklch(0.20_0.010_240)] rounded-md px-2 py-2 text-center tabular-nums border border-border">
+                    <span className="text-[11px] font-mono font-bold text-muted-foreground bg-[oklch(0.255_0.016_170)] rounded-md px-2 py-2 text-center tabular-nums border border-border">
                       S{i + 1}
                     </span>
                     <Input
@@ -136,7 +136,7 @@ export default function NovaEscalaPage() {
             </div>
           </div>
 
-          <div className="flex justify-end gap-2 px-6 py-4 border-t border-border bg-[oklch(0.16_0.010_240)]">
+          <div className="flex justify-end gap-2 px-6 py-4 border-t border-border bg-[oklch(0.205_0.016_172)]">
             <Button type="button" variant="ghost" onClick={() => router.back()}>
               Cancelar
             </Button>

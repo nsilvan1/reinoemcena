@@ -77,9 +77,15 @@ export default function LoginPage() {
   const showWelcome = stage === "welcome";
 
   return (
-    <div className="relative min-h-screen bg-background text-foreground">
+    <div className="relative min-h-screen text-foreground">
       {/* Background */}
-      <div className="absolute inset-0 ambient-shell" />
+      <div className="absolute inset-0 ambient-shell">
+        <div className="ambient-blob ambient-blob--1" />
+        <div className="ambient-blob ambient-blob--2" />
+        <div className="ambient-blob ambient-blob--3" />
+        <div className="ambient-blob ambient-blob--4" />
+        <div className="absolute inset-0 bg-grid-faint-animated opacity-60 [mask-image:radial-gradient(ellipse_80%_60%_at_50%_40%,black_20%,transparent_85%)]" />
+      </div>
 
       {/* Brand */}
       <header className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between px-6 py-5">
@@ -100,7 +106,7 @@ export default function LoginPage() {
         </span>
       </header>
 
-      <div className="relative z-10 min-h-screen flex items-center justify-center px-6 py-24">
+      <div className="relative z-10 min-h-[100dvh] flex items-center justify-center px-4 sm:px-6 py-20 sm:py-24" style={{ paddingBottom: "max(5rem, env(safe-area-inset-bottom))" }}>
         <div className="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-5 gap-10 lg:gap-14 items-center">
           {/* Hero */}
           <div className="hidden lg:block lg:col-span-3 animate-in-view">
@@ -135,7 +141,7 @@ export default function LoginPage() {
                         <span
                           className="relative h-10 w-10 rounded-lg flex items-center justify-center border"
                           style={{
-                            background: `oklch(0.16 0.012 240)`,
+                            background: `oklch(0.21 0.018 172)`,
                             borderColor: `${s.color.replace("0.78", "0.30").replace("0.13", "0.04")}`,
                             animation: `glow-pulse 3s ease-in-out infinite`,
                             animationDelay: `${i * 0.4}s`,
@@ -155,7 +161,7 @@ export default function LoginPage() {
           </div>
 
           {/* Form */}
-          <div className="lg:col-span-2 flex justify-center lg:justify-end animate-in-view stagger-1">
+          <div className="lg:col-span-2 flex justify-center lg:justify-end animate-in-view stagger-1 w-full">
             <div className="w-full max-w-sm relative">
               <div className="lg:hidden text-center mb-8">
                 <h1 className="font-heading text-3xl font-semibold tracking-[-0.03em] text-gradient-mint inline-block">
@@ -164,7 +170,7 @@ export default function LoginPage() {
               </div>
 
               {showWelcome ? (
-                <Card elevated className="p-10 text-center">
+                <Card elevated className="p-8 sm:p-10 text-center">
                   <div className="relative inline-flex">
                     <span className="absolute inset-0 rounded-full bg-[oklch(0.55_0.18_158)] blur-2xl opacity-50 glow-pulse" />
                     <span className="relative h-14 w-14 rounded-full bg-gradient-to-br from-[oklch(0.55_0.18_158)] to-[oklch(0.40_0.16_158)] flex items-center justify-center shadow-2xl shadow-[oklch(0.55_0.18_158)]/40">
@@ -177,12 +183,12 @@ export default function LoginPage() {
                   <p className="text-muted-foreground/65 text-[12.5px] mt-2 font-mono uppercase tracking-[0.18em]">
                     Carregando painel
                   </p>
-                  <div className="mt-6 h-0.5 bg-[oklch(0.20_0.010_240)] rounded-full overflow-hidden">
+                  <div className="mt-6 h-0.5 bg-[oklch(0.255_0.016_170)] rounded-full overflow-hidden">
                     <div className="h-full w-1/3 bg-gradient-to-r from-[oklch(0.55_0.18_158)] to-[oklch(0.75_0.16_158)] animate-pulse" />
                   </div>
                 </Card>
               ) : (
-                <Card elevated className="p-7">
+                <Card elevated className="p-6 sm:p-7">
                   <p className="text-[10px] font-mono uppercase tracking-[0.22em] text-[oklch(0.78_0.16_158)]">
                     Entrar
                   </p>
@@ -228,7 +234,7 @@ export default function LoginPage() {
                             onClick={() => setShowPassword((v) => !v)}
                             tabIndex={-1}
                             disabled={isLoading}
-                            className="h-7 w-7 rounded-md flex items-center justify-center text-muted-foreground/50 hover:text-foreground hover:bg-[oklch(0.20_0.010_240)] transition-colors"
+                            className="h-7 w-7 rounded-md flex items-center justify-center text-muted-foreground/50 hover:text-foreground hover:bg-[oklch(0.255_0.016_170)] transition-colors"
                             aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
                           >
                             {showPassword ? (
@@ -254,7 +260,7 @@ export default function LoginPage() {
                           className={`h-4 w-4 rounded-md border transition-all flex items-center justify-center ${
                             rememberMe
                               ? "bg-[oklch(0.45_0.16_158)] border-[oklch(0.60_0.16_158)] shadow-[0_0_10px_oklch(0.55_0.18_158_/_0.4)]"
-                              : "bg-[oklch(0.16_0.010_240)] border-border group-hover/r:border-[oklch(0.30_0.010_240)]"
+                              : "bg-[oklch(0.205_0.016_172)] border-border group-hover/r:border-[oklch(0.34_0.018_170)]"
                           }`}
                         >
                           {rememberMe && <Check className="h-2.5 w-2.5 text-white" strokeWidth={3} />}

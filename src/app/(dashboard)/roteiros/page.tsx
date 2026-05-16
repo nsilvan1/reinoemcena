@@ -93,9 +93,10 @@ export default function RoteirosPage() {
         />
       ) : (
         <Card className="overflow-hidden animate-in-view">
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto">
+          <table className="w-full text-sm min-w-[480px]">
             <thead>
-              <tr className="text-left bg-[oklch(0.16_0.010_240)] border-b border-border">
+              <tr className="text-left bg-[oklch(0.205_0.016_172)] border-b border-border">
                 <th className="pl-6 pr-3 py-3 text-[10px] font-mono uppercase tracking-[0.22em] text-muted-foreground/55">Título</th>
                 <th className="px-3 py-3 text-[10px] font-mono uppercase tracking-[0.22em] text-muted-foreground/55 hidden sm:table-cell">Autor</th>
                 <th className="px-3 py-3 text-[10px] font-mono uppercase tracking-[0.22em] text-muted-foreground/55 hidden md:table-cell">Data</th>
@@ -108,7 +109,7 @@ export default function RoteirosPage() {
                 <tr
                   key={r._id}
                   onClick={() => router.push(`/roteiros/${r._id}`)}
-                  className="border-t border-border/60 hover:bg-[oklch(0.17_0.010_240)] transition-colors group cursor-pointer"
+                  className="border-t border-border/60 hover:bg-[oklch(0.225_0.016_172)] transition-colors group cursor-pointer"
                 >
                   <td className="pl-6 pr-3 py-3.5">
                     <div className="flex items-center gap-3 min-w-0">
@@ -158,7 +159,7 @@ export default function RoteirosPage() {
                               </span>
                             ))}
                             {people.length > 4 && (
-                              <span className="h-8 w-8 rounded-full bg-[oklch(0.20_0.010_240)] border-2 border-card flex items-center justify-center text-[10px] font-mono font-bold text-muted-foreground">
+                              <span className="h-8 w-8 rounded-full bg-[oklch(0.255_0.016_170)] border-2 border-card flex items-center justify-center text-[10px] font-mono font-bold text-muted-foreground">
                                 +{people.length - 4}
                               </span>
                             )}
@@ -171,6 +172,7 @@ export default function RoteirosPage() {
               ))}
             </tbody>
           </table>
+          </div>
         </Card>
       )}
     </div>

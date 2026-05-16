@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import mongoose from "mongoose";
 import { connectDB } from "@/lib/mongodb";
 import Attachment from "@/models/Attachment";
+import Character from "@/models/Character";
 import { requireAuth } from "@/lib/auth-helpers";
 import { ROLE_HIERARCHY } from "@/types";
 import { unlinkUploadedFile } from "@/lib/upload-storage";
@@ -33,7 +34,21 @@ export async function DELETE(req: NextRequest, { params }: Params) {
     return NextResponse.json({ error: "Sem permissão" }, { status: 403 });
   }
 
-  await unlinkUploadedFile(attachment.url);
+  // Antes de remover o arquivo físico, garante que nenhum outro registro
+  // depende dele — pode ser referenciado por outros Attachments (importação
+  // do acervo cria refs múltiplas) ou por Characters (cover/gallery). Se
+  // existir outro consumidor, só remove o documento Attachment.
+  const otherAttachmentUsing = await Attachment.exists({
+    _id: { $ne: attachment._id },
+    url: attachment.url,
+  });
+  const characterUsing = await Character.exists({
+    $or: [{ coverImageUrl: attachment.url }, { gallery: attachment.url }],
+  });
+
+  if (!otherAttachmentUsing && !characterUsing) {
+    await unlinkUploadedFile(attachment.url);
+  }
   await Attachment.findByIdAndDelete(id);
 
   return NextResponse.json({ ok: true });

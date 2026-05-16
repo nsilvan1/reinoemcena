@@ -1,7 +1,9 @@
 "use client";
 import { useEditor, EditorContent } from "@tiptap/react";
+// StarterKit (v3+) já inclui Underline. Não re-importe @tiptap/extension-underline
+// — causa o warning "Duplicate extension names found: ['underline']" e quebra
+// o highlight do botão. Use editor.chain().toggleUnderline() normalmente.
 import StarterKit from "@tiptap/starter-kit";
-import Underline from "@tiptap/extension-underline";
 import TextAlign from "@tiptap/extension-text-align";
 import Highlight from "@tiptap/extension-highlight";
 import Color from "@tiptap/extension-color";
@@ -80,7 +82,6 @@ export function RichTextEditor({ content, onChange, editable = true, placeholder
       StarterKit.configure({
         heading: { levels: [1, 2, 3] },
       }),
-      Underline,
       TextAlign.configure({ types: ["heading", "paragraph"] }),
       Highlight.configure({ multicolor: true }),
       TextStyle,
@@ -260,7 +261,6 @@ export function RichTextViewer({ content }: { content: string }) {
   const editor = useEditor({
     extensions: [
       StarterKit,
-      Underline,
       TextAlign.configure({ types: ["heading", "paragraph"] }),
       Highlight.configure({ multicolor: true }),
       TextStyle,

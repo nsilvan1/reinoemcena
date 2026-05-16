@@ -125,7 +125,7 @@ export default function PerfilPage() {
           </form>
         </div>
 
-        <div className="px-6 py-4 border-t border-border bg-[oklch(0.16_0.010_240)]">
+        <div className="px-6 py-4 border-t border-border bg-[oklch(0.205_0.016_172)]">
           <Button onClick={handleSave} size="lg" className="w-full" loading={saving}>
             <Save className="h-4 w-4" /> {saving ? "Salvando..." : "Salvar alterações"}
           </Button>

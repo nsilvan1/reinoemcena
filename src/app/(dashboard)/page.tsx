@@ -189,7 +189,7 @@ export default function DashboardPage() {
             <HeroAllClear />
           )}
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-2 gap-3">
           <Stat label="Escalas" value={data.stats.totalScales} icon={Calendar} accent="info" />
           <Stat label="Em curso" value={data.stats.pendingWeeks} icon={Clock} accent="warning" />
           <Stat label="Concluídos" value={data.stats.completedWeeks} icon={CheckCircle2} accent="primary" />
@@ -202,7 +202,7 @@ export default function DashboardPage() {
         <section className="animate-in-view stagger-2">
           <SectionHeading eyebrow="Pipeline" title="Distribuição das semanas" />
           <Card className="p-5">
-            <div className="grid grid-cols-5 gap-3 sm:gap-4">
+            <div className="grid grid-cols-5 gap-2 sm:gap-4">
               {(Object.keys(PHASE_META) as Array<keyof typeof PHASE_META>).map((key, i, arr) => {
                 const phase = PHASE_META[key];
                 const count = data.phaseDistribution[key] || 0;
@@ -284,7 +284,7 @@ export default function DashboardPage() {
                     key={`${r.scaleId}-${r.weekNumber}-${r.editorId}`}
                     href={`/escalas/${r.scaleId}`}
                     className={cn(
-                      "flex items-center gap-3 p-3 hover:bg-[oklch(0.18_0.010_240)] transition-colors group",
+                      "flex items-center gap-3 p-3 hover:bg-[oklch(0.235_0.016_172)] transition-colors group",
                       i > 0 && "border-t border-border"
                     )}
                   >
@@ -316,7 +316,7 @@ export default function DashboardPage() {
               />
               <Card className="overflow-hidden">
                 {unread.slice(0, 5).map((n, i) => (
-                  <div key={n._id} className={cn("flex items-start gap-2.5 p-3 hover:bg-[oklch(0.18_0.010_240)] transition-colors", i > 0 && "border-t border-border")}>
+                  <div key={n._id} className={cn("flex items-start gap-2.5 p-3 hover:bg-[oklch(0.235_0.016_172)] transition-colors", i > 0 && "border-t border-border")}>
                     <span className="mt-1 h-1.5 w-1.5 rounded-full bg-[oklch(0.74_0.16_158)] shrink-0" />
                     <div className="min-w-0 flex-1">
                       <p className="text-[12.5px] leading-snug text-foreground/90">{n.message}</p>
@@ -398,7 +398,7 @@ function HeroTask({ task }: { task: PendingTask }) {
               {overdue ? `Atrasado ${formatDistanceToNowStrict(deadline, { locale: ptBR })}` : `Em ${formatDistanceToNowStrict(deadline, { locale: ptBR })}`}
             </span>
           )}
-          <span className="inline-flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-[0.18em] px-2.5 py-1 rounded-md bg-[oklch(0.20_0.010_240)] border border-border group-hover:border-primary/40 group-hover:bg-[oklch(0.22_0.030_158)] transition-colors">
+          <span className="inline-flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-[0.18em] px-2.5 py-1 rounded-md bg-[oklch(0.255_0.016_170)] border border-border group-hover:border-primary/40 group-hover:bg-[oklch(0.22_0.030_158)] transition-colors">
             Abrir <ArrowRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
           </span>
         </div>
@@ -458,7 +458,7 @@ function HeroDeadline({ d }: { d: UpcomingDeadline }) {
             <Calendar className="h-3 w-3" />
             {d.overdue ? `Atrasado ${Math.abs(d.daysRemaining)}d` : d.daysRemaining === 0 ? "Hoje" : `Em ${d.daysRemaining}d`}
           </span>
-          <span className="inline-flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-[0.18em] px-2.5 py-1 rounded-md bg-[oklch(0.20_0.010_240)] border border-border group-hover:border-primary/40 transition-colors">
+          <span className="inline-flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-[0.18em] px-2.5 py-1 rounded-md bg-[oklch(0.255_0.016_170)] border border-border group-hover:border-primary/40 transition-colors">
             Abrir <ArrowRight className="h-3 w-3" />
           </span>
         </div>
@@ -568,7 +568,7 @@ function DeadlineRow({ d }: { d: UpcomingDeadline }) {
             ? "bg-[oklch(0.22_0.030_25)] text-[oklch(0.80_0.14_25)] border-[oklch(0.30_0.060_25)]"
             : d.daysRemaining <= 2
               ? "bg-[oklch(0.22_0.030_60)] text-[oklch(0.80_0.14_60)] border-[oklch(0.30_0.060_60)]"
-              : "bg-[oklch(0.20_0.010_240)] text-muted-foreground border-border"
+              : "bg-[oklch(0.255_0.016_170)] text-muted-foreground border-border"
         )}
       >
         {d.overdue ? `−${Math.abs(d.daysRemaining)}d` : d.daysRemaining === 0 ? "Hoje" : `${d.daysRemaining}d`}
