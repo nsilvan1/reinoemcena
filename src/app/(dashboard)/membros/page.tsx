@@ -15,6 +15,8 @@ import {
   Sparkles,
   User,
   Activity,
+  LayoutGrid,
+  Rows3,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -154,6 +156,204 @@ function MemberCard({
   );
 }
 
+// ─── Members Table (dense) ───────────────────────────────────────────
+
+function MembersTable({
+  users,
+  canManage,
+  isAdmin,
+  sessionId,
+  onEdit,
+  onDelete,
+}: {
+  users: User[];
+  canManage: boolean;
+  isAdmin: boolean;
+  sessionId?: string;
+  onEdit: (u: User) => void;
+  onDelete: (id: string) => void;
+}) {
+  return (
+    <Card elevated className="overflow-hidden animate-in-view stagger-5">
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-border/40 text-left bg-[oklch(0.215_0.014_172)]">
+              <th className="px-4 py-2.5 text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-wider">
+                Membro
+              </th>
+              <th className="px-4 py-2.5 text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-wider">
+                Papel
+              </th>
+              <th className="px-4 py-2.5 text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-wider hidden sm:table-cell">
+                Habilidades
+              </th>
+              <th className="px-4 py-2.5 text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-wider hidden lg:table-cell">
+                Gestor
+              </th>
+              {(canManage || isAdmin) && (
+                <th className="px-4 py-2.5 text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-wider text-right">
+                  Ações
+                </th>
+              )}
+            </tr>
+          </thead>
+          <tbody>
+            {users.map((u, idx) => (
+              <tr
+                key={u._id}
+                className={cn(
+                  "border-b border-border/30 last:border-0 hover:bg-[oklch(0.225_0.018_172)] transition-colors",
+                  idx < 12 && `animate-in-view stagger-${(idx % 12) + 1}`
+                )}
+              >
+                {/* Membro: avatar + nome + @username */}
+                <td className="px-4 py-2.5">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <Avatar name={u.name} size="sm" />
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-[13px] truncate leading-tight">
+                        {u.name}
+                      </p>
+                      <p className="text-[10px] font-mono text-muted-foreground/55 truncate">
+                        @{u.username}
+                      </p>
+                    </div>
+                  </div>
+                </td>
+
+                {/* Papel */}
+                <td className="px-4 py-2.5">
+                  <Badge tone={ROLE_TONE[u.role] || "neutral"}>
+                    {ROLE_LABELS[u.role]}
+                  </Badge>
+                </td>
+
+                {/* Habilidades */}
+                <td className="px-4 py-2.5 hidden sm:table-cell">
+                  <div className="flex items-center gap-1 flex-wrap">
+                    {u.skills && u.skills.length > 0 ? (
+                      u.skills.map((s) => (
+                        <span
+                          key={s}
+                          className={cn(
+                            "inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium",
+                            s === "narrador"
+                              ? "bg-amber-500/15 text-amber-400"
+                              : "bg-violet-500/15 text-violet-400"
+                          )}
+                        >
+                          {s === "narrador" ? (
+                            <Mic className="h-2.5 w-2.5" />
+                          ) : (
+                            <Film className="h-2.5 w-2.5" />
+                          )}
+                          {s === "narrador" ? "Narrador" : "Editor"}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-[10px] text-muted-foreground/30">—</span>
+                    )}
+                  </div>
+                </td>
+
+                {/* Gestor */}
+                <td className="px-4 py-2.5 hidden lg:table-cell">
+                  {u.managedBy?.name ? (
+                    <span className="text-[12px] text-muted-foreground/75 truncate inline-flex items-center gap-1.5">
+                      <Avatar name={u.managedBy.name} size="xs" />
+                      {u.managedBy.name}
+                    </span>
+                  ) : (
+                    <span className="text-[10px] text-muted-foreground/25">—</span>
+                  )}
+                </td>
+
+                {/* Ações */}
+                {(canManage || isAdmin) && (
+                  <td className="px-4 py-2.5">
+                    <div className="flex items-center justify-end gap-0.5">
+                      {canManage && (
+                        <button
+                          onClick={() => onEdit(u)}
+                          className="h-8 w-8 rounded-md inline-flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-white/8 transition-colors"
+                          title="Editar"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                      {isAdmin && u._id !== sessionId && (
+                        <button
+                          onClick={() => onDelete(u._id)}
+                          className="h-8 w-8 rounded-md inline-flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                          title="Remover"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </Card>
+  );
+}
+
+// ─── View toggle (table | cards) ─────────────────────────────────────
+
+type ViewMode = "table" | "cards";
+
+function ViewToggle({
+  view,
+  onChange,
+}: {
+  view: ViewMode;
+  onChange: (v: ViewMode) => void;
+}) {
+  return (
+    <div
+      className="inline-flex items-center bg-[oklch(0.205_0.016_172)] border border-border rounded-md p-0.5"
+      role="tablist"
+      aria-label="Modo de visualização"
+    >
+      <button
+        type="button"
+        onClick={() => onChange("table")}
+        aria-pressed={view === "table"}
+        className={cn(
+          "h-7 px-2 rounded inline-flex items-center gap-1.5 text-[11px] font-medium transition-colors",
+          view === "table"
+            ? "bg-[oklch(0.22_0.030_158)] text-[oklch(0.85_0.14_158)]"
+            : "text-muted-foreground/60 hover:text-foreground"
+        )}
+        title="Tabela"
+      >
+        <Rows3 className="h-3 w-3" />
+        Tabela
+      </button>
+      <button
+        type="button"
+        onClick={() => onChange("cards")}
+        aria-pressed={view === "cards"}
+        className={cn(
+          "h-7 px-2 rounded inline-flex items-center gap-1.5 text-[11px] font-medium transition-colors",
+          view === "cards"
+            ? "bg-[oklch(0.22_0.030_158)] text-[oklch(0.85_0.14_158)]"
+            : "text-muted-foreground/60 hover:text-foreground"
+        )}
+        title="Cards"
+      >
+        <LayoutGrid className="h-3 w-3" />
+        Cards
+      </button>
+    </div>
+  );
+}
+
 // ─── Page ────────────────────────────────────────────────────────────
 
 export default function MembrosPage() {
@@ -162,6 +362,7 @@ export default function MembrosPage() {
   const [loading,     setLoading]     = useState(true);
   const [dialogOpen,  setDialogOpen]  = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [view, setView] = useState<ViewMode>("table");
   const [form, setForm] = useState({
     name:     "",
     username: "",
@@ -175,7 +376,23 @@ export default function MembrosPage() {
 
   useEffect(() => {
     fetchUsers();
+    // Restaura preferência de visualização
+    try {
+      const saved = localStorage.getItem("reinoemcena.membros.view");
+      if (saved === "table" || saved === "cards") setView(saved);
+    } catch {
+      /* localStorage indisponível */
+    }
   }, []);
+
+  function changeView(v: ViewMode) {
+    setView(v);
+    try {
+      localStorage.setItem("reinoemcena.membros.view", v);
+    } catch {
+      /* ignore */
+    }
+  }
 
   async function fetchUsers() {
     try {
@@ -299,11 +516,14 @@ export default function MembrosPage() {
         description="Voluntários e gestores do ministério"
         icon={Users}
         actions={
-          canManage ? (
-            <Button onClick={openCreate}>
-              <Plus className="h-3.5 w-3.5" /> Novo membro
-            </Button>
-          ) : undefined
+          <div className="flex items-center gap-2">
+            {users.length > 0 && <ViewToggle view={view} onChange={changeView} />}
+            {canManage && (
+              <Button onClick={openCreate}>
+                <Plus className="h-3.5 w-3.5" /> Novo membro
+              </Button>
+            )}
+          </div>
         }
       />
 
@@ -459,6 +679,15 @@ export default function MembrosPage() {
               </Button>
             ) : undefined
           }
+        />
+      ) : view === "table" ? (
+        <MembersTable
+          users={users}
+          canManage={canManage}
+          isAdmin={isAdmin}
+          sessionId={sessionId}
+          onEdit={openEdit}
+          onDelete={handleDelete}
         />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
