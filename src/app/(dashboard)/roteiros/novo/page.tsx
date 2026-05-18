@@ -12,6 +12,8 @@ import {
   PenLine,
   Paperclip,
   Calendar,
+  Sparkles,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn, parseLocalDate } from "@/lib/utils";
@@ -53,6 +55,43 @@ export default function NovoRoteiroPage() {
   const [file, setFile] = useState<File | null>(null);
   const [filePreviewUrl, setFilePreviewUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [extracting, setExtracting] = useState(false);
+
+  const isExtractable = (f: File | null) =>
+    !!f &&
+    (f.type === "application/pdf" ||
+      f.type === "application/msword" ||
+      f.type ===
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+
+  async function importTextFromFile() {
+    if (!file || !isExtractable(file)) return;
+    setExtracting(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/roteiros/extract-text", {
+        method: "POST",
+        body: fd,
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Falha na extração");
+      if (!json.html || json.html.length < 5) {
+        toast.warning("Nenhum texto extraível encontrado no arquivo");
+        return;
+      }
+      setContent(json.html);
+      toast.success(
+        json.warnings?.length
+          ? `Texto importado · ${json.warnings.length} aviso${json.warnings.length > 1 ? "s" : ""}`
+          : "Texto importado pro editor"
+      );
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao extrair texto");
+    } finally {
+      setExtracting(false);
+    }
+  }
 
   useEffect(() => {
     fetch("/api/scales")
@@ -344,6 +383,33 @@ export default function NovoRoteiroPage() {
 
                     {file.type.startsWith("audio/") && (
                       <AudioPlayer src={URL.createObjectURL(file)} compact />
+                    )}
+
+                    {isExtractable(file) && (
+                      <button
+                        type="button"
+                        onClick={importTextFromFile}
+                        disabled={extracting}
+                        className={cn(
+                          "w-full inline-flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-[12.5px] font-semibold transition-all",
+                          "bg-[oklch(0.22_0.030_158)] text-[oklch(0.85_0.14_158)] border border-[oklch(0.30_0.040_158)]",
+                          "hover:bg-[oklch(0.26_0.045_158)] hover:border-[oklch(0.40_0.060_158)]",
+                          "active:scale-[0.99]",
+                          "disabled:opacity-60 disabled:cursor-wait"
+                        )}
+                      >
+                        {extracting ? (
+                          <>
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            Extraindo texto…
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="h-3.5 w-3.5" />
+                            Importar texto pro editor
+                          </>
+                        )}
+                      </button>
                     )}
 
                     <button

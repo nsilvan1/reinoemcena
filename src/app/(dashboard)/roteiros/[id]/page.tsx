@@ -308,7 +308,25 @@ export default function RoteiroDetailPage() {
 
           {/* Files — dense list */}
           <div className="animate-in-view stagger-3">
-            <RoteiroFiles roteiroId={String(id)} canEdit={canEdit} />
+            <RoteiroFiles
+              roteiroId={String(id)}
+              canEdit={canEdit}
+              onImportText={(html) => {
+                const hasContent =
+                  content && content.replace(/<[^>]+>/g, "").trim().length > 20;
+                if (
+                  hasContent &&
+                  !confirm(
+                    "O editor já tem texto. Substituir pelo conteúdo extraído?"
+                  )
+                ) {
+                  return;
+                }
+                setContent(html);
+                // Marca como dirty pra autosave disparar
+                if (lastSavedContent === html) setLastSavedContent("");
+              }}
+            />
           </div>
         </div>
 

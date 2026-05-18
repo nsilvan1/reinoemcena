@@ -12,6 +12,8 @@ import {
   Maximize2,
   Minimize2,
   Eye,
+  Sparkles,
+  Loader2,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -32,6 +34,21 @@ interface RoteiroFile {
 interface Props {
   roteiroId: string;
   canEdit: boolean;
+  /**
+   * Quando passado, mostra botão "Importar texto" em anexos PDF/DOC/DOCX
+   * que ao clicar extrai o conteúdo e chama esse callback com HTML pronto pro TipTap.
+   */
+  onImportText?: (html: string) => void;
+}
+
+function isImportable(file: RoteiroFile) {
+  const mt = file.mimeType.toLowerCase();
+  return (
+    mt === "application/pdf" ||
+    mt === "application/msword" ||
+    mt ===
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+  );
 }
 
 function iconFor(file: RoteiroFile) {
@@ -63,13 +80,42 @@ function isImage(file: RoteiroFile) {
   return file.mimeType.startsWith("image/");
 }
 
-export function RoteiroFiles({ roteiroId, canEdit }: Props) {
+export function RoteiroFiles({ roteiroId, canEdit, onImportText }: Props) {
   const [files, setFiles] = useState<RoteiroFile[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [previewId, setPreviewId] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
+  const [importingId, setImportingId] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  async function handleImportText(file: RoteiroFile) {
+    if (!onImportText || !isImportable(file)) return;
+    setImportingId(file._id);
+    try {
+      const res = await fetch("/api/roteiros/extract-text", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: file.url, mimeType: file.mimeType }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Falha na extração");
+      if (!json.html || json.html.length < 5) {
+        toast.warning("Nenhum texto extraível encontrado");
+        return;
+      }
+      onImportText(json.html);
+      toast.success(
+        json.warnings?.length
+          ? `Texto importado · ${json.warnings.length} aviso${json.warnings.length > 1 ? "s" : ""}`
+          : "Texto importado pro editor"
+      );
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao extrair texto");
+    } finally {
+      setImportingId(null);
+    }
+  }
 
   async function load() {
     setLoading(true);
@@ -231,6 +277,24 @@ export function RoteiroFiles({ roteiroId, canEdit }: Props) {
                         title={isSelected ? "Fechar pré-visualização" : "Pré-visualizar"}
                       >
                         <Eye className="h-3 w-3" />
+                      </button>
+                    )}
+                    {onImportText && canEdit && isImportable(f) && (
+                      <button
+                        onClick={() => handleImportText(f)}
+                        disabled={importingId === f._id}
+                        className={cn(
+                          "h-6 w-6 rounded-md flex items-center justify-center transition-colors",
+                          "text-[oklch(0.80_0.14_158)] hover:bg-[oklch(0.22_0.030_158)]",
+                          importingId === f._id && "opacity-60 cursor-wait"
+                        )}
+                        title="Importar texto pro editor"
+                      >
+                        {importingId === f._id ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <Sparkles className="h-3 w-3" />
+                        )}
                       </button>
                     )}
                     <a
