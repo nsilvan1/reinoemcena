@@ -123,7 +123,7 @@ export function TeamTable({
           ) : (
             <>
               {/* ── Mobile: lista de cards (< sm) ── */}
-              <div className="sm:hidden divide-y divide-border/30">
+              <div className="sm:hidden divide-y divide-border/30 max-h-[60vh] overflow-y-auto">
                 {groups.map((group) =>
                   group.members.map((u) => {
                     const userKey = u._id?.toString() || (u as unknown as string)?.toString();
@@ -218,9 +218,9 @@ export function TeamTable({
               </div>
 
               {/* ── Desktop: tabela (>= sm) ── */}
-              <div className="hidden sm:block overflow-x-auto">
+              <div className="hidden sm:block max-h-[60vh] overflow-y-auto overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead>
+                  <thead className="sticky top-0 z-10 bg-[oklch(0.215_0.014_172)] backdrop-blur-sm">
                     <tr className="border-b border-border/40 text-left">
                       <th className="px-4 py-2 text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-wider">
                         Membro

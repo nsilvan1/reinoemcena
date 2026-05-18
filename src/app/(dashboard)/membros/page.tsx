@@ -175,10 +175,10 @@ function MembersTable({
 }) {
   return (
     <Card elevated className="overflow-hidden animate-in-view stagger-5">
-      <div className="overflow-x-auto">
+      <div className="max-h-[65vh] overflow-y-auto overflow-x-auto">
         <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-border/40 text-left bg-[oklch(0.215_0.014_172)]">
+          <thead className="sticky top-0 z-10 bg-[oklch(0.215_0.014_172)] backdrop-blur-sm">
+            <tr className="border-b border-border/40 text-left">
               <th className="px-4 py-2.5 text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-wider">
                 Membro
               </th>

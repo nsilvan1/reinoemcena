@@ -235,10 +235,10 @@ export default function RoteirosPage() {
             />
           ) : (
             <Card elevated className="overflow-hidden animate-in-view stagger-5">
-              <div className="overflow-x-auto">
+              <div className="max-h-[65vh] overflow-y-auto overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-left border-b border-border/40 bg-[oklch(0.205_0.014_172)]">
+                  <thead className="sticky top-0 z-10 bg-[oklch(0.205_0.014_172)] backdrop-blur-sm">
+                    <tr className="text-left border-b border-border/40">
                       <th className="pl-4 pr-2 py-2.5 w-8" aria-hidden />
                       <th className="px-3 py-2.5 text-[10px] font-mono uppercase tracking-[0.18em] text-muted-foreground/45">
                         Título

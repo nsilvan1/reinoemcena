@@ -642,8 +642,9 @@ function DeadlinesTable({ items }: { items: UpcomingDeadline[] }) {
         }
       />
       <div className="rounded-lg border border-border bg-card overflow-hidden">
+        <div className="max-h-[420px] overflow-y-auto">
         <table className="w-full text-[13px]">
-          <thead>
+          <thead className="sticky top-0 z-10 bg-card backdrop-blur-sm">
             <tr className="text-left border-b border-border/60">
               <th className="font-medium text-[10px] uppercase tracking-[0.08em] text-muted-foreground/55 px-4 py-2.5 w-14">
                 Sem
@@ -725,6 +726,7 @@ function DeadlinesTable({ items }: { items: UpcomingDeadline[] }) {
             })}
           </tbody>
         </table>
+        </div>
       </div>
     </section>
   );

@@ -319,23 +319,25 @@ export default function EscalasPage() {
         />
       ) : (
         <Card elevated className="overflow-hidden animate-in-view stagger-5">
-          {/* Column headers */}
-          <div className="hidden sm:flex items-center gap-4 lg:gap-6 px-5 py-2.5 border-b border-border/50 bg-[oklch(0.205_0.014_172)]">
-            <div className="flex-1 text-[10px] font-mono uppercase tracking-[0.18em] text-muted-foreground/45">
-              Escala
+          <div className="max-h-[65vh] overflow-y-auto">
+            {/* Column headers — sticky dentro do scroll */}
+            <div className="hidden sm:flex items-center gap-4 lg:gap-6 px-5 py-2.5 border-b border-border/50 bg-[oklch(0.205_0.014_172)] sticky top-0 z-10 backdrop-blur-sm">
+              <div className="flex-1 text-[10px] font-mono uppercase tracking-[0.18em] text-muted-foreground/45">
+                Escala
+              </div>
+              <div className="flex-[2] text-[10px] font-mono uppercase tracking-[0.18em] text-muted-foreground/45">
+                Semanas
+              </div>
+              <div className="w-20 text-right text-[10px] font-mono uppercase tracking-[0.18em] text-muted-foreground/45 pr-8">
+                Avanço
+              </div>
             </div>
-            <div className="flex-[2] text-[10px] font-mono uppercase tracking-[0.18em] text-muted-foreground/45">
-              Semanas
-            </div>
-            <div className="w-20 text-right text-[10px] font-mono uppercase tracking-[0.18em] text-muted-foreground/45 pr-8">
-              Avanço
-            </div>
-          </div>
 
-          <div>
-            {scales.map((scale, idx) => (
-              <ScaleRow key={scale._id} scale={scale} index={idx} />
-            ))}
+            <div>
+              {scales.map((scale, idx) => (
+                <ScaleRow key={scale._id} scale={scale} index={idx} />
+              ))}
+            </div>
           </div>
         </Card>
       )}
