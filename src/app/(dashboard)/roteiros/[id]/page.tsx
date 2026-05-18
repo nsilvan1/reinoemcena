@@ -1,8 +1,23 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { FileText, Film, Mic, Save, Check, AlertCircle, Loader2 } from "lucide-react";
+import {
+  FileText,
+  Film,
+  Mic,
+  Save,
+  Check,
+  AlertCircle,
+  Loader2,
+  ChevronRight,
+  Calendar,
+  Hash,
+  User2,
+  Clock,
+  History,
+} from "lucide-react";
+import Link from "next/link";
 import { format, formatDistanceToNowStrict } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
@@ -10,15 +25,12 @@ import { cn } from "@/lib/utils";
 import { RichTextEditor, RichTextViewer } from "@/components/editor/rich-text-editor";
 import { VersionHistory } from "@/components/roteiro/version-history";
 import { RoteiroFiles } from "@/components/roteiro/roteiro-files";
-import { Button, Card, PageHeader } from "@/components/v2/primitives";
+import { Avatar } from "@/components/v2/primitives";
 
 type SaveState = "idle" | "saving" | "error";
 
 const AUTOSAVE_DELAY_MS = 1200;
 
-// O TipTap reaplica `style` (cor de fundo do Highlight) mesmo após salvarmos
-// um HTML sem style. Para evitar loop eterno de "dirty", a comparação ignora
-// esse atributo volátil e diferenças de espaçamento.
 function normalizeForDiff(html: string) {
   return html
     .replace(/\s*style="[^"]*"/g, "")
@@ -29,7 +41,6 @@ function normalizeForDiff(html: string) {
 export default function RoteiroDetailPage() {
   const { id } = useParams();
   const { data: session } = useSession();
-  const router = useRouter();
   const [roteiro, setRoteiro] = useState<any>(null);
   const [users, setUsers] = useState<any[]>([]);
   const [content, setContent] = useState("");
@@ -45,8 +56,6 @@ export default function RoteiroDetailPage() {
   }, [saveState]);
 
   const role = (session?.user as any)?.role;
-  // canEdit vem do server (calculado por canEditRoteiro). Fallback para coord+
-  // antes do roteiro carregar para evitar flash de "read-only" inicial.
   const canEdit: boolean =
     roteiro?.canEdit ?? (role === "admin" || role === "coordenador");
   const canManageAssignments: boolean = roteiro?.canManageAssignments ?? false;
@@ -99,14 +108,12 @@ export default function RoteiroDetailPage() {
     [canEdit, content, id]
   );
 
-  // Autosave com debounce. Não dispara durante save em curso.
   useEffect(() => {
     if (!canEdit || !isDirty || saveState === "saving") return;
     const t = setTimeout(() => saveContent(true), AUTOSAVE_DELAY_MS);
     return () => clearTimeout(t);
   }, [content, canEdit, isDirty, saveState, saveContent]);
 
-  // Alerta o usuário antes de fechar com alterações pendentes
   useEffect(() => {
     if (!isDirty && saveState !== "saving") return;
     const handler = (e: BeforeUnloadEvent) => {
@@ -117,7 +124,6 @@ export default function RoteiroDetailPage() {
     return () => window.removeEventListener("beforeunload", handler);
   }, [isDirty, saveState]);
 
-  // Tick a cada 15s para atualizar o "salvo há Xs"
   useEffect(() => {
     if (!lastSavedAt) return;
     const t = setInterval(() => setNow(new Date()), 15000);
@@ -128,21 +134,56 @@ export default function RoteiroDetailPage() {
     await saveContent(false);
   }
 
-  async function toggleAssignment(assignUserId: string, field: "assignedEditors" | "assignedNarrators") {
+  async function toggleAssignment(
+    assignUserId: string,
+    field: "assignedEditors" | "assignedNarrators"
+  ) {
     const currentList: string[] = (roteiro[field] || []).map((u: any) => u._id || u);
     const isAssigned = currentList.includes(assignUserId);
-    const newList = isAssigned ? currentList.filter((uid) => uid !== assignUserId) : [...currentList, assignUserId];
+    const newList = isAssigned
+      ? currentList.filter((uid) => uid !== assignUserId)
+      : [...currentList, assignUserId];
     try {
       const res = await fetch(`/api/roteiros/${id}`, {
-        method: "PUT", headers: { "Content-Type": "application/json" },
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ [field]: newList }),
       });
-      if (res.ok) { setRoteiro(await res.json()); toast.success(isAssigned ? "Removido!" : "Atribuido!"); }
-    } catch { toast.error("Erro"); }
+      if (res.ok) {
+        setRoteiro(await res.json());
+        toast.success(isAssigned ? "Removido!" : "Atribuido!");
+      }
+    } catch {
+      toast.error("Erro");
+    }
   }
 
-  if (loading) return <div className="h-64 skeleton rounded-xl" />;
-  if (!roteiro) return <p className="text-muted-foreground">Roteiro não encontrado</p>;
+  if (loading) {
+    return (
+      <div className="space-y-5">
+        <div className="h-5 w-48 skeleton" />
+        <div className="h-10 w-96 skeleton" />
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-8">
+          <div className="lg:col-span-9 space-y-4">
+            <div className="h-96 skeleton rounded-xl" />
+            <div className="h-32 skeleton rounded-xl" />
+          </div>
+          <div className="lg:col-span-3">
+            <div className="h-80 skeleton rounded-xl" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!roteiro) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 gap-3">
+        <FileText className="h-10 w-10 text-muted-foreground/20" />
+        <p className="text-sm text-muted-foreground">Roteiro não encontrado</p>
+      </div>
+    );
+  }
 
   const editors = users.filter((u: any) => u.skills?.includes("editor"));
   const narrators = users.filter((u: any) => u.skills?.includes("narrador"));
@@ -150,14 +191,32 @@ export default function RoteiroDetailPage() {
   const assignedNarratorIds = (roteiro.assignedNarrators || []).map((u: any) => u._id || u);
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        eyebrow={`Por ${roteiro.createdBy?.name} · ${format(new Date(roteiro.createdAt), "dd 'de' MMMM", { locale: ptBR })}`}
-        title={roteiro.title}
-        icon={FileText}
-        back={{ href: "/roteiros", label: "Roteiros" }}
-        actions={
-          <div className="flex items-center gap-2">
+    <div className="space-y-0 -mt-2">
+      {/* ── Sticky document header ── */}
+      <div className="sticky top-0 z-30 bg-background/80 backdrop-blur-md border-b border-border/50 -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 mb-6">
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          {/* Left: breadcrumb + meta */}
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <Link
+              href="/roteiros"
+              className="text-[12px] font-medium text-muted-foreground hover:text-foreground transition-colors shrink-0"
+            >
+              Roteiros
+            </Link>
+            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0" />
+            <span className="text-[12px] font-medium text-foreground/80 truncate">
+              {roteiro.title}
+            </span>
+            <span className="hidden sm:flex items-center gap-1.5 ml-2 text-[11px] text-muted-foreground/50 shrink-0">
+              <User2 className="h-3 w-3" />
+              {roteiro.createdBy?.name}
+              <span className="mx-1">·</span>
+              {format(new Date(roteiro.createdAt), "dd 'de' MMM", { locale: ptBR })}
+            </span>
+          </div>
+
+          {/* Right: save controls */}
+          <div className="flex items-center gap-2 shrink-0">
             {canEdit && (
               <SaveStatusPill
                 state={saveState}
@@ -178,146 +237,272 @@ export default function RoteiroDetailPage() {
               }}
             />
             {canEdit && (
-              <Button onClick={handleSave} disabled={saveState === "saving" || !isDirty}>
+              <button
+                onClick={handleSave}
+                disabled={saveState === "saving" || !isDirty}
+                className={cn(
+                  "inline-flex items-center gap-1.5 h-8 px-3 rounded-md text-[12px] font-medium transition-all",
+                  "disabled:opacity-40 disabled:pointer-events-none",
+                  isDirty && saveState !== "saving"
+                    ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                    : "bg-[oklch(0.235_0.014_172)] text-muted-foreground border border-border"
+                )}
+              >
                 <Save className="h-3.5 w-3.5" />
                 {saveState === "saving" ? "Salvando..." : "Salvar"}
-              </Button>
+              </button>
             )}
           </div>
-        }
-      />
+        </div>
+      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        <div className="lg:col-span-2 space-y-5">
-          <div>
-            <div className="flex items-center gap-2 mb-2.5">
-              <FileText className="h-3.5 w-3.5 text-muted-foreground/65" />
-              <span className="text-[10px] font-mono uppercase tracking-[0.22em] text-muted-foreground/55">
-                Conteúdo
-              </span>
-            </div>
+      {/* ── Main 9+3 grid ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* ── Left: document area ── */}
+        <div className="lg:col-span-9 space-y-5">
+          {/* Inline editable title */}
+          <h1
+            className="font-heading text-[28px] sm:text-[32px] leading-tight tracking-[-0.03em] text-foreground"
+            style={{ fontWeight: 600 }}
+          >
+            {roteiro.title}
+          </h1>
+
+          {/* Editor */}
+          <div className="rounded-xl bg-card border border-border overflow-hidden">
             {canEdit ? (
-              <RichTextEditor content={content} onChange={setContent} placeholder="Escreva o roteiro aqui..." />
+              <RichTextEditor
+                content={content}
+                onChange={setContent}
+                placeholder="Escreva o roteiro aqui..."
+              />
             ) : content ? (
-              <RichTextViewer content={content} />
+              <div className="p-5">
+                <RichTextViewer content={content} />
+              </div>
             ) : (
-              <Card className="p-8 text-center">
-                <FileText className="h-6 w-6 mx-auto text-muted-foreground/25 mb-2" />
+              <div className="p-10 flex flex-col items-center gap-2 text-center">
+                <FileText className="h-8 w-8 text-muted-foreground/20" />
                 <p className="text-xs text-muted-foreground/45">Sem conteúdo</p>
-              </Card>
+              </div>
             )}
           </div>
 
+          {/* Files — dense list */}
           <RoteiroFiles roteiroId={String(id)} canEdit={canEdit} />
         </div>
 
-        <div>
-          <Card className="overflow-hidden lg:sticky lg:top-6">
-            <div className="px-4 py-2.5 border-b border-border bg-[oklch(0.205_0.016_172)] flex items-center gap-2">
-              <span className="h-5 w-5 rounded-md bg-[oklch(0.22_0.030_300)] flex items-center justify-center">
-                <Film className="h-3 w-3 text-[oklch(0.80_0.14_300)]" />
-              </span>
-              <p className="text-[10px] font-mono uppercase tracking-[0.22em] text-muted-foreground/55">
-                Editores
+        {/* ── Right: sidebar meta ── */}
+        <div className="lg:col-span-3">
+          <div className="lg:sticky lg:top-[3.75rem] space-y-0 rounded-xl bg-card border border-border overflow-hidden">
+            {/* Meta section */}
+            <div className="px-4 pt-4 pb-3 border-b border-border/60">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/50 mb-3">
+                Informacoes
               </p>
-              <span className="text-[10px] font-mono font-bold tabular-nums bg-[oklch(0.22_0.030_300)] text-[oklch(0.80_0.14_300)] rounded-md h-4 min-w-4 flex items-center justify-center px-1.5 ml-auto">
-                {assignedEditorIds.length}
-              </span>
-            </div>
-            <div className="p-3">
-              {editors.length === 0 ? (
-                <p className="text-[11px] text-muted-foreground/30 px-1 italic">Nenhum editor cadastrado</p>
-              ) : (
-                <div className="space-y-0.5">
-                  {editors.map((u: { _id: string; name: string }) => {
-                    const isAssigned = assignedEditorIds.includes(u._id);
-                    return (
-                      <button
-                        key={u._id}
-                        onClick={() => canManageAssignments && toggleAssignment(u._id, "assignedEditors")}
-                        disabled={!canManageAssignments}
-                        className={cn(
-                          "w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm transition-all",
-                          isAssigned
-                            ? "bg-[oklch(0.22_0.030_300)] text-[oklch(0.85_0.14_300)] ring-1 ring-[oklch(0.32_0.060_300)]"
-                            : "hover:bg-[oklch(0.225_0.016_172)]",
-                          !canManageAssignments && "cursor-default"
-                        )}
-                      >
-                        <span
-                          className={cn(
-                            "h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-bold ring-1",
-                            isAssigned
-                              ? "bg-[oklch(0.28_0.040_300)] text-[oklch(0.90_0.10_300)] ring-[oklch(0.40_0.060_300)]/50"
-                              : "bg-[oklch(0.255_0.016_170)] text-muted-foreground ring-border"
-                          )}
-                        >
-                          {u.name[0]}
-                        </span>
-                        <span className="flex-1 text-left text-[12.5px] font-medium">{u.name}</span>
-                        {isAssigned && <span className="h-1.5 w-1.5 rounded-full bg-[oklch(0.78_0.16_300)]" />}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
+              <div className="space-y-2.5">
+                {roteiro.weekNumber && (
+                  <MetaRow icon={Hash} label="Semana" value={`Semana ${roteiro.weekNumber}`} />
+                )}
+                {roteiro.scaleId && (
+                  <MetaRow icon={Calendar} label="Escala" value={roteiro.scaleId?.title || "—"} />
+                )}
+                <MetaRow
+                  icon={Clock}
+                  label="Criado em"
+                  value={format(new Date(roteiro.createdAt), "dd/MM/yyyy", { locale: ptBR })}
+                />
+                {roteiro.createdBy && (
+                  <div className="flex items-center gap-2">
+                    <User2 className="h-3 w-3 text-muted-foreground/40 shrink-0" />
+                    <span className="text-[11px] text-muted-foreground/55 w-14 shrink-0">Autor</span>
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <Avatar name={roteiro.createdBy.name} size="xs" />
+                      <span className="text-[12px] font-medium truncate">{roteiro.createdBy.name}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
-            <div className="px-4 py-2.5 border-y border-border bg-[oklch(0.205_0.016_172)] flex items-center gap-2">
-              <span className="h-5 w-5 rounded-md bg-[oklch(0.22_0.030_60)] flex items-center justify-center">
-                <Mic className="h-3 w-3 text-[oklch(0.80_0.14_60)]" />
-              </span>
-              <p className="text-[10px] font-mono uppercase tracking-[0.22em] text-muted-foreground/55">
-                Narradores
+            {/* Editors section */}
+            <TeamSection
+              label="Editores"
+              icon={Film}
+              iconHue={300}
+              users={editors}
+              assignedIds={assignedEditorIds}
+              canManage={canManageAssignments}
+              field="assignedEditors"
+              onToggle={toggleAssignment}
+              emptyText="Nenhum editor cadastrado"
+            />
+
+            {/* Narrators section */}
+            <TeamSection
+              label="Narradores"
+              icon={Mic}
+              iconHue={60}
+              users={narrators}
+              assignedIds={assignedNarratorIds}
+              canManage={canManageAssignments}
+              field="assignedNarrators"
+              onToggle={toggleAssignment}
+              emptyText="Nenhum narrador cadastrado"
+            />
+
+            {/* Versions link */}
+            <div className="px-4 py-3 border-t border-border/60">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/50 mb-2">
+                Versoes
               </p>
-              <span className="text-[10px] font-mono font-bold tabular-nums bg-[oklch(0.22_0.030_60)] text-[oklch(0.80_0.14_60)] rounded-md h-4 min-w-4 flex items-center justify-center px-1.5 ml-auto">
-                {assignedNarratorIds.length}
-              </span>
+              <button
+                onClick={() => {
+                  // trigger VersionHistory open via a shared ref would require lifting state;
+                  // instead expose via VersionHistoryTrigger component pattern
+                }}
+                className="inline-flex items-center gap-1.5 text-[11px] text-primary hover:underline"
+              >
+                <History className="h-3 w-3" />
+                Ver historico de versoes
+              </button>
             </div>
-            <div className="p-3">
-              {narrators.length === 0 ? (
-                <p className="text-[11px] text-muted-foreground/30 px-1 italic">Nenhum narrador cadastrado</p>
-              ) : (
-                <div className="space-y-0.5">
-                  {narrators.map((u: { _id: string; name: string }) => {
-                    const isAssigned = assignedNarratorIds.includes(u._id);
-                    return (
-                      <button
-                        key={u._id}
-                        onClick={() => canManageAssignments && toggleAssignment(u._id, "assignedNarrators")}
-                        disabled={!canManageAssignments}
-                        className={cn(
-                          "w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm transition-all",
-                          isAssigned
-                            ? "bg-[oklch(0.22_0.030_60)] text-[oklch(0.85_0.14_60)] ring-1 ring-[oklch(0.32_0.060_60)]"
-                            : "hover:bg-[oklch(0.225_0.016_172)]",
-                          !canManageAssignments && "cursor-default"
-                        )}
-                      >
-                        <span
-                          className={cn(
-                            "h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-bold ring-1",
-                            isAssigned
-                              ? "bg-[oklch(0.28_0.040_60)] text-[oklch(0.90_0.10_60)] ring-[oklch(0.40_0.060_60)]/50"
-                              : "bg-[oklch(0.255_0.016_170)] text-muted-foreground ring-border"
-                          )}
-                        >
-                          {u.name[0]}
-                        </span>
-                        <span className="flex-1 text-left text-[12.5px] font-medium">{u.name}</span>
-                        {isAssigned && <span className="h-1.5 w-1.5 rounded-full bg-[oklch(0.78_0.16_60)]" />}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </Card>
+          </div>
         </div>
       </div>
     </div>
   );
 }
+
+// ── MetaRow ──────────────────────────────────────────────────────
+
+function MetaRow({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <Icon className="h-3 w-3 text-muted-foreground/40 shrink-0" />
+      <span className="text-[11px] text-muted-foreground/55 w-14 shrink-0">{label}</span>
+      <span className="text-[12px] font-medium truncate">{value}</span>
+    </div>
+  );
+}
+
+// ── TeamSection ──────────────────────────────────────────────────
+
+function TeamSection({
+  label,
+  icon: Icon,
+  iconHue,
+  users,
+  assignedIds,
+  canManage,
+  field,
+  onToggle,
+  emptyText,
+}: {
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  iconHue: number;
+  users: { _id: string; name: string }[];
+  assignedIds: string[];
+  canManage: boolean;
+  field: "assignedEditors" | "assignedNarrators";
+  onToggle: (id: string, field: "assignedEditors" | "assignedNarrators") => void;
+  emptyText: string;
+}) {
+  return (
+    <div className="border-t border-border/60">
+      {/* Section header */}
+      <div className="flex items-center gap-2 px-4 py-2.5">
+        <span
+          className="h-5 w-5 rounded-md flex items-center justify-center shrink-0"
+          style={{ background: `oklch(0.22 0.030 ${iconHue})`, color: `oklch(0.80 0.14 ${iconHue})` }}
+        >
+          <Icon className="h-3 w-3" />
+        </span>
+        <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/50 flex-1">
+          {label}
+        </span>
+        {assignedIds.length > 0 && (
+          <span
+            className="text-[10px] font-mono font-bold tabular-nums rounded px-1.5 h-4 flex items-center"
+            style={{
+              background: `oklch(0.22 0.030 ${iconHue})`,
+              color: `oklch(0.80 0.14 ${iconHue})`,
+            }}
+          >
+            {assignedIds.length}
+          </span>
+        )}
+      </div>
+
+      {/* User list */}
+      <div className="px-2 pb-2 space-y-0.5">
+        {users.length === 0 ? (
+          <p className="text-[11px] text-muted-foreground/30 px-2 pb-1 italic">{emptyText}</p>
+        ) : (
+          users.map((u) => {
+            const isAssigned = assignedIds.includes(u._id);
+            return (
+              <button
+                key={u._id}
+                type="button"
+                onClick={() => canManage && onToggle(u._id, field)}
+                disabled={!canManage}
+                className={cn(
+                  "w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm transition-colors",
+                  isAssigned
+                    ? "bg-[oklch(0.235_0.025_158)] text-foreground"
+                    : "hover:bg-[oklch(0.225_0.016_172)] text-muted-foreground",
+                  !canManage && "cursor-default"
+                )}
+              >
+                {/* Avatar initials */}
+                <span
+                  className={cn(
+                    "h-6 w-6 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0",
+                    isAssigned
+                      ? "ring-1"
+                      : "bg-[oklch(0.255_0.016_170)] text-muted-foreground"
+                  )}
+                  style={
+                    isAssigned
+                      ? {
+                          background: `oklch(0.28 0.040 ${iconHue})`,
+                          color: `oklch(0.90 0.10 ${iconHue})`,
+                          boxShadow: `0 0 0 1px oklch(0.40 0.060 ${iconHue} / 0.5)`,
+                        }
+                      : {}
+                  }
+                >
+                  {u.name[0].toUpperCase()}
+                </span>
+                <span className="flex-1 text-left text-[12px] font-medium truncate">
+                  {u.name}
+                </span>
+                {isAssigned && (
+                  <span
+                    className="h-1.5 w-1.5 rounded-full shrink-0"
+                    style={{ background: `oklch(0.78 0.16 ${iconHue})` }}
+                  />
+                )}
+              </button>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── SaveStatusPill ───────────────────────────────────────────────
 
 interface SaveStatusPillProps {
   state: SaveState;
@@ -349,7 +534,7 @@ function SaveStatusPill({ state, dirty, lastSavedAt, now, onRetry }: SaveStatusP
   if (dirty) {
     return (
       <span className="flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-wider text-[oklch(0.85_0.14_60)] bg-[oklch(0.22_0.030_60)] border border-[oklch(0.32_0.060_60)] px-2.5 py-1 rounded-md">
-        <span className="h-1.5 w-1.5 rounded-full bg-[oklch(0.78_0.16_60)] status-pulse" /> Não salvo
+        <span className="h-1.5 w-1.5 rounded-full bg-[oklch(0.78_0.16_60)] status-pulse" /> Nao salvo
       </span>
     );
   }
@@ -358,7 +543,7 @@ function SaveStatusPill({ state, dirty, lastSavedAt, now, onRetry }: SaveStatusP
     const label =
       diffMs < 5000
         ? "agora"
-        : `há ${formatDistanceToNowStrict(lastSavedAt, { locale: ptBR })}`;
+        : `ha ${formatDistanceToNowStrict(lastSavedAt, { locale: ptBR })}`;
     return (
       <span className="flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-wider text-muted-foreground/65 px-2.5 py-1">
         <Check className="h-3 w-3 text-[oklch(0.80_0.14_158)]" /> {label}

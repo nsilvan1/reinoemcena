@@ -17,23 +17,23 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 
 const BTN_VARIANTS: Record<ButtonVariant, string> = {
   primary:
-    "bg-primary text-primary-foreground hover:bg-primary/90 shadow-[0_1px_0_oklch(1_0_0_/_0.15)_inset,0_2px_8px_oklch(0_0_0_/_0.4)] hover:shadow-[0_1px_0_oklch(1_0_0_/_0.2)_inset,0_4px_12px_oklch(0.74_0.16_158_/_0.3)]",
+    "bg-primary text-primary-foreground hover:bg-[oklch(0.78_0.16_158)] shadow-[inset_0_1px_0_oklch(1_0_0_/_0.12)]",
   secondary:
-    "bg-surface-2 text-foreground border border-border hover:bg-[oklch(0.255_0.016_170)] hover:border-[oklch(0.34_0.018_170)]",
+    "bg-[oklch(0.235_0.014_172)] text-foreground border border-border hover:bg-[oklch(0.265_0.015_172)] hover:border-[oklch(0.36_0.018_170)]",
   ghost:
-    "text-muted-foreground hover:text-foreground hover:bg-[oklch(0.235_0.016_172)]",
+    "text-muted-foreground hover:text-foreground hover:bg-[oklch(0.225_0.014_172)]",
   outline:
-    "border border-border text-foreground hover:bg-[oklch(0.235_0.016_172)] hover:border-[oklch(0.34_0.018_170)]",
+    "border border-border text-foreground bg-transparent hover:bg-[oklch(0.225_0.014_172)] hover:border-[oklch(0.36_0.018_170)]",
   destructive:
-    "bg-destructive text-white hover:bg-destructive/90",
+    "bg-destructive text-white hover:bg-[oklch(0.66_0.21_25)]",
 };
 
 const BTN_SIZES: Record<ButtonSize, string> = {
   xs: "h-6 px-2 text-[11px] gap-1 rounded-md",
-  sm: "h-8 px-3 text-xs gap-1.5 rounded-lg",
-  md: "h-9 px-3.5 text-[13px] gap-1.5 rounded-lg",
-  lg: "h-10 px-4 text-sm gap-2 rounded-lg",
-  icon: "h-8 w-8 rounded-lg",
+  sm: "h-8 px-3 text-[12px] gap-1.5 rounded-md",
+  md: "h-9 px-3.5 text-[13px] gap-1.5 rounded-md",
+  lg: "h-10 px-4 text-sm gap-2 rounded-md",
+  icon: "h-8 w-8 rounded-md",
 };
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
@@ -63,17 +63,49 @@ Button.displayName = "Button";
 
 // ─── Card / Surface ────────────────────────────────────────────────
 
+type CardAccent = "primary" | "info" | "warning" | "danger" | "violet" | "amber";
+
+const CARD_ACCENT_HUE: Record<CardAccent, number> = {
+  primary: 158,
+  info: 220,
+  warning: 60,
+  danger: 25,
+  violet: 300,
+  amber: 80,
+};
+
+interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
+  interactive?: boolean;
+  elevated?: boolean;
+  /** Pinta um rail de 2px lateral colorido (estilo Linear). */
+  accent?: CardAccent;
+}
+
+/**
+ * Card v3 — minimalista. Padrão é `bg-card + border-border + radius-md`.
+ * `interactive` adiciona hover-lift de 1px (translateY -1) e borda mais clara.
+ * `accent` pinta apenas um rail lateral 2px na cor do tema — não tinge o fundo.
+ */
 export function Card({
   className,
   interactive,
   elevated,
+  accent,
+  style,
   ...props
-}: React.HTMLAttributes<HTMLDivElement> & { interactive?: boolean; elevated?: boolean }) {
+}: CardProps) {
+  const hue = accent ? CARD_ACCENT_HUE[accent] : null;
   return (
     <div
+      style={
+        hue !== null
+          ? { ...(style || {}), boxShadow: `inset 2px 0 0 0 oklch(0.62 0.18 ${hue})` }
+          : style
+      }
       className={cn(
-        "rounded-xl",
-        elevated ? "surface-elevated" : interactive ? "surface-interactive" : "surface-1",
+        "rounded-lg bg-card border border-border",
+        elevated && "shadow-[0_1px_2px_oklch(0_0_0_/_0.35),0_8px_24px_oklch(0_0_0_/_0.25)]",
+        interactive && "transition-[transform,border-color,background-color] duration-150 hover:-translate-y-px hover:border-[oklch(0.36_0.018_170)] hover:bg-[oklch(0.215_0.016_172)]",
         className
       )}
       {...props}
@@ -95,7 +127,7 @@ export function Field({ label, hint, error, children, className }: FieldProps) {
   return (
     <div className={cn("space-y-1.5", className)}>
       {label && (
-        <label className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground/85">
+        <label className="text-[12px] font-medium text-foreground/85">
           {label}
         </label>
       )}
@@ -105,7 +137,7 @@ export function Field({ label, hint, error, children, className }: FieldProps) {
           <span className="h-1 w-1 rounded-full bg-destructive" /> {error}
         </p>
       ) : hint ? (
-        <p className="text-[11px] text-muted-foreground/70">{hint}</p>
+        <p className="text-[11px] text-muted-foreground/60">{hint}</p>
       ) : null}
     </div>
   );
@@ -122,7 +154,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
   ({ className, leading, trailing, ...props }, ref) => (
     <div className="relative group">
       {leading && (
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/50 group-focus-within:text-primary transition-colors pointer-events-none">
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/55 group-focus-within:text-foreground transition-colors pointer-events-none">
           {leading}
         </span>
       )}
@@ -130,14 +162,14 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
         ref={ref}
         {...props}
         className={cn(
-          "h-10 w-full rounded-lg bg-[oklch(0.205_0.016_172)] border border-border px-3 text-sm text-foreground",
-          "placeholder:text-muted-foreground/40",
-          "outline-none transition-[border-color,box-shadow,background-color] duration-150",
-          "hover:border-[oklch(0.34_0.018_170)]",
-          "focus:border-primary/60 focus:bg-[oklch(0.245_0.018_172)] focus:ring-4 focus:ring-primary/15",
+          "h-9 w-full rounded-md bg-[oklch(0.215_0.014_172)] border border-border px-3 text-[13px] text-foreground",
+          "placeholder:text-muted-foreground/45",
+          "outline-none transition-[border-color,box-shadow] duration-150",
+          "hover:border-[oklch(0.36_0.018_170)]",
+          "focus:border-primary/70 focus:ring-2 focus:ring-primary/20",
           "disabled:opacity-50 disabled:cursor-not-allowed",
-          leading && "pl-10",
-          trailing && "pr-10",
+          leading && "pl-9",
+          trailing && "pr-9",
           className
         )}
       />
@@ -154,14 +186,14 @@ Input.displayName = "Input";
 type BadgeTone = "neutral" | "primary" | "success" | "warning" | "danger" | "info" | "violet" | "amber";
 
 const BADGE_TONES: Record<BadgeTone, string> = {
-  neutral: "bg-[oklch(0.275_0.016_170)] text-[oklch(0.86_0.008_172)] border-[oklch(0.32_0.018_170)]",
-  primary: "bg-[oklch(0.24_0.030_158)] text-[oklch(0.86_0.12_158)] border-[oklch(0.30_0.050_158)]",
-  success: "bg-[oklch(0.22_0.030_158)] text-[oklch(0.86_0.14_158)] border-[oklch(0.28_0.060_158)]",
-  warning: "bg-[oklch(0.22_0.030_60)] text-[oklch(0.86_0.14_60)] border-[oklch(0.30_0.060_60)]",
-  danger: "bg-[oklch(0.22_0.030_25)] text-[oklch(0.86_0.14_25)] border-[oklch(0.30_0.060_25)]",
-  info: "bg-[oklch(0.22_0.030_220)] text-[oklch(0.86_0.14_220)] border-[oklch(0.30_0.060_220)]",
-  violet: "bg-[oklch(0.22_0.030_300)] text-[oklch(0.86_0.14_300)] border-[oklch(0.30_0.060_300)]",
-  amber: "bg-[oklch(0.22_0.030_80)] text-[oklch(0.86_0.14_80)] border-[oklch(0.30_0.060_80)]",
+  neutral: "bg-[oklch(0.265_0.014_170)] text-[oklch(0.82_0.010_172)]",
+  primary: "bg-[oklch(0.26_0.040_158)] text-[oklch(0.86_0.13_158)]",
+  success: "bg-[oklch(0.24_0.045_158)] text-[oklch(0.86_0.14_158)]",
+  warning: "bg-[oklch(0.24_0.040_60)] text-[oklch(0.86_0.14_60)]",
+  danger: "bg-[oklch(0.24_0.040_25)] text-[oklch(0.86_0.14_25)]",
+  info: "bg-[oklch(0.24_0.040_220)] text-[oklch(0.86_0.14_220)]",
+  violet: "bg-[oklch(0.24_0.040_300)] text-[oklch(0.86_0.14_300)]",
+  amber: "bg-[oklch(0.24_0.040_80)] text-[oklch(0.86_0.14_80)]",
 };
 
 export function Badge({
@@ -172,7 +204,7 @@ export function Badge({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md border text-[10px] font-medium uppercase tracking-wider whitespace-nowrap",
+        "inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-[0.06em] whitespace-nowrap",
         BADGE_TONES[tone],
         className
       )}
@@ -306,27 +338,26 @@ const STAT_ACCENT: Record<NonNullable<StatProps["accent"]>, { bar: string; text:
 export function Stat({ label, value, hint, trend, icon: Icon, accent = "primary", className }: StatProps) {
   const a = STAT_ACCENT[accent];
   return (
-    <Card className={cn("relative p-4 overflow-hidden group", className)}>
-      <div className="flex items-start justify-between mb-3">
+    <Card className={cn("p-4 group", className)}>
+      <div className="flex items-center gap-2.5 mb-3">
         {Icon && (
-          <span className={cn("inline-flex h-8 w-8 rounded-lg items-center justify-center", a.bg)}>
-            <Icon className={cn("h-4 w-4", a.text)} strokeWidth={1.8} />
+          <span className={cn("inline-flex h-7 w-7 rounded-md items-center justify-center", a.bg)}>
+            <Icon className={cn("h-3.5 w-3.5", a.text)} strokeWidth={1.8} />
           </span>
         )}
+        <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground/70 truncate">
+          {label}
+        </p>
         {trend && (
-          <span className={cn("text-[10px] font-mono", trend.value >= 0 ? "text-emerald-400" : "text-red-400")}>
+          <span className={cn("ml-auto text-[10px] font-medium tabular-nums", trend.value >= 0 ? "text-emerald-400" : "text-red-400")}>
             {trend.value >= 0 ? "+" : ""}
             {trend.value}
             {trend.label || "%"}
           </span>
         )}
       </div>
-      <p className="font-heading text-3xl font-semibold tabular-nums leading-none">{value}</p>
-      <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-muted-foreground/85 mt-2">
-        {label}
-      </p>
-      {hint && <p className="text-[11px] text-muted-foreground/55 mt-1">{hint}</p>}
-      <span className={cn("absolute bottom-0 left-0 h-px w-1/2 bg-gradient-to-r to-transparent opacity-60", a.bar)} />
+      <p className="text-[26px] font-semibold tabular-nums leading-none tracking-tight">{value}</p>
+      {hint && <p className="text-[11px] text-muted-foreground/55 mt-1.5">{hint}</p>}
     </Card>
   );
 }
@@ -355,33 +386,33 @@ export function PageHeader({
   className,
 }: PageHeaderProps) {
   return (
-    <header className={cn("relative", className)}>
+    <header className={cn("relative pb-6 mb-2 border-b border-border/60", className)}>
       {back && (
         <Link
           href={back.href}
-          className="inline-flex items-center gap-1 text-[11px] font-mono uppercase tracking-[0.18em] text-muted-foreground hover:text-foreground transition-colors mb-3"
+          className="inline-flex items-center gap-1 text-[12px] font-medium text-muted-foreground hover:text-foreground transition-colors mb-3"
         >
           ← {back.label || "voltar"}
         </Link>
       )}
       <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div className="flex items-start gap-3 sm:gap-4 min-w-0 flex-1">
+        <div className="flex items-start gap-3 min-w-0 flex-1">
           {Icon && (
-            <span className="shrink-0 h-11 w-11 rounded-xl bg-[oklch(0.18_0.014_158)] ring-1 ring-[oklch(0.28_0.030_158)]/40 inline-flex items-center justify-center">
-              <Icon className="h-5 w-5 text-[oklch(0.80_0.14_158)]" strokeWidth={1.7} />
+            <span className="shrink-0 h-9 w-9 rounded-md bg-[oklch(0.22_0.030_158)] inline-flex items-center justify-center mt-0.5">
+              <Icon className="h-4 w-4 text-[oklch(0.82_0.14_158)]" strokeWidth={1.8} />
             </span>
           )}
           <div className="min-w-0">
             {eyebrow && (
-              <p className="text-[10px] font-mono uppercase tracking-[0.22em] text-[oklch(0.65_0.12_158)] mb-1.5">
+              <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground/65 mb-1">
                 {eyebrow}
               </p>
             )}
-            <h1 className="font-heading text-3xl sm:text-4xl font-semibold leading-[1.05] tracking-[-0.03em]">
+            <h1 className="text-[26px] sm:text-[28px] font-semibold leading-[1.15] tracking-[-0.02em]">
               {title}
             </h1>
             {description && (
-              <p className="text-sm text-muted-foreground mt-2 max-w-2xl">{description}</p>
+              <p className="text-[13.5px] text-muted-foreground/85 mt-1.5 max-w-2xl leading-relaxed">{description}</p>
             )}
             {meta && <div className="mt-4">{meta}</div>}
           </div>
@@ -404,22 +435,57 @@ interface EmptyProps {
 
 export function EmptyState({ icon: Icon, title, description, action, className }: EmptyProps) {
   return (
-    <Card className={cn("p-10 sm:p-14 flex flex-col items-center text-center relative overflow-hidden", className)}>
-      <div className="absolute inset-0 bg-dots-faint opacity-50 pointer-events-none" />
-      <div className="relative">
-        <div className="h-14 w-14 rounded-2xl bg-[oklch(0.18_0.014_158)] ring-8 ring-[oklch(0.205_0.016_172)] flex items-center justify-center mx-auto">
-          <Icon className="h-6 w-6 text-[oklch(0.78_0.13_158)]" strokeWidth={1.6} />
-        </div>
-        <h3 className="font-heading text-xl font-semibold mt-5 tracking-tight">{title}</h3>
-        {description && (
-          <p className="text-sm text-muted-foreground/80 mt-2 max-w-md leading-relaxed mx-auto">
-            {description}
-          </p>
-        )}
-        {action && <div className="mt-6 inline-flex">{action}</div>}
+    <Card className={cn("p-10 sm:p-12 flex flex-col items-center text-center", className)}>
+      <div className="h-12 w-12 rounded-md bg-[oklch(0.22_0.030_158)] flex items-center justify-center">
+        <Icon className="h-5 w-5 text-[oklch(0.82_0.14_158)]" strokeWidth={1.6} />
       </div>
+      <h3 className="text-lg font-semibold mt-4 tracking-tight">{title}</h3>
+      {description && (
+        <p className="text-[13px] text-muted-foreground/80 mt-1.5 max-w-md leading-relaxed mx-auto">
+          {description}
+        </p>
+      )}
+      {action && <div className="mt-5 inline-flex">{action}</div>}
     </Card>
   );
+}
+
+// ─── KPI Inline strip ───────────────────────────────────────────
+
+type KpiTone = "muted" | "primary" | "warning" | "danger" | "info" | "violet";
+
+const KPI_TONE_COLOR: Record<KpiTone, string> = {
+  muted: "text-foreground",
+  primary: "text-[oklch(0.82_0.14_158)]",
+  warning: "text-[oklch(0.82_0.14_60)]",
+  danger: "text-[oklch(0.82_0.14_25)]",
+  info: "text-[oklch(0.82_0.14_220)]",
+  violet: "text-[oklch(0.82_0.14_300)]",
+};
+
+export function KpiInline({
+  value,
+  label,
+  tone = "muted",
+}: {
+  value: number | string;
+  label: string;
+  tone?: KpiTone;
+}) {
+  return (
+    <span className="flex items-baseline gap-1.5 leading-none">
+      <span className={cn("text-2xl font-semibold tabular-nums tracking-tight", KPI_TONE_COLOR[tone])}>
+        {value}
+      </span>
+      <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground/60">
+        {label}
+      </span>
+    </span>
+  );
+}
+
+export function KpiDivider() {
+  return <span className="h-7 w-px bg-border/60" aria-hidden />;
 }
 
 // ─── Section heading (eyebrow + title) ────────────────────────────
@@ -441,14 +507,14 @@ export function SectionHeading({
     <div className={cn("flex items-end justify-between gap-2 mb-3", className)}>
       <div>
         {eyebrow && (
-          <p className="text-[10px] font-mono uppercase tracking-[0.22em] text-muted-foreground/65 mb-1">
+          <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground/65 mb-1">
             {eyebrow}
           </p>
         )}
         <div className="flex items-center gap-2">
-          <h2 className="font-heading text-lg font-semibold tracking-tight">{title}</h2>
+          <h2 className="text-[15px] font-semibold tracking-tight">{title}</h2>
           {count !== undefined && count > 0 && (
-            <span className="text-[10px] font-mono tabular-nums px-1.5 py-0.5 rounded-md bg-[oklch(0.22_0.030_158)] text-[oklch(0.85_0.14_158)] border border-[oklch(0.30_0.050_158)]">
+            <span className="text-[10px] font-medium tabular-nums px-1.5 py-0.5 rounded bg-[oklch(0.255_0.016_172)] text-muted-foreground">
               {count}
             </span>
           )}

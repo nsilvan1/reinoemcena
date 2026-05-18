@@ -1,22 +1,26 @@
 "use client";
-import { useEffect, useState, useRef, Fragment, useMemo } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useEffect, useState, useRef, useMemo } from "react";
+import { useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import {
-  ArrowLeft, Check, ExternalLink, FileText, Mic, Upload,
-  RotateCcw, Send, MessageCircle, Clock,
-  PenLine, Film, Eye, CircleCheck, CalendarDays, History,
-  CheckCircle2, Paperclip, MessageSquare, X, AlertTriangle,
-  ChevronDown, ChevronUp,
+  Check,
+  ExternalLink,
+  FileText,
+  Mic,
+  PenLine,
+  Film,
+  Eye,
+  CircleCheck,
+  Clock,
+  Paperclip,
+  X,
+  AlertTriangle,
 } from "lucide-react";
-import { format, formatDistanceToNow } from "date-fns";
-import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
-import { cn, parseLocalDate } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { STEPS } from "@/components/pipeline/mini-pipeline";
 import { RichTextEditor } from "@/components/editor/rich-text-editor";
 import { StageAttachments } from "@/components/escala/stage-attachments";
@@ -28,16 +32,26 @@ import { ReviewByEditor } from "@/components/escala/review-by-editor";
 import { ReviewVideoPanel } from "@/components/escala/review-video-panel";
 import { RoteiroPreview } from "@/components/escala/roteiro-preview";
 import { AddEditingMediaSheet } from "@/components/escala/add-editing-media-sheet";
-import { WeekReferences } from "@/components/escala/week-references";
 import { HistoryCardPicker } from "@/components/acervo/history-card-picker";
 import { CharacterPicker } from "@/components/acervo/character-picker";
+import { WeekHeader } from "@/components/escala/week-header";
+import { WeekStepper } from "@/components/escala/week-stepper";
+import { PhasePipeline } from "@/components/escala/phase-pipeline";
+import { ReferencesStrip } from "@/components/escala/references-strip";
+import { PhaseFrame } from "@/components/escala/phase-frame";
+import { TeamTable } from "@/components/escala/team-table";
+import { CommentsPanel } from "@/components/escala/comments-panel";
+import { StageActivity } from "@/components/escala/stage-activity";
 
-const ROLE_TO_STAGE: Record<string, string> = { roteirista: "roteiro", narrador: "gravacao", editor: "edicao" };
+const ROLE_TO_STAGE: Record<string, string> = {
+  roteirista: "roteiro",
+  narrador: "gravacao",
+  editor: "edicao",
+};
 
 export default function ScaleDetailPage() {
   const { id } = useParams();
   const { data: session } = useSession();
-  const router = useRouter();
   const [scale, setScale] = useState<any>(null);
   const [progress, setProgress] = useState<any[]>([]);
   const [comments, setComments] = useState<any[]>([]);
@@ -46,8 +60,6 @@ export default function ScaleDetailPage() {
   const [newComment, setNewComment] = useState("");
   const [sendingComment, setSendingComment] = useState(false);
   const [viewingStage, setViewingStage] = useState<string | null>(null);
-  const [linkUrl, setLinkUrl] = useState("");
-  const commentsEndRef = useRef<HTMLDivElement>(null);
 
   // Inline roteiro creation
   const [showInlineRoteiro, setShowInlineRoteiro] = useState(false);
@@ -56,9 +68,6 @@ export default function ScaleDetailPage() {
   const [inlineFile, setInlineFile] = useState<File | null>(null);
   const [savingRoteiro, setSavingRoteiro] = useState(false);
   const inlineFileRef = useRef<HTMLInputElement>(null);
-
-  // Team section collapse
-  const [showTeam, setShowTeam] = useState(false);
 
   // Admin advance confirmation
   const [confirmAdvance, setConfirmAdvance] = useState<string | null>(null);
@@ -73,7 +82,7 @@ export default function ScaleDetailPage() {
   const [editingRoteiroContent, setEditingRoteiroContent] = useState("");
   const [savingEditedRoteiro, setSavingEditedRoteiro] = useState(false);
 
-  // Edição: sheet "Adicionar mídia" (acervo + upload com push opcional)
+  // Edição: sheet "Adicionar mídia"
   const [addMediaOpen, setAddMediaOpen] = useState(false);
 
   const userId = (session?.user as any)?.id;
@@ -82,27 +91,32 @@ export default function ScaleDetailPage() {
   const canLinkAcervo = ["admin", "coordenador", "roteirista"].includes(role);
 
   useEffect(() => {
-    fetch(`/api/scales/${id}`).then((r) => r.ok ? r.json() : null).then((data) => {
-      if (data) setScale(data);
-    }).finally(() => setLoading(false));
+    fetch(`/api/scales/${id}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data) setScale(data);
+      })
+      .finally(() => setLoading(false));
   }, [id]);
 
   useEffect(() => {
     if (!scale) return;
     Promise.all([
-      fetch(`/api/task-progress?scaleId=${id}&weekNumber=${selectedWeek}`).then((r) => (r.ok ? r.json() : [])),
-      fetch(`/api/comments?scaleId=${id}&weekNumber=${selectedWeek}`).then((r) => (r.ok ? r.json() : [])),
-    ]).then(([p, c]) => { setProgress(p); setComments(c); }).catch((err) => console.error("Erro ao carregar dados da semana:", err));
+      fetch(`/api/task-progress?scaleId=${id}&weekNumber=${selectedWeek}`).then((r) =>
+        r.ok ? r.json() : []
+      ),
+      fetch(`/api/comments?scaleId=${id}&weekNumber=${selectedWeek}`).then((r) =>
+        r.ok ? r.json() : []
+      ),
+    ])
+      .then(([p, c]) => {
+        setProgress(p);
+        setComments(c);
+      })
+      .catch((err) =>
+        console.error("Erro ao carregar dados da semana:", err)
+      );
   }, [id, selectedWeek, scale]);
-
-  useEffect(() => {
-    const el = commentsEndRef.current;
-    if (!el) return;
-    const container = el.parentElement;
-    if (!container) return;
-    // Rola apenas o container interno do chat, nunca a página
-    container.scrollTo({ top: container.scrollHeight, behavior: "smooth" });
-  }, [comments]);
 
   useEffect(() => {
     setViewingStage(null);
@@ -120,16 +134,6 @@ export default function ScaleDetailPage() {
     setAddMediaOpen(false);
   }, [selectedWeek]);
 
-  useEffect(() => {
-    if (!scale) return;
-    const wk = scale.weeks.find((w: { number: number }) => w.number === selectedWeek);
-    const total =
-      (wk?.assignments?.roteiristas?.length || 0) +
-      (wk?.assignments?.narradores?.length || 0) +
-      (wk?.assignments?.editores?.length || 0);
-    setShowTeam(total > 0);
-  }, [selectedWeek, scale]);
-
   async function refreshData() {
     const [scaleRes, progRes, commRes] = await Promise.all([
       fetch(`/api/scales/${id}`),
@@ -142,30 +146,48 @@ export default function ScaleDetailPage() {
   }
 
   async function handleInlineRoteiroSave() {
-    if (!inlineTitle.trim()) { toast.error("Informe o título do roteiro"); return; }
-    if (!inlineContent.trim() && !inlineFile) { toast.error("Escreva o conteúdo ou anexe um arquivo"); return; }
+    if (!inlineTitle.trim()) {
+      toast.error("Informe o título do roteiro");
+      return;
+    }
+    if (!inlineContent.trim() && !inlineFile) {
+      toast.error("Escreva o conteúdo ou anexe um arquivo");
+      return;
+    }
     setSavingRoteiro(true);
     try {
       const res = await fetch("/api/roteiros", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: inlineTitle.trim(), content: inlineContent, scaleId: id, weekNumber: selectedWeek }),
+        body: JSON.stringify({
+          title: inlineTitle.trim(),
+          content: inlineContent,
+          scaleId: id,
+          weekNumber: selectedWeek,
+        }),
       });
       if (!res.ok) throw new Error((await res.json()).error);
       const roteiro = await res.json();
       if (inlineFile) {
         const formData = new FormData();
         formData.append("file", inlineFile);
-        const uploadRes = await fetch(`/api/roteiros/${roteiro._id}/upload`, { method: "POST", body: formData });
+        const uploadRes = await fetch(`/api/roteiros/${roteiro._id}/upload`, {
+          method: "POST",
+          body: formData,
+        });
         if (!uploadRes.ok) toast.error("Roteiro salvo, mas erro no upload do arquivo");
       }
       toast.success("Roteiro salvo!");
       setShowInlineRoteiro(false);
-      setInlineTitle(""); setInlineContent(""); setInlineFile(null);
+      setInlineTitle("");
+      setInlineContent("");
+      setInlineFile(null);
       refreshData();
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Erro ao salvar roteiro");
-    } finally { setSavingRoteiro(false); }
+    } finally {
+      setSavingRoteiro(false);
+    }
   }
 
   function startEditRoteiro(r: { _id: string; title?: string; content?: string }) {
@@ -182,7 +204,10 @@ export default function ScaleDetailPage() {
 
   async function saveEditedRoteiro() {
     if (!editingRoteiroId) return;
-    if (!editingRoteiroTitle.trim()) { toast.error("Informe o título"); return; }
+    if (!editingRoteiroTitle.trim()) {
+      toast.error("Informe o título");
+      return;
+    }
     setSavingEditedRoteiro(true);
     try {
       const res = await fetch(`/api/roteiros/${editingRoteiroId}`, {
@@ -209,19 +234,26 @@ export default function ScaleDetailPage() {
 
   async function markComplete(taskRole: string, linkUrl?: string) {
     const res = await fetch(`/api/scales/${id}/weeks/${selectedWeek}`, {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ role: taskRole, completed: true, linkUrl }),
     });
-    if (res.ok) { toast.success("Concluído!"); refreshData(); } else toast.error("Erro");
+    if (res.ok) {
+      toast.success("Concluído!");
+      refreshData();
+    } else toast.error("Erro");
   }
 
   async function setWeekStatus(newStatus: string) {
     const res = await fetch(`/api/scales/${id}/weeks/${selectedWeek}`, {
-      method: "PUT", headers: { "Content-Type": "application/json" },
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: newStatus }),
     });
-    if (res.ok) { toast.success("Etapa atualizada!"); refreshData(); }
-    else toast.error("Erro ao atualizar etapa");
+    if (res.ok) {
+      toast.success("Etapa atualizada!");
+      refreshData();
+    } else toast.error("Erro ao atualizar etapa");
   }
 
   async function handlePickHistory(historyCardId: string | null) {
@@ -230,8 +262,10 @@ export default function ScaleDetailPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ historyCardId }),
     });
-    if (res.ok) { toast.success(historyCardId ? "História vinculada" : "Removido"); refreshData(); }
-    else {
+    if (res.ok) {
+      toast.success(historyCardId ? "História vinculada" : "Removido");
+      refreshData();
+    } else {
       const err = await res.json().catch(() => ({}));
       toast.error((err as { error?: string }).error || "Erro ao vincular");
     }
@@ -243,13 +277,14 @@ export default function ScaleDetailPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ characterIds }),
     });
-    if (res.ok) { toast.success("Personagens atualizados"); refreshData(); }
-    else {
+    if (res.ok) {
+      toast.success("Personagens atualizados");
+      refreshData();
+    } else {
       const err = await res.json().catch(() => ({}));
       toast.error((err as { error?: string }).error || "Erro ao atualizar");
     }
   }
-
 
   async function sendComment() {
     if (!newComment.trim()) return;
@@ -257,40 +292,56 @@ export default function ScaleDetailPage() {
     try {
       const cw = scale?.weeks?.find((w: any) => w.number === selectedWeek);
       const res = await fetch("/api/comments", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ scaleId: id, weekNumber: selectedWeek, message: newComment.trim(), stage: cw?.status || "geral" }),
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          scaleId: id,
+          weekNumber: selectedWeek,
+          message: newComment.trim(),
+          stage: cw?.status || "geral",
+        }),
       });
       if (res.ok) {
         setNewComment("");
-        const cr = await fetch(`/api/comments?scaleId=${id}&weekNumber=${selectedWeek}`);
+        const cr = await fetch(
+          `/api/comments?scaleId=${id}&weekNumber=${selectedWeek}`
+        );
         if (cr.ok) setComments(await cr.json());
       }
-    } catch { toast.error("Erro ao enviar"); }
-    finally { setSendingComment(false); }
+    } catch {
+      toast.error("Erro ao enviar");
+    } finally {
+      setSendingComment(false);
+    }
   }
 
   // Build unified activity feed from progress + comments for a given stage
   const stageActivity = useMemo(() => {
     if (!viewingStage) return [];
-    const vs = STEPS.find(s => s.key === viewingStage);
+    const vs = STEPS.find((s) => s.key === viewingStage);
     if (!vs) return [];
+    const items: { type: "completion" | "link" | "comment"; time: Date; data: any }[] =
+      [];
 
-    const items: { type: "completion" | "link" | "comment"; time: Date; data: any }[] = [];
-
-    // Completions for this stage
     progress.forEach((p: any) => {
       const pStage = ROLE_TO_STAGE[p.role];
       if (pStage === viewingStage && p.completed && p.completedAt) {
         items.push({ type: "completion", time: new Date(p.completedAt), data: p });
       }
       if (pStage === viewingStage && p.linkUrl) {
-        items.push({ type: "link", time: new Date(p.updatedAt || p.completedAt || p.createdAt), data: p });
+        items.push({
+          type: "link",
+          time: new Date(p.updatedAt || p.completedAt || p.createdAt),
+          data: p,
+        });
       }
     });
 
-    // Comments for this stage
     comments.forEach((c: any) => {
-      if (c.stage === viewingStage || (viewingStage === "concluido" && c.stage === "geral")) {
+      if (
+        c.stage === viewingStage ||
+        (viewingStage === "concluido" && c.stage === "geral")
+      ) {
         items.push({ type: "comment", time: new Date(c.createdAt), data: c });
       }
     });
@@ -299,101 +350,134 @@ export default function ScaleDetailPage() {
     return items;
   }, [viewingStage, progress, comments]);
 
-  if (loading) return (
-    <div className="space-y-4">
-      <div className="h-8 w-52 skeleton rounded-md" />
-      <div className="h-10 skeleton rounded-lg" />
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2 h-80 skeleton rounded-xl" />
-        <div className="h-80 skeleton rounded-xl" />
+  if (loading)
+    return (
+      <div className="space-y-4">
+        <div className="h-6 w-64 skeleton rounded-md" />
+        <div className="h-10 w-full skeleton rounded-lg" />
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+          <div className="lg:col-span-8 space-y-4">
+            <div className="h-12 skeleton rounded-lg" />
+            <div className="h-60 skeleton rounded-xl" />
+            <div className="h-40 skeleton rounded-xl" />
+          </div>
+          <div className="lg:col-span-4 h-96 skeleton rounded-xl" />
+        </div>
       </div>
-    </div>
-  );
-  if (!scale) return <p className="text-muted-foreground">Escala não encontrada</p>;
+    );
+
+  if (!scale)
+    return <p className="text-muted-foreground">Escala não encontrada</p>;
 
   const currentWeek = scale.weeks.find((w: any) => w.number === selectedWeek);
   const weekStatus = currentWeek?.status || "roteiro";
   const stepIdx = STEPS.findIndex((s) => s.key === weekStatus);
   const currentStep = STEPS[stepIdx];
   const nextStep = STEPS[stepIdx + 1];
-  const isNarrator = currentWeek?.assignments?.narradores?.some((u: any) => (u._id || u) === userId);
-  const isEditor = currentWeek?.assignments?.editores?.some((u: any) => (u._id || u) === userId);
-  const isRoteirista = currentWeek?.assignments?.roteiristas?.some((u: any) => (u._id || u) === userId);
+  const isNarrator = currentWeek?.assignments?.narradores?.some(
+    (u: any) => (u._id || u) === userId
+  );
+  const isEditor = currentWeek?.assignments?.editores?.some(
+    (u: any) => (u._id || u) === userId
+  );
+  const isRoteirista = currentWeek?.assignments?.roteiristas?.some(
+    (u: any) => (u._id || u) === userId
+  );
 
-  const teamGroups = [
-    { key: "roteiristas", label: "Roteirista", icon: PenLine, members: currentWeek?.assignments?.roteiristas || [], tagBg: "bg-[oklch(0.22_0.030_220)] text-[oklch(0.82_0.13_220)]" },
-    { key: "narradores", label: "Narrador", icon: Mic, members: currentWeek?.assignments?.narradores || [], tagBg: "bg-[oklch(0.22_0.030_60)] text-[oklch(0.82_0.13_60)]" },
-    { key: "editores", label: "Editor", icon: Film, members: currentWeek?.assignments?.editores || [], tagBg: "bg-[oklch(0.22_0.025_300)] text-[oklch(0.82_0.13_300)]" },
-  ];
+  const teamCount =
+    (currentWeek?.assignments?.roteiristas?.length || 0) +
+    (currentWeek?.assignments?.narradores?.length || 0) +
+    (currentWeek?.assignments?.editores?.length || 0);
 
-  const viewingStep = viewingStage ? STEPS.find(s => s.key === viewingStage) : null;
+  const viewingStep = viewingStage ? STEPS.find((s) => s.key === viewingStage) : null;
+
+  /** Renders the "Avançar" button + warning workflow (used by all phase panels). */
+  const renderAdvance = (advanceWarning: string | null) => {
+    if (!nextStep) return null;
+    if (confirmAdvance === nextStep.key) {
+      return (
+        <div className="flex items-center gap-1.5">
+          <span className="text-[10px] text-[oklch(0.82_0.13_60)] font-medium">
+            {advanceWarning}
+          </span>
+          <Button
+            size="sm"
+            variant="destructive"
+            className="h-7 text-[11px] rounded-md"
+            onClick={() => {
+              setConfirmAdvance(null);
+              setWeekStatus(nextStep.key);
+            }}
+          >
+            Avançar mesmo assim
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 text-[11px] rounded-md px-2"
+            onClick={() => setConfirmAdvance(null)}
+          >
+            <X className="h-3 w-3" />
+          </Button>
+        </div>
+      );
+    }
+    return (
+      <Button
+        size="sm"
+        variant="outline"
+        className={cn(
+          "h-7 text-[11px] rounded-md border",
+          advanceWarning
+            ? "border-[oklch(0.40_0.08_60)] text-[oklch(0.82_0.13_60)] hover:bg-[oklch(0.22_0.030_60)]"
+            : cn(nextStep.lightBorder, nextStep.lightText)
+        )}
+        onClick={() => {
+          if (advanceWarning) setConfirmAdvance(nextStep.key);
+          else setWeekStatus(nextStep.key);
+        }}
+      >
+        {advanceWarning && <AlertTriangle className="h-3 w-3 mr-1" />}
+        <nextStep.icon className="h-3 w-3 mr-1" />
+        Avançar
+      </Button>
+    );
+  };
 
   return (
-    <div className="space-y-5">
-      {/* Header */}
-      <div>
-        <Link
-          href="/escalas"
-          className="inline-flex items-center gap-1 text-[11px] font-mono uppercase tracking-[0.18em] text-muted-foreground hover:text-foreground transition-colors mb-3"
-        >
-          ← Escalas
-        </Link>
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div>
-            <p className="text-[10px] font-mono uppercase tracking-[0.22em] text-[oklch(0.65_0.12_158)] mb-1">
-              {scale.month} · {scale.weeks.length} semanas
-            </p>
-            <h1 className="font-heading text-3xl sm:text-4xl font-semibold leading-[1.05] tracking-[-0.03em]">
-              {scale.title}
-            </h1>
-          </div>
-        </div>
-      </div>
+    <div className="space-y-4">
+      {/* ═══ HEADER ═══ */}
+      <WeekHeader
+        scaleTitle={scale.title}
+        scaleId={String(id)}
+        scaleMonth={scale.month}
+        weekNumber={selectedWeek}
+        weekTheme={currentWeek?.theme || ""}
+        weekDeadline={currentWeek?.deadline || ""}
+        weekStatus={weekStatus}
+        teamCount={teamCount}
+      />
 
-      {/* Week tabs — rich cards */}
-      <div className="flex gap-2 overflow-x-auto pb-1">
-        {scale.weeks.map((week: any) => {
-          const ws = STEPS.find((s) => s.key === week.status) || STEPS[0];
-          const sel = selectedWeek === week.number;
-          const overdue = week.status !== "concluido" && parseLocalDate(week.deadline) < new Date();
-          return (
-            <button
-              key={week.number}
-              onClick={() => setSelectedWeek(week.number)}
-              className={cn(
-                "flex flex-col items-start px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all border min-w-[80px]",
-                sel
-                  ? `bg-gradient-to-br ${ws.gradient} text-white border-transparent shadow-sm`
-                  : "bg-card border-border hover:border-primary/20"
-              )}
-            >
-              <div className="flex items-center gap-1.5 w-full">
-                <ws.icon className={cn("h-3 w-3 shrink-0", sel ? "text-white" : ws.color)} />
-                <span>S{week.number}</span>
-                {!sel && week.status === "concluido" && (
-                  <CircleCheck className="h-3 w-3 text-emerald-500 ml-auto" />
-                )}
-                {!sel && overdue && (
-                  <span className="h-1.5 w-1.5 rounded-full bg-rose-500 shrink-0 ml-auto" title="Prazo vencido" />
-                )}
-              </div>
-              <span className={cn(
-                "text-[10px] mt-0.5 truncate w-full font-medium",
-                sel ? "text-white/80" : "text-muted-foreground"
-              )}>
-                {week.theme.length > 18 ? week.theme.slice(0, 18) + "…" : week.theme}
-              </span>
-            </button>
-          );
-        })}
-      </div>
+      {/* ═══ WEEK STEPPER ═══ */}
+      <WeekStepper
+        weeks={scale.weeks}
+        selected={selectedWeek}
+        onSelect={setSelectedWeek}
+      />
+
+      {/* ═══ PHASE PIPELINE ═══ */}
+      <PhasePipeline
+        status={weekStatus}
+        viewingStage={viewingStage}
+        onSelectStage={setViewingStage}
+      />
 
       {currentWeek && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          {/* ═══ LEFT ═══ */}
-          <div className="lg:col-span-2 space-y-4">
-
-            <WeekReferences
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+          {/* ═══ LEFT (8 cols) ═══ */}
+          <div className="lg:col-span-8 space-y-4">
+            {/* References strip */}
+            <ReferencesStrip
               historyCard={currentWeek?.historyCardId || null}
               characters={currentWeek?.characterIds || []}
               canEdit={canLinkAcervo}
@@ -401,817 +485,477 @@ export default function ScaleDetailPage() {
               onPickCharacters={() => setPickCharactersOpen(true)}
             />
 
+            {/* Stage activity (only when viewing past stage) */}
+            {viewingStage && viewingStep && (
+              <StageActivity
+                viewingStage={viewingStage}
+                items={stageActivity}
+                onClose={() => setViewingStage(null)}
+              />
+            )}
 
-            {/* Action — FIRST: user sees their task immediately */}
-            <div className="card-glass rounded-xl overflow-hidden">
-              <div className="px-4 py-2.5 border-b bg-muted/20 flex items-center gap-2">
-                {weekStatus === "concluido" ? (
-                  <CircleCheck className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
-                ) : (
-                  <div className={cn("h-1.5 w-1.5 rounded-full animate-pulse-ring shrink-0", currentStep.dot)} />
-                )}
-                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                  Ação · {currentStep.label}
-                </p>
-              </div>
-              <div className="p-4">
-                {weekStatus === "roteiro" && canReview && !isRoteirista && (() => {
-                  const total = currentWeek?.assignments?.roteiristas?.length || 0;
-                  const done = progress.filter((p: any) => p.role === "roteirista" && p.completed).length;
-                  const advanceWarning = !currentWeek.roteiro ? "Nenhum roteiro criado" : null;
-                  return (
-                    <div className={cn("p-3 rounded-lg border space-y-2.5", STEPS[0].lightBg, STEPS[0].lightBorder)}>
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex items-center gap-2.5">
-                          <PenLine className={cn("h-4 w-4 shrink-0", STEPS[0].color)} />
-                          <div>
-                            <p className={cn("text-sm font-bold", STEPS[0].lightText)}>Fase: Roteiro</p>
-                            <p className="text-[11px] text-muted-foreground/70">
-                              {total > 0 ? `${done} de ${total} roteirista${total > 1 ? "s" : ""} concluiu` : "Nenhum roteirista atribuído"}
-                            </p>
-                          </div>
-                        </div>
-                        {nextStep && (
-                          confirmAdvance === nextStep.key ? (
-                            <div className="flex items-center gap-1.5 shrink-0">
-                              <span className="text-[10px] text-[oklch(0.82_0.13_60)] font-medium">{advanceWarning}</span>
-                              <Button size="sm" variant="destructive" className="h-8 text-xs rounded-lg"
-                                onClick={() => { setConfirmAdvance(null); setWeekStatus(nextStep.key); }}>
-                                Avançar mesmo assim
-                              </Button>
-                              <Button size="sm" variant="ghost" className="h-8 text-xs rounded-lg"
-                                onClick={() => setConfirmAdvance(null)}>
-                                <X className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          ) : (
-                            <Button size="sm" variant="outline"
-                              className={cn("h-8 text-xs rounded-lg shrink-0 border",
-                                advanceWarning ? "border-[oklch(0.40_0.08_60)] text-[oklch(0.82_0.13_60)] hover:bg-[oklch(0.22_0.030_60)]" : cn(STEPS[0].lightBorder, STEPS[0].lightText)
-                              )}
-                              onClick={() => {
-                                if (advanceWarning) setConfirmAdvance(nextStep.key);
-                                else setWeekStatus(nextStep.key);
-                              }}>
-                              {advanceWarning && <AlertTriangle className="h-3.5 w-3.5 mr-1" />}
-                              <nextStep.icon className="h-3.5 w-3.5 mr-1" /> Avançar
-                            </Button>
-                          )
-                        )}
-                      </div>
-                      {!currentWeek.roteiro && !showInlineRoteiro && (
-                        <Button size="sm" className="bg-[oklch(0.55_0.17_220)] hover:bg-[oklch(0.48_0.17_220)] h-8 text-xs rounded-lg w-full"
-                          onClick={() => setShowInlineRoteiro(true)}>
-                          <PenLine className="h-3.5 w-3.5 mr-1" /> Escrever roteiro agora
+            {/* ═══ PHASE ACTIVE PANEL ═══ */}
+            {weekStatus === "roteiro" && canReview && !isRoteirista && (() => {
+              const total = currentWeek?.assignments?.roteiristas?.length || 0;
+              const done = progress.filter(
+                (p: any) => p.role === "roteirista" && p.completed
+              ).length;
+              const advanceWarning = !currentWeek.roteiro
+                ? "Nenhum roteiro criado"
+                : null;
+              return (
+                <PhaseFrame
+                  accentText={STEPS[0].lightText}
+                  rail={STEPS[0].bg}
+                  tint={STEPS[0].lightBg}
+                  icon={PenLine}
+                  label="Fase de Roteiro"
+                  subtitle={
+                    total > 0
+                      ? `${total} roteirista${total > 1 ? "s" : ""} atribuído${total > 1 ? "s" : ""}`
+                      : "Nenhum roteirista atribuído"
+                  }
+                  progress={{ done, total }}
+                  actions={renderAdvance(advanceWarning)}
+                >
+                  {!currentWeek.roteiro && !showInlineRoteiro && (
+                    <Button
+                      size="sm"
+                      className="bg-[oklch(0.55_0.17_220)] hover:bg-[oklch(0.48_0.17_220)] h-8 text-xs rounded-lg w-full"
+                      onClick={() => setShowInlineRoteiro(true)}
+                    >
+                      <PenLine className="h-3.5 w-3.5 mr-1.5" /> Escrever roteiro agora
+                    </Button>
+                  )}
+                  {currentWeek.roteiro && !showInlineRoteiro && (
+                    editingRoteiroId === (currentWeek.roteiro._id || currentWeek.roteiro) ? (
+                      <InlineRoteiroEditor
+                        title={editingRoteiroTitle}
+                        content={editingRoteiroContent}
+                        onChangeTitle={setEditingRoteiroTitle}
+                        onChangeContent={setEditingRoteiroContent}
+                        onSave={saveEditedRoteiro}
+                        onCancel={cancelEditRoteiro}
+                        saving={savingEditedRoteiro}
+                        label="Editando roteiro"
+                      />
+                    ) : (
+                      <RoteiroPreview
+                        roteiro={currentWeek.roteiro}
+                        canEdit={canReview}
+                        onEdit={() => startEditRoteiro(currentWeek.roteiro)}
+                        accentText={STEPS[0].lightText}
+                      />
+                    )
+                  )}
+                  {showInlineRoteiro && (
+                    <InlineRoteiroCreator
+                      title={inlineTitle}
+                      content={inlineContent}
+                      file={inlineFile}
+                      fileRef={inlineFileRef}
+                      onChangeTitle={setInlineTitle}
+                      onChangeContent={setInlineContent}
+                      onChangeFile={setInlineFile}
+                      onSave={handleInlineRoteiroSave}
+                      onCancel={() => {
+                        setShowInlineRoteiro(false);
+                        setInlineTitle("");
+                        setInlineContent("");
+                        setInlineFile(null);
+                      }}
+                      saving={savingRoteiro}
+                    />
+                  )}
+                </PhaseFrame>
+              );
+            })()}
+
+            {weekStatus === "roteiro" && isRoteirista && (
+              currentWeek.roteiro ? (
+                <PhaseFrame
+                  accentText={STEPS[0].lightText}
+                  rail={STEPS[0].bg}
+                  tint={STEPS[0].lightBg}
+                  icon={PenLine}
+                  label="Seu Roteiro"
+                  subtitle="Revise o conteúdo e marque como concluído"
+                >
+                  {editingRoteiroId === (currentWeek.roteiro._id || currentWeek.roteiro) ? (
+                    <InlineRoteiroEditor
+                      title={editingRoteiroTitle}
+                      content={editingRoteiroContent}
+                      onChangeTitle={setEditingRoteiroTitle}
+                      onChangeContent={setEditingRoteiroContent}
+                      onSave={saveEditedRoteiro}
+                      onCancel={cancelEditRoteiro}
+                      saving={savingEditedRoteiro}
+                      label="Editando roteiro"
+                    />
+                  ) : (
+                    <>
+                      <RoteiroPreview
+                        roteiro={currentWeek.roteiro}
+                        canEdit
+                        onEdit={() => startEditRoteiro(currentWeek.roteiro)}
+                        accentText={STEPS[0].lightText}
+                      />
+                      <div className="pt-2 border-t border-dashed border-border/40 flex justify-end">
+                        <Button
+                          size="sm"
+                          onClick={() => markComplete("roteirista")}
+                          className="bg-[oklch(0.55_0.17_220)] hover:bg-[oklch(0.48_0.17_220)] h-8 text-xs rounded-lg"
+                        >
+                          <Check className="h-3.5 w-3.5 mr-1" /> Marcar como concluído
                         </Button>
-                      )}
-                      {currentWeek.roteiro && !showInlineRoteiro && (
-                        editingRoteiroId === (currentWeek.roteiro._id || currentWeek.roteiro) ? (
-                          <div className="space-y-3 pt-1">
-                            <div className="flex items-center justify-between gap-2">
-                              <p className={cn("text-[10px] font-bold uppercase tracking-widest", STEPS[0].lightText)}>
-                                Editando roteiro
-                              </p>
-                              <Button size="sm" variant="ghost" className="h-7 text-[11px] rounded-md"
-                                onClick={cancelEditRoteiro}>
-                                <X className="h-3 w-3 mr-1" /> Cancelar
-                              </Button>
-                            </div>
-                            <Input placeholder="Título do roteiro" value={editingRoteiroTitle}
-                              onChange={(e) => setEditingRoteiroTitle(e.target.value)}
-                              className="h-9 text-sm bg-[oklch(0.235_0.015_172)]" />
-                            <RichTextEditor content={editingRoteiroContent}
-                              onChange={setEditingRoteiroContent} placeholder="Escreva o roteiro..." />
-                            <div className="flex gap-2">
-                              <Button size="sm" className="bg-[oklch(0.55_0.17_220)] hover:bg-[oklch(0.48_0.17_220)] h-8 text-xs rounded-lg flex-1"
-                                disabled={savingEditedRoteiro || !editingRoteiroTitle.trim()}
-                                onClick={saveEditedRoteiro}>
-                                {savingEditedRoteiro ? "Salvando…" : "Salvar alterações"}
-                              </Button>
-                            </div>
-                          </div>
-                        ) : (
-                          <RoteiroPreview
-                            roteiro={currentWeek.roteiro}
-                            canEdit={canReview}
-                            onEdit={() => startEditRoteiro(currentWeek.roteiro)}
-                            accentText={STEPS[0].lightText}
-                          />
-                        )
-                      )}
-                      {showInlineRoteiro && (
-                        <div className="space-y-3 pt-1">
-                          <Input placeholder="Título do roteiro" value={inlineTitle}
-                            onChange={(e) => setInlineTitle(e.target.value)} className="h-9 text-sm bg-[oklch(0.235_0.015_172)]" />
-                          <RichTextEditor content={inlineContent} onChange={setInlineContent} placeholder="Escreva o roteiro..." />
-                          <div className="flex items-center gap-2">
-                            <input ref={inlineFileRef} type="file" className="hidden" accept=".pdf,.doc,.docx,.mp3,.wav"
-                              onChange={(e) => setInlineFile(e.target.files?.[0] || null)} />
-                            {inlineFile ? (
-                              <div className="flex items-center gap-2 text-[11px] text-[oklch(0.82_0.13_220)] bg-[oklch(0.22_0.030_220)] border border-[oklch(0.35_0.06_220)] rounded-lg px-2 py-1 flex-1">
-                                <FileText className="h-3 w-3 shrink-0" />
-                                <span className="truncate">{inlineFile.name}</span>
-                                <button onClick={() => setInlineFile(null)} className="ml-auto"><X className="h-3 w-3" /></button>
-                              </div>
-                            ) : (
-                              <button type="button" onClick={() => inlineFileRef.current?.click()}
-                                className="text-[11px] text-[oklch(0.78_0.13_220)] hover:underline flex items-center gap-1">
-                                <Paperclip className="h-3 w-3" /> Anexar arquivo (opcional)
-                              </button>
-                            )}
-                          </div>
-                          <div className="flex gap-2">
-                            <Button size="sm" className="bg-[oklch(0.55_0.17_220)] hover:bg-[oklch(0.48_0.17_220)] h-8 text-xs rounded-lg flex-1"
-                              disabled={savingRoteiro || !inlineTitle.trim() || (!inlineContent.trim() && !inlineFile)}
-                              onClick={handleInlineRoteiroSave}>
-                              {savingRoteiro ? "Salvando..." : "Salvar Roteiro"}
-                            </Button>
-                            <Button size="sm" variant="ghost" className="h-8 text-xs rounded-lg"
-                              onClick={() => { setShowInlineRoteiro(false); setInlineTitle(""); setInlineContent(""); setInlineFile(null); }}>
-                              Cancelar
-                            </Button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })()}
-
-                {weekStatus === "roteiro" && isRoteirista && (
-                  currentWeek.roteiro ? (
-                    <div className={cn("p-3 rounded-lg border space-y-3", STEPS[0].lightBg, STEPS[0].lightBorder)}>
-                      {editingRoteiroId === (currentWeek.roteiro._id || currentWeek.roteiro) ? (
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between gap-2">
-                            <p className={cn("text-[10px] font-bold uppercase tracking-widest", STEPS[0].lightText)}>
-                              Editando roteiro
-                            </p>
-                            <Button size="sm" variant="ghost" className="h-7 text-[11px] rounded-md"
-                              onClick={cancelEditRoteiro}>
-                              <X className="h-3 w-3 mr-1" /> Cancelar
-                            </Button>
-                          </div>
-                          <Input placeholder="Título do roteiro" value={editingRoteiroTitle}
-                            onChange={(e) => setEditingRoteiroTitle(e.target.value)}
-                            className="h-9 text-sm bg-[oklch(0.235_0.015_172)]" />
-                          <RichTextEditor content={editingRoteiroContent}
-                            onChange={setEditingRoteiroContent} placeholder="Escreva o roteiro..." />
-                          <div className="flex gap-2">
-                            <Button size="sm" className="bg-[oklch(0.55_0.17_220)] hover:bg-[oklch(0.48_0.17_220)] h-8 text-xs rounded-lg flex-1"
-                              disabled={savingEditedRoteiro || !editingRoteiroTitle.trim()}
-                              onClick={saveEditedRoteiro}>
-                              {savingEditedRoteiro ? "Salvando…" : "Salvar alterações"}
-                            </Button>
-                          </div>
-                        </div>
-                      ) : (
-                        <>
-                          <RoteiroPreview
-                            roteiro={currentWeek.roteiro}
-                            canEdit
-                            onEdit={() => startEditRoteiro(currentWeek.roteiro)}
-                            accentText={STEPS[0].lightText}
-                          />
-                          <div className="pt-2 border-t border-dashed flex justify-end">
-                            <Button size="sm" onClick={() => markComplete("roteirista")}
-                              className="bg-[oklch(0.55_0.17_220)] hover:bg-[oklch(0.48_0.17_220)] h-8 text-xs rounded-lg">
-                              <Check className="h-3.5 w-3.5 mr-1" /> Marcar como concluído
-                            </Button>
-                          </div>
-                        </>
-                      )}
+                      </div>
+                    </>
+                  )}
+                </PhaseFrame>
+              ) : (
+                <PhaseFrame
+                  accentText={STEPS[0].lightText}
+                  rail={STEPS[0].bg}
+                  tint={STEPS[0].lightBg}
+                  icon={PenLine}
+                  label="Criar Roteiro"
+                  subtitle="Escreva o roteiro ou anexe o arquivo aqui mesmo"
+                >
+                  {!showInlineRoteiro ? (
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        className="bg-[oklch(0.55_0.17_220)] hover:bg-[oklch(0.48_0.17_220)] h-8 text-xs rounded-lg flex-1"
+                        onClick={() => setShowInlineRoteiro(true)}
+                      >
+                        <PenLine className="h-3.5 w-3.5 mr-1" /> Escrever agora
+                      </Button>
+                      <Link href="/roteiros/novo">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-8 text-xs rounded-lg text-muted-foreground border"
+                        >
+                          <ExternalLink className="h-3.5 w-3.5 mr-1" /> Editor completo
+                        </Button>
+                      </Link>
                     </div>
                   ) : (
-                    <div className={cn("p-3 rounded-lg border space-y-3", STEPS[0].lightBg, STEPS[0].lightBorder)}>
-                      {!showInlineRoteiro ? (
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2.5">
-                            <PenLine className="h-4 w-4 text-[oklch(0.78_0.13_220)]" />
-                            <div>
-                              <p className="text-sm font-bold text-[oklch(0.86_0.13_220)]">Criar roteiro</p>
-                              <p className="text-[11px] text-muted-foreground/70">Escreva o roteiro ou anexe o arquivo aqui mesmo</p>
-                            </div>
-                          </div>
-                          <div className="flex gap-2 pt-1">
-                            <Button size="sm" className="bg-[oklch(0.55_0.17_220)] hover:bg-[oklch(0.48_0.17_220)] h-8 text-xs rounded-lg flex-1"
-                              onClick={() => setShowInlineRoteiro(true)}>
-                              <PenLine className="h-3.5 w-3.5 mr-1" /> Escrever agora
-                            </Button>
-                            <Link href="/roteiros/novo">
-                              <Button size="sm" variant="ghost" className="h-8 text-xs rounded-lg text-muted-foreground border">
-                                <ExternalLink className="h-3.5 w-3.5 mr-1" /> Editor completo
-                              </Button>
-                            </Link>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="space-y-3">
-                          <Input
-                            placeholder="Título do roteiro"
-                            value={inlineTitle}
-                            onChange={(e) => setInlineTitle(e.target.value)}
-                            className="h-9 text-sm bg-[oklch(0.235_0.015_172)]"
-                          />
-                          <RichTextEditor
-                            content={inlineContent}
-                            onChange={setInlineContent}
-                            placeholder="Escreva o roteiro..."
-                          />
-                          <div className="flex items-center gap-2">
-                            <input
-                              ref={inlineFileRef}
-                              type="file"
-                              className="hidden"
-                              accept=".pdf,.doc,.docx,.mp3,.wav"
-                              onChange={(e) => setInlineFile(e.target.files?.[0] || null)}
-                            />
-                            {inlineFile ? (
-                              <div className="flex items-center gap-2 text-[11px] text-[oklch(0.82_0.13_220)] bg-[oklch(0.22_0.030_220)] border border-[oklch(0.35_0.06_220)] rounded-lg px-2 py-1 flex-1">
-                                <FileText className="h-3 w-3 shrink-0" />
-                                <span className="truncate">{inlineFile.name}</span>
-                                <button onClick={() => setInlineFile(null)} className="ml-auto">
-                                  <X className="h-3 w-3" />
-                                </button>
-                              </div>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={() => inlineFileRef.current?.click()}
-                                className="text-[11px] text-[oklch(0.78_0.13_220)] hover:underline flex items-center gap-1"
-                              >
-                                <Paperclip className="h-3 w-3" /> Anexar arquivo (opcional)
-                              </button>
-                            )}
-                          </div>
-                          <div className="flex gap-2">
-                            <Button
-                              size="sm"
-                              className="bg-[oklch(0.55_0.17_220)] hover:bg-[oklch(0.48_0.17_220)] h-8 text-xs rounded-lg flex-1"
-                              disabled={savingRoteiro || !inlineTitle.trim() || (!inlineContent.trim() && !inlineFile)}
-                              onClick={handleInlineRoteiroSave}
-                            >
-                              {savingRoteiro ? "Salvando..." : "Salvar Roteiro"}
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-8 text-xs rounded-lg"
-                              onClick={() => {
-                                setShowInlineRoteiro(false);
-                                setInlineTitle("");
-                                setInlineContent("");
-                                setInlineFile(null);
-                              }}
-                            >
-                              Cancelar
-                            </Button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )
-                )}
-
-                {weekStatus === "gravacao" && canReview && !isNarrator && (() => {
-                  const total = currentWeek?.assignments?.narradores?.length || 0;
-                  const done = progress.filter((p: any) => p.role === "narrador" && p.completed).length;
-                  const advanceWarning = done === 0 ? "Nenhuma narração concluída" : (done < total ? `${total - done} narrador(es) pendente(s)` : null);
-                  return (
-                    <div className={cn("p-3 rounded-lg border space-y-3", STEPS[1].lightBg, STEPS[1].lightBorder)}>
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex items-center gap-2.5">
-                          <Mic className={cn("h-4 w-4 shrink-0", STEPS[1].color)} />
-                          <div>
-                            <p className={cn("text-sm font-bold", STEPS[1].lightText)}>Fase: Gravação</p>
-                            <p className="text-[11px] text-muted-foreground/70">
-                              {total > 0 ? `${done} de ${total} narrador${total > 1 ? "es" : ""} concluiu` : "Nenhum narrador atribuído"}
-                            </p>
-                          </div>
-                        </div>
-                        {nextStep && (
-                          confirmAdvance === nextStep.key ? (
-                            <div className="flex items-center gap-1.5 shrink-0">
-                              <span className="text-[10px] text-[oklch(0.82_0.13_60)] font-medium">{advanceWarning}</span>
-                              <Button size="sm" variant="destructive" className="h-8 text-xs rounded-lg"
-                                onClick={() => { setConfirmAdvance(null); setWeekStatus(nextStep.key); }}>
-                                Avançar mesmo assim
-                              </Button>
-                              <Button size="sm" variant="ghost" className="h-8 text-xs rounded-lg"
-                                onClick={() => setConfirmAdvance(null)}>
-                                <X className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          ) : (
-                            <Button size="sm" variant="outline"
-                              className={cn("h-8 text-xs rounded-lg shrink-0 border",
-                                advanceWarning ? "border-[oklch(0.40_0.08_60)] text-[oklch(0.82_0.13_60)] hover:bg-[oklch(0.22_0.030_60)]" : cn(STEPS[1].lightBorder, STEPS[1].lightText)
-                              )}
-                              onClick={() => {
-                                if (advanceWarning) setConfirmAdvance(nextStep.key);
-                                else setWeekStatus(nextStep.key);
-                              }}>
-                              {advanceWarning && <AlertTriangle className="h-3.5 w-3.5 mr-1" />}
-                              <nextStep.icon className="h-3.5 w-3.5 mr-1" /> Avançar
-                            </Button>
-                          )
-                        )}
-                      </div>
-                      <RecordingsOverview
-                        scaleId={String(id)}
-                        weekNumber={selectedWeek}
-                        narradores={(currentWeek?.assignments?.narradores || []).map((u: any) => ({ _id: u._id || u, name: u.name || "?" }))}
-                        progress={progress}
-                      />
-                    </div>
-                  );
-                })()}
-
-                {weekStatus === "gravacao" && isNarrator && (() => {
-                  const myProgress = progress.find((p: any) => p.role === "narrador" && (p.userId?._id || p.userId) === userId);
-                  return (
-                    <RecordingsUploader
-                      scaleId={String(id)}
-                      weekNumber={selectedWeek}
-                      currentUserId={String(userId)}
-                      currentUserName={(session?.user as any)?.name || "narrador"}
-                      hasRoteiro={!!currentWeek?.roteiro}
-                      notes={myProgress?.notes || ""}
-                      completed={!!myProgress?.completed}
-                      onChanged={refreshData}
+                    <InlineRoteiroCreator
+                      title={inlineTitle}
+                      content={inlineContent}
+                      file={inlineFile}
+                      fileRef={inlineFileRef}
+                      onChangeTitle={setInlineTitle}
+                      onChangeContent={setInlineContent}
+                      onChangeFile={setInlineFile}
+                      onSave={handleInlineRoteiroSave}
+                      onCancel={() => {
+                        setShowInlineRoteiro(false);
+                        setInlineTitle("");
+                        setInlineContent("");
+                        setInlineFile(null);
+                      }}
+                      saving={savingRoteiro}
                     />
-                  );
-                })()}
+                  )}
+                </PhaseFrame>
+              )
+            )}
 
-                {weekStatus === "edicao" && canReview && !isEditor && (() => {
-                  const total = currentWeek?.assignments?.editores?.length || 0;
-                  const done = progress.filter((p: any) => p.role === "editor" && p.completed).length;
-                  const advanceWarning = done < total ? `Faltam ${total - done} editor${total - done > 1 ? "es" : ""}` : null;
-                  return (
-                    <div className={cn("p-3 rounded-lg border space-y-2.5", STEPS[2].lightBg, STEPS[2].lightBorder)}>
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex items-center gap-2.5">
-                          <Film className={cn("h-4 w-4 shrink-0", STEPS[2].color)} />
-                          <div>
-                            <p className={cn("text-sm font-bold", STEPS[2].lightText)}>Fase: Edição</p>
-                            <p className="text-[11px] text-muted-foreground/70">
-                              {total > 0 ? `${done} de ${total} editor${total > 1 ? "es" : ""} concluiu` : "Nenhum editor atribuído"}
-                            </p>
-                          </div>
-                        </div>
-                        {nextStep && (
-                          confirmAdvance === nextStep.key ? (
-                            <div className="flex items-center gap-1.5 shrink-0">
-                              <span className="text-[10px] text-[oklch(0.82_0.13_60)] font-medium">{advanceWarning}</span>
-                              <Button size="sm" variant="destructive" className="h-8 text-xs rounded-lg"
-                                onClick={() => { setConfirmAdvance(null); setWeekStatus(nextStep.key); }}>
-                                Avançar mesmo assim
-                              </Button>
-                              <Button size="sm" variant="ghost" className="h-8 text-xs rounded-lg"
-                                onClick={() => setConfirmAdvance(null)}>
-                                <X className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          ) : (
-                            <Button size="sm" variant="outline"
-                              className={cn("h-8 text-xs rounded-lg shrink-0 border",
-                                advanceWarning ? "border-[oklch(0.40_0.08_60)] text-[oklch(0.82_0.13_60)] hover:bg-[oklch(0.22_0.030_60)]" : cn(STEPS[2].lightBorder, STEPS[2].lightText)
-                              )}
-                              onClick={() => {
-                                if (advanceWarning) setConfirmAdvance(nextStep.key);
-                                else setWeekStatus(nextStep.key);
-                              }}>
-                              {advanceWarning && <AlertTriangle className="h-3.5 w-3.5 mr-1" />}
-                              <nextStep.icon className="h-3.5 w-3.5 mr-1" /> Avançar
-                            </Button>
-                          )
-                        )}
-                      </div>
-                      <EditingOverview
-                        scaleId={String(id)}
-                        weekNumber={selectedWeek}
-                        editores={(currentWeek?.assignments?.editores || []).map((u: any) => ({ _id: u._id || u, name: u.name || "?" }))}
-                        progress={progress}
-                      />
-                    </div>
-                  );
-                })()}
-
-                {weekStatus === "edicao" && isEditor && (() => {
-                  const myProgress = progress.find((p: any) => p.role === "editor" && (p.userId?._id || p.userId) === userId);
-                  return (
-                    <div className="space-y-3">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="h-9 text-xs w-full border-dashed border-[oklch(0.40_0.06_300)] text-[oklch(0.82_0.13_300)] hover:bg-[oklch(0.22_0.025_300)]"
-                        onClick={() => setAddMediaOpen(true)}
-                      >
-                        <Paperclip className="h-3.5 w-3.5 mr-1.5" />
-                        Adicionar mídia (Acervo ou upload)
-                      </Button>
-                      <EditingUploader
-                        scaleId={String(id)}
-                        weekNumber={selectedWeek}
-                        currentUserId={String(userId)}
-                        hasRoteiro={!!currentWeek?.roteiro}
-                        notes={myProgress?.notes || ""}
-                        completed={!!myProgress?.completed}
-                        reviewStatus={myProgress?.reviewStatus}
-                        reviewReason={myProgress?.reviewReason}
-                        rejectionCount={myProgress?.rejectionCount}
-                        onChanged={refreshData}
-                      />
-                    </div>
-                  );
-                })()}
-
-                {weekStatus === "revisao" && canReview && (() => {
-                  const editores = (currentWeek?.assignments?.editores || []).map((u: any) => ({ _id: u._id || u, name: u.name || "?" }));
-                  const approvedCount = progress.filter((p: any) => p.role === "editor" && p.reviewStatus === "approved").length;
-                  const allApproved = editores.length > 0 && approvedCount === editores.length;
-                  return (
-                    <div className={cn("p-3 rounded-lg border space-y-3", STEPS[3].lightBg, STEPS[3].lightBorder)}>
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2.5">
-                          <Eye className={cn("h-4 w-4", STEPS[3].color)} />
-                          <div>
-                            <p className={cn("text-sm font-bold", STEPS[3].lightText)}>Revisão</p>
-                            <p className="text-[11px] text-muted-foreground/70">
-                              {editores.length > 0
-                                ? `${approvedCount}/${editores.length} ${approvedCount === 1 ? "aprovado" : "aprovados"}`
-                                : "Nenhum editor"}
-                            </p>
-                          </div>
-                        </div>
-                        {allApproved && (
-                          <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-[oklch(0.82_0.13_158)] bg-[oklch(0.22_0.030_158)] px-2 py-1 rounded-md">
-                            <Check className="h-3 w-3" /> Todos aprovados
-                          </span>
-                        )}
-                      </div>
-
-                      <ReviewVideoPanel
-                        scaleId={String(id)}
-                        weekNumber={selectedWeek}
-                        initialUrl={currentWeek.reviewVideoUrl || ""}
-                        canReview={canReview}
-                        onChanged={refreshData}
-                      />
-
-                      <ReviewByEditor
-                        scaleId={String(id)}
-                        weekNumber={selectedWeek}
-                        editores={editores}
-                        progress={progress}
-                        onChanged={refreshData}
-                      />
-                    </div>
-                  );
-                })()}
-
-                {/* Visualização retroativa de gravações quando a fase já passou */}
-                {viewingStage === "gravacao" && weekStatus !== "gravacao" && (
+            {weekStatus === "gravacao" && canReview && !isNarrator && (() => {
+              const total = currentWeek?.assignments?.narradores?.length || 0;
+              const done = progress.filter(
+                (p: any) => p.role === "narrador" && p.completed
+              ).length;
+              const advanceWarning =
+                done === 0
+                  ? "Nenhuma narração concluída"
+                  : done < total
+                    ? `${total - done} narrador(es) pendente(s)`
+                    : null;
+              return (
+                <PhaseFrame
+                  accentText={STEPS[1].lightText}
+                  rail={STEPS[1].bg}
+                  tint={STEPS[1].lightBg}
+                  icon={Mic}
+                  label="Fase de Gravação"
+                  subtitle={
+                    total > 0
+                      ? `${total} narrador${total > 1 ? "es" : ""} atribuído${total > 1 ? "s" : ""}`
+                      : "Nenhum narrador atribuído"
+                  }
+                  progress={{ done, total }}
+                  actions={renderAdvance(advanceWarning)}
+                >
                   <RecordingsOverview
                     scaleId={String(id)}
                     weekNumber={selectedWeek}
-                    narradores={(currentWeek?.assignments?.narradores || []).map((u: any) => ({ _id: u._id || u, name: u.name || "?" }))}
+                    narradores={(currentWeek?.assignments?.narradores || []).map(
+                      (u: any) => ({ _id: u._id || u, name: u.name || "?" })
+                    )}
                     progress={progress}
                   />
-                )}
-
-                {weekStatus === "concluido" && !viewingStage && (
-                  <div className="flex items-center gap-3 p-3 rounded-lg bg-[oklch(0.22_0.030_158)] border border-[oklch(0.35_0.06_158)] text-[oklch(0.82_0.13_158)]">
-                    <CircleCheck className="h-5 w-5 shrink-0" />
-                    <div>
-                      <p className="text-sm font-bold">Semana concluída</p>
-                      <p className="text-[11px] opacity-60">Todos os passos foram finalizados</p>
-                    </div>
-                  </div>
-                )}
-
-                {weekStatus !== "concluido" && !isRoteirista && !isNarrator && !isEditor && !canReview && (
-                  <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/30 border border-dashed text-muted-foreground/40">
-                    <Clock className="h-4 w-4" />
-                    <p className="text-xs">Nenhuma ação disponível para você nesta etapa</p>
-                  </div>
-                )}
-
-                {weekStatus !== "concluido" && (
-                  <div className="mt-4 pt-4 border-t">
-                    <StageAttachments
-                      scaleId={String(id)}
-                      weekNumber={selectedWeek}
-                      stage={weekStatus}
-                      currentUserId={userId}
-                      canDeleteAny={canReview}
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Theme + Clickable Pipeline — context header */}
-            <div className="card-glass rounded-xl overflow-hidden">
-              <div className={cn("h-1 bg-gradient-to-r", currentStep.gradient)} />
-              <div className="px-4 py-3 flex items-center justify-between gap-3 border-b">
-                <div className="min-w-0">
-                  <h2 className="font-heading text-base truncate">{currentWeek.theme}</h2>
-                  <span className="flex items-center gap-1 text-[11px] text-muted-foreground mt-0.5">
-                    <CalendarDays className="h-3 w-3" /> {format(parseLocalDate(currentWeek.deadline), "dd MMM yyyy", { locale: ptBR })}
-                  </span>
-                </div>
-                <div className={cn("flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-gradient-to-r text-white shrink-0", currentStep.gradient)}>
-                  <currentStep.icon className="h-3.5 w-3.5" />
-                  {currentStep.label}
-                </div>
-              </div>
-
-              {/* Clickable pipeline */}
-              <div className="px-4 py-3 bg-muted/20">
-                <div className="flex items-center justify-between">
-                  {STEPS.map((s, i) => {
-                    const done = i < stepIdx;
-                    const active = i === stepIdx;
-                    const clickable = i <= stepIdx;
-                    const viewing = viewingStage === s.key;
-                    const Icon = s.icon;
-                    return (
-                      <Fragment key={s.key}>
-                        <button
-                          onClick={() => clickable ? setViewingStage(viewing ? null : s.key) : undefined}
-                          disabled={!clickable}
-                          className={cn("flex flex-col items-center gap-1 group transition-all", clickable ? "cursor-pointer" : "cursor-default")}
-                        >
-                          <div className={cn(
-                            "h-8 w-8 rounded-lg flex items-center justify-center transition-all relative",
-                            active ? `bg-gradient-to-br ${s.gradient} text-[oklch(0.10_0.012_158)] shadow-sm` :
-                            done ? "bg-[oklch(0.22_0.030_158)] text-[oklch(0.78_0.13_158)]" :
-                            "bg-[oklch(0.200_0.016_172)] text-muted-foreground/15 border border-border",
-                            clickable && !viewing && "hover:ring-2 hover:ring-primary/20",
-                            viewing && "ring-2 ring-primary ring-offset-1"
-                          )}>
-                            {done ? <Check className="h-3.5 w-3.5" /> : <Icon className="h-3.5 w-3.5" />}
-                          </div>
-                          <span className={cn(
-                            "text-[9px] font-bold uppercase tracking-wider transition-colors",
-                            viewing ? "text-primary" :
-                            active ? s.color : done ? "text-[oklch(0.65_0.12_158)]" : "text-muted-foreground/15"
-                          )}>{s.label}</span>
-                          {clickable && (
-                            <span className={cn("text-[8px] font-medium transition-opacity", viewing ? "text-primary opacity-100" : "opacity-0 group-hover:opacity-60 text-muted-foreground")}>
-                              {viewing ? "Visualizando" : "Clique p/ ver"}
-                            </span>
-                          )}
-                        </button>
-                        {i < STEPS.length - 1 && <div className={cn("flex-1 h-px mx-1 -mt-6", i < stepIdx ? "bg-[oklch(0.45_0.12_158)]" : "bg-border")} />}
-                      </Fragment>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Stage activity panel — slides open when a stage is clicked */}
-              {viewingStage && viewingStep && (
-                <div className={cn("border-t", viewingStep.lightBg)}>
-                  <div className="px-4 py-2 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <History className={cn("h-3.5 w-3.5", viewingStep.color)} />
-                      <span className={cn("text-xs font-bold", viewingStep.color)}>Atividade — {viewingStep.label}</span>
-                      {stageActivity.length > 0 && <span className="text-[10px] text-muted-foreground">({stageActivity.length})</span>}
-                    </div>
-                    <button onClick={() => setViewingStage(null)} className="h-5 w-5 rounded flex items-center justify-center hover:bg-black/5 transition-colors">
-                      <X className="h-3 w-3 text-muted-foreground" />
-                    </button>
-                  </div>
-
-                  <div className="px-4 pb-3 max-h-52 overflow-y-auto">
-                    {stageActivity.length === 0 ? (
-                      <p className="text-[11px] text-muted-foreground/50 py-2 text-center">Nenhuma atividade registrada nesta etapa</p>
-                    ) : (
-                      <div className="space-y-0.5">
-                        {stageActivity.map((item, idx) => (
-                          <div key={idx} className="flex items-start gap-2 py-1.5 border-b border-black/[0.03] last:border-0">
-                            {/* Icon */}
-                            <div className={cn("h-5 w-5 rounded flex items-center justify-center shrink-0 mt-0.5",
-                              item.type === "completion" ? "bg-[oklch(0.22_0.030_158)] text-[oklch(0.78_0.13_158)]" :
-                              item.type === "link" ? "bg-[oklch(0.22_0.030_220)] text-[oklch(0.78_0.13_220)]" :
-                              "bg-muted text-muted-foreground"
-                            )}>
-                              {item.type === "completion" ? <CheckCircle2 className="h-3 w-3" /> :
-                               item.type === "link" ? <Paperclip className="h-3 w-3" /> :
-                               <MessageSquare className="h-3 w-3" />}
-                            </div>
-
-                            {/* Content */}
-                            <div className="flex-1 min-w-0">
-                              {item.type === "completion" && (
-                                <p className="text-[12px]">
-                                  <span className="font-semibold">{item.data.userId?.name}</span>
-                                  <span className="text-muted-foreground"> concluiu como </span>
-                                  <span className="font-medium">{item.data.role}</span>
-                                </p>
-                              )}
-                              {item.type === "link" && (
-                                <div className="text-[12px]">
-                                  <span className="font-semibold">{item.data.userId?.name}</span>
-                                  <span className="text-muted-foreground"> anexou </span>
-                                  <a href={item.data.linkUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center gap-0.5">
-                                    link <ExternalLink className="h-2.5 w-2.5" />
-                                  </a>
-                                </div>
-                              )}
-                              {item.type === "comment" && (
-                                <div className="text-[12px]">
-                                  <span className="font-semibold">{item.data.userId?.name}: </span>
-                                  <span className="text-muted-foreground">{item.data.message}</span>
-                                </div>
-                              )}
-                              <p className="text-[9px] text-muted-foreground/50 mt-px">
-                                {format(item.time, "dd/MM 'as' HH:mm", { locale: ptBR })}
-                              </p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Team + Progress — collapsible */}
-            {(() => {
-              const totalMembers = teamGroups.reduce((acc, g) => acc + g.members.length, 0);
-              return (
-                <div className="card-glass rounded-xl overflow-hidden">
-                  <button
-                    onClick={() => setShowTeam((v) => !v)}
-                    className="w-full px-4 py-2.5 border-b bg-muted/20 flex items-center justify-between gap-2 hover:bg-muted/30 transition-colors"
-                  >
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Equipe & Progresso</p>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] text-muted-foreground/60 font-medium">{totalMembers} membro{totalMembers !== 1 ? "s" : ""}</span>
-                      {showTeam
-                        ? <ChevronUp className="h-3.5 w-3.5 text-muted-foreground/50" />
-                        : <ChevronDown className="h-3.5 w-3.5 text-muted-foreground/50" />}
-                    </div>
-                  </button>
-                  {showTeam && (
-                    <>
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b text-left">
-                            <th className="px-4 py-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Membro</th>
-                            <th className="px-4 py-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Função</th>
-                            <th className="px-4 py-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider hidden sm:table-cell">Anexo</th>
-                            <th className="px-4 py-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider text-right">Status</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {totalMembers === 0 && (
-                            <tr>
-                              <td colSpan={4} className="px-4 py-8 text-center">
-                                <p className="text-xs text-muted-foreground/50">Nenhum membro atribuído a esta semana</p>
-                                {canReview && (
-                                  <p className="text-[11px] text-muted-foreground/30 mt-1">Edite a escala para atribuir roteiristas, narradores e editores</p>
-                                )}
-                              </td>
-                            </tr>
-                          )}
-                          {teamGroups.map((group) =>
-                            group.members.map((u: any) => {
-                              const mp = progress.find((p: any) =>
-                                (p.userId?._id?.toString() || p.userId?.toString()) === (u._id?.toString() || u?.toString())
-                              );
-                              return (
-                                <tr key={`${group.key}-${u._id || u}`} className="border-b last:border-0 hover:bg-muted/20 transition-colors">
-                                  <td className="px-4 py-2">
-                                    <div className="flex items-center gap-2">
-                                      <div className={cn("h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-bold", group.tagBg)}>
-                                        {u.name?.[0] || "?"}
-                                      </div>
-                                      <span className="font-medium text-sm">{u.name || "—"}</span>
-                                    </div>
-                                  </td>
-                                  <td className="px-4 py-2">
-                                    <span className={cn("inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded", group.tagBg)}>
-                                      <group.icon className="h-2.5 w-2.5" /> {group.label}
-                                    </span>
-                                  </td>
-                                  <td className="px-4 py-2 hidden sm:table-cell">
-                                    {mp?.linkUrl ? (
-                                      <a href={mp.linkUrl} target="_blank" rel="noopener noreferrer" className="text-[11px] text-primary hover:underline inline-flex items-center gap-0.5">
-                                        <ExternalLink className="h-2.5 w-2.5" /> Abrir
-                                      </a>
-                                    ) : <span className="text-[11px] text-muted-foreground/25">—</span>}
-                                  </td>
-                                  <td className="px-4 py-2 text-right">
-                                    {mp ? (
-                                      <span className={cn("text-[10px] font-bold px-1.5 py-0.5 rounded-full",
-                                        mp.completed ? "bg-[oklch(0.22_0.030_158)] text-[oklch(0.82_0.13_158)]" : "bg-[oklch(0.22_0.030_60)] text-[oklch(0.82_0.13_60)]"
-                                      )}>{mp.completed ? "Concluído" : "Pendente"}</span>
-                                    ) : (() => {
-                                      const activeInPhase =
-                                        (weekStatus === "roteiro" && group.key === "roteiristas") ||
-                                        (weekStatus === "gravacao" && group.key === "narradores") ||
-                                        (weekStatus === "edicao" && group.key === "editores") ||
-                                        weekStatus === "revisao";
-                                      return activeInPhase ? (
-                                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-[oklch(0.22_0.030_25)] text-[oklch(0.82_0.13_25)]">
-                                          Pendente
-                                        </span>
-                                      ) : (
-                                        <span className="text-[10px] text-muted-foreground/25">—</span>
-                                      );
-                                    })()}
-                                  </td>
-                                </tr>
-                              );
-                            })
-                          )}
-                        </tbody>
-                      </table>
-                      {currentWeek.roteiro && (
-                        <Link href={`/roteiros/${currentWeek.roteiro._id || currentWeek.roteiro}`} className="flex items-center gap-2 px-4 py-2.5 border-t hover:bg-muted/20 transition-colors text-sm font-medium text-primary">
-                          <FileText className="h-3.5 w-3.5" /> Ver Roteiro <ExternalLink className="h-3 w-3 opacity-40" />
-                        </Link>
-                      )}
-                    </>
-                  )}
-                </div>
+                </PhaseFrame>
               );
             })()}
-          </div>
 
-          {/* ═══ RIGHT — Comments ═══ */}
-          <div>
-            <div className="card-glass rounded-xl lg:sticky lg:top-6 overflow-hidden">
-              <div className="flex flex-col" style={{ height: "min(calc(100vh - 6rem), 640px)" }}>
-                <div className="px-3 py-2.5 border-b bg-muted/20 flex items-center gap-2">
-                  <MessageCircle className="h-3.5 w-3.5 text-primary" />
-                  <span className="text-xs font-bold">Comentários</span>
-                  {comments.length > 0 && (
-                    <span className="text-[9px] font-bold bg-primary/10 text-primary rounded-full h-4 min-w-4 flex items-center justify-center px-1 ml-auto">{comments.length}</span>
+            {weekStatus === "gravacao" && isNarrator && (() => {
+              const myProgress = progress.find(
+                (p: any) =>
+                  p.role === "narrador" &&
+                  (p.userId?._id || p.userId) === userId
+              );
+              return (
+                <PhaseFrame
+                  accentText={STEPS[1].lightText}
+                  rail={STEPS[1].bg}
+                  tint={STEPS[1].lightBg}
+                  icon={Mic}
+                  label="Sua Narração"
+                  subtitle="Grave ou envie o áudio da sua narração"
+                >
+                  <RecordingsUploader
+                    scaleId={String(id)}
+                    weekNumber={selectedWeek}
+                    currentUserId={String(userId)}
+                    currentUserName={(session?.user as any)?.name || "narrador"}
+                    hasRoteiro={!!currentWeek?.roteiro}
+                    notes={myProgress?.notes || ""}
+                    completed={!!myProgress?.completed}
+                    onChanged={refreshData}
+                  />
+                </PhaseFrame>
+              );
+            })()}
+
+            {weekStatus === "edicao" && canReview && !isEditor && (() => {
+              const total = currentWeek?.assignments?.editores?.length || 0;
+              const done = progress.filter(
+                (p: any) => p.role === "editor" && p.completed
+              ).length;
+              const advanceWarning =
+                done < total
+                  ? `Faltam ${total - done} editor${total - done > 1 ? "es" : ""}`
+                  : null;
+              return (
+                <PhaseFrame
+                  accentText={STEPS[2].lightText}
+                  rail={STEPS[2].bg}
+                  tint={STEPS[2].lightBg}
+                  icon={Film}
+                  label="Fase de Edição"
+                  subtitle={
+                    total > 0
+                      ? `${total} editor${total > 1 ? "es" : ""} atribuído${total > 1 ? "s" : ""}`
+                      : "Nenhum editor atribuído"
+                  }
+                  progress={{ done, total }}
+                  actions={renderAdvance(advanceWarning)}
+                >
+                  <EditingOverview
+                    scaleId={String(id)}
+                    weekNumber={selectedWeek}
+                    editores={(currentWeek?.assignments?.editores || []).map(
+                      (u: any) => ({ _id: u._id || u, name: u.name || "?" })
+                    )}
+                    progress={progress}
+                  />
+                </PhaseFrame>
+              );
+            })()}
+
+            {weekStatus === "edicao" && isEditor && (() => {
+              const myProgress = progress.find(
+                (p: any) =>
+                  p.role === "editor" && (p.userId?._id || p.userId) === userId
+              );
+              return (
+                <PhaseFrame
+                  accentText={STEPS[2].lightText}
+                  rail={STEPS[2].bg}
+                  tint={STEPS[2].lightBg}
+                  icon={Film}
+                  label="Sua Edição"
+                  subtitle="Envie sua versão final do vídeo editado"
+                >
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-9 text-xs w-full border-dashed border-[oklch(0.40_0.06_300)] text-[oklch(0.82_0.13_300)] hover:bg-[oklch(0.22_0.025_300)]"
+                    onClick={() => setAddMediaOpen(true)}
+                  >
+                    <Paperclip className="h-3.5 w-3.5 mr-1.5" />
+                    Adicionar mídia (Acervo ou upload)
+                  </Button>
+                  <EditingUploader
+                    scaleId={String(id)}
+                    weekNumber={selectedWeek}
+                    currentUserId={String(userId)}
+                    hasRoteiro={!!currentWeek?.roteiro}
+                    notes={myProgress?.notes || ""}
+                    completed={!!myProgress?.completed}
+                    reviewStatus={myProgress?.reviewStatus}
+                    reviewReason={myProgress?.reviewReason}
+                    rejectionCount={myProgress?.rejectionCount}
+                    onChanged={refreshData}
+                  />
+                </PhaseFrame>
+              );
+            })()}
+
+            {weekStatus === "revisao" && canReview && (() => {
+              const editores = (currentWeek?.assignments?.editores || []).map(
+                (u: any) => ({ _id: u._id || u, name: u.name || "?" })
+              );
+              const approvedCount = progress.filter(
+                (p: any) => p.role === "editor" && p.reviewStatus === "approved"
+              ).length;
+              const allApproved =
+                editores.length > 0 && approvedCount === editores.length;
+              return (
+                <PhaseFrame
+                  accentText={STEPS[3].lightText}
+                  rail={STEPS[3].bg}
+                  tint={STEPS[3].lightBg}
+                  icon={Eye}
+                  label="Revisão Final"
+                  subtitle={
+                    editores.length > 0
+                      ? "Aprove ou peça alterações nas edições"
+                      : "Nenhum editor atribuído"
+                  }
+                  progress={
+                    editores.length > 0
+                      ? { done: approvedCount, total: editores.length }
+                      : undefined
+                  }
+                  actions={
+                    allApproved ? (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-[oklch(0.82_0.13_158)] bg-[oklch(0.22_0.030_158)] px-2 py-1 rounded-md">
+                        <Check className="h-3 w-3" /> Aprovado
+                      </span>
+                    ) : undefined
+                  }
+                >
+                  <ReviewVideoPanel
+                    scaleId={String(id)}
+                    weekNumber={selectedWeek}
+                    initialUrl={currentWeek.reviewVideoUrl || ""}
+                    canReview={canReview}
+                    onChanged={refreshData}
+                  />
+                  <ReviewByEditor
+                    scaleId={String(id)}
+                    weekNumber={selectedWeek}
+                    editores={editores}
+                    progress={progress}
+                    onChanged={refreshData}
+                  />
+                </PhaseFrame>
+              );
+            })()}
+
+            {viewingStage === "gravacao" && weekStatus !== "gravacao" && (
+              <PhaseFrame
+                accentText={STEPS[1].lightText}
+                rail={STEPS[1].bg}
+                tint={STEPS[1].lightBg}
+                icon={Mic}
+                label="Gravações (visualizando)"
+                subtitle="Revisão histórica desta etapa"
+              >
+                <RecordingsOverview
+                  scaleId={String(id)}
+                  weekNumber={selectedWeek}
+                  narradores={(currentWeek?.assignments?.narradores || []).map(
+                    (u: any) => ({ _id: u._id || u, name: u.name || "?" })
                   )}
-                </div>
+                  progress={progress}
+                />
+              </PhaseFrame>
+            )}
 
-                <div className="flex-1 overflow-y-auto px-3 py-2.5 space-y-2.5">
-                  {comments.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-full">
-                      <MessageCircle className="h-5 w-5 text-muted-foreground/15 mb-1" />
-                      <p className="text-[11px] text-muted-foreground/30">Nenhum comentário</p>
-                    </div>
-                  ) : (
-                    comments.map((c: any) => {
-                      const isMe = c.userId?._id === userId;
-                      const cStep = STEPS.find(s => s.key === c.stage);
-                      return (
-                        <div key={c._id} className={cn("flex gap-1.5", isMe && "flex-row-reverse")}>
-                          <div className={cn(
-                            "h-5 w-5 rounded-full flex items-center justify-center text-[8px] font-bold shrink-0 mt-0.5",
-                            isMe ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
-                          )}>
-                            {c.userId?.name?.[0] || "?"}
-                          </div>
-                          <div className={cn("max-w-[82%]", isMe && "text-right")}>
-                            <div className={cn("flex items-baseline gap-1 mb-px", isMe && "justify-end")}>
-                              <span className="text-[10px] font-bold">{c.userId?.name}</span>
-                              {cStep && (
-                                <span className={cn("text-[8px] font-bold px-1 py-px rounded", cStep.tagBg)}>{cStep.label}</span>
-                              )}
-                              <span className="text-[8px] text-muted-foreground/50">
-                                {formatDistanceToNow(new Date(c.createdAt), { addSuffix: true, locale: ptBR })}
-                              </span>
-                            </div>
-                            <div className={cn(
-                              "inline-block px-2.5 py-1.5 rounded-xl text-[13px] leading-snug",
-                              isMe ? "bg-primary text-primary-foreground rounded-tr-sm" : "bg-muted/40 rounded-tl-sm"
-                            )}>{c.message}</div>
-                          </div>
-                        </div>
-                      );
-                    })
-                  )}
-                  <div ref={commentsEndRef} />
-                </div>
-
-                <div className="p-2 border-t">
-                  <div className="flex gap-1.5">
-                    <Textarea
-                      value={newComment}
-                      onChange={(e) => setNewComment(e.target.value)}
-                      placeholder="Escreva..."
-                      className="min-h-8 max-h-20 text-xs resize-none bg-muted/20 rounded-lg py-2"
-                      onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendComment(); } }}
-                    />
-                    <Button size="icon" disabled={!newComment.trim() || sendingComment} onClick={sendComment} className="h-8 w-8 shrink-0 rounded-lg">
-                      <Send className="h-3 w-3" />
-                    </Button>
+            {weekStatus === "concluido" && !viewingStage && (
+              <div className="flex items-center justify-between gap-3 p-4 rounded-xl card-glass border border-[oklch(0.35_0.06_158)] bg-[oklch(0.22_0.030_158)]">
+                <div className="flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-lg bg-[oklch(0.30_0.05_158)] flex items-center justify-center">
+                    <CircleCheck className="h-5 w-5 text-[oklch(0.82_0.13_158)]" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-[oklch(0.92_0.10_158)]">
+                      Semana concluída
+                    </p>
+                    <p className="text-[11px] text-[oklch(0.82_0.13_158)]/70">
+                      Todos os passos foram finalizados
+                    </p>
                   </div>
                 </div>
+                {currentWeek.reviewVideoUrl && (
+                  <a
+                    href={currentWeek.reviewVideoUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-[11px] text-[oklch(0.82_0.13_158)] hover:text-[oklch(0.92_0.10_158)] px-2 py-1 rounded-md border border-[oklch(0.35_0.06_158)]"
+                  >
+                    Vídeo final <ExternalLink className="h-3 w-3" />
+                  </a>
+                )}
               </div>
-            </div>
+            )}
+
+            {weekStatus !== "concluido" &&
+              !isRoteirista &&
+              !isNarrator &&
+              !isEditor &&
+              !canReview && (
+                <div className="flex items-center gap-2 p-3 rounded-lg surface-1 border-dashed text-muted-foreground/60">
+                  <Clock className="h-4 w-4" />
+                  <p className="text-xs">
+                    Nenhuma ação disponível para você nesta etapa
+                  </p>
+                </div>
+              )}
+
+            {/* Attachments */}
+            {weekStatus !== "concluido" && (
+              <div className="card-glass rounded-xl px-4 py-3">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2 flex items-center gap-1.5">
+                  <Paperclip className="h-3 w-3" /> Anexos da fase
+                </p>
+                <StageAttachments
+                  scaleId={String(id)}
+                  weekNumber={selectedWeek}
+                  stage={weekStatus}
+                  currentUserId={userId}
+                  canDeleteAny={canReview}
+                />
+              </div>
+            )}
+
+            {/* Team */}
+            <TeamTable
+              assignments={currentWeek.assignments || {}}
+              progress={progress}
+              weekStatus={weekStatus}
+              roteiro={currentWeek.roteiro}
+              canReview={canReview}
+              defaultOpen={teamCount > 0}
+            />
+          </div>
+
+          {/* ═══ RIGHT (4 cols) — Chat ═══ */}
+          <div className="lg:col-span-4">
+            <CommentsPanel
+              comments={comments}
+              currentUserId={userId}
+              newComment={newComment}
+              onChangeNewComment={setNewComment}
+              onSend={sendComment}
+              sending={sendingComment}
+            />
           </div>
         </div>
       )}
@@ -1225,7 +969,9 @@ export default function ScaleDetailPage() {
       <CharacterPicker
         open={pickCharactersOpen}
         onOpenChange={setPickCharactersOpen}
-        selectedIds={(currentWeek?.characterIds || []).map((c: any) => c._id || c)}
+        selectedIds={(currentWeek?.characterIds || []).map(
+          (c: any) => c._id || c
+        )}
         onConfirm={handlePickCharacters}
       />
       <AddEditingMediaSheet
@@ -1235,6 +981,143 @@ export default function ScaleDetailPage() {
         weekNumber={selectedWeek}
         onChanged={refreshData}
       />
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════
+ * Sub-renderers (kept inline — small)
+ * ═══════════════════════════════════════ */
+
+function InlineRoteiroCreator({
+  title,
+  content,
+  file,
+  fileRef,
+  onChangeTitle,
+  onChangeContent,
+  onChangeFile,
+  onSave,
+  onCancel,
+  saving,
+}: {
+  title: string;
+  content: string;
+  file: File | null;
+  fileRef: React.RefObject<HTMLInputElement | null>;
+  onChangeTitle: (v: string) => void;
+  onChangeContent: (v: string) => void;
+  onChangeFile: (f: File | null) => void;
+  onSave: () => void;
+  onCancel: () => void;
+  saving: boolean;
+}) {
+  return (
+    <div className="space-y-3">
+      <Input
+        placeholder="Título do roteiro"
+        value={title}
+        onChange={(e) => onChangeTitle(e.target.value)}
+        className="h-9 text-sm bg-[oklch(0.235_0.015_172)]"
+      />
+      <RichTextEditor
+        content={content}
+        onChange={onChangeContent}
+        placeholder="Escreva o roteiro..."
+      />
+      <div className="flex items-center gap-2">
+        <input
+          ref={fileRef}
+          type="file"
+          className="hidden"
+          accept=".pdf,.doc,.docx,.mp3,.wav"
+          onChange={(e) => onChangeFile(e.target.files?.[0] || null)}
+        />
+        {file ? (
+          <div className="flex items-center gap-2 text-[11px] text-[oklch(0.82_0.13_220)] bg-[oklch(0.22_0.030_220)] border border-[oklch(0.35_0.06_220)] rounded-lg px-2 py-1 flex-1">
+            <FileText className="h-3 w-3 shrink-0" />
+            <span className="truncate">{file.name}</span>
+            <button onClick={() => onChangeFile(null)} className="ml-auto">
+              <X className="h-3 w-3" />
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            className="text-[11px] text-[oklch(0.78_0.13_220)] hover:underline flex items-center gap-1"
+          >
+            <Paperclip className="h-3 w-3" /> Anexar arquivo (opcional)
+          </button>
+        )}
+      </div>
+      <div className="flex gap-2">
+        <Button
+          size="sm"
+          className="bg-[oklch(0.55_0.17_220)] hover:bg-[oklch(0.48_0.17_220)] h-8 text-xs rounded-lg flex-1"
+          disabled={saving || !title.trim() || (!content.trim() && !file)}
+          onClick={onSave}
+        >
+          {saving ? "Salvando..." : "Salvar Roteiro"}
+        </Button>
+        <Button size="sm" variant="ghost" className="h-8 text-xs rounded-lg" onClick={onCancel}>
+          Cancelar
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function InlineRoteiroEditor({
+  title,
+  content,
+  onChangeTitle,
+  onChangeContent,
+  onSave,
+  onCancel,
+  saving,
+  label,
+}: {
+  title: string;
+  content: string;
+  onChangeTitle: (v: string) => void;
+  onChangeContent: (v: string) => void;
+  onSave: () => void;
+  onCancel: () => void;
+  saving: boolean;
+  label: string;
+}) {
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-2">
+        <p className={cn("text-[10px] font-bold uppercase tracking-widest", STEPS[0].lightText)}>
+          {label}
+        </p>
+        <Button size="sm" variant="ghost" className="h-7 text-[11px] rounded-md" onClick={onCancel}>
+          <X className="h-3 w-3 mr-1" /> Cancelar
+        </Button>
+      </div>
+      <Input
+        placeholder="Título do roteiro"
+        value={title}
+        onChange={(e) => onChangeTitle(e.target.value)}
+        className="h-9 text-sm bg-[oklch(0.235_0.015_172)]"
+      />
+      <RichTextEditor
+        content={content}
+        onChange={onChangeContent}
+        placeholder="Escreva o roteiro..."
+      />
+      <div className="flex gap-2">
+        <Button
+          size="sm"
+          className="bg-[oklch(0.55_0.17_220)] hover:bg-[oklch(0.48_0.17_220)] h-8 text-xs rounded-lg flex-1"
+          disabled={saving || !title.trim()}
+          onClick={onSave}
+        >
+          {saving ? "Salvando…" : "Salvar alterações"}
+        </Button>
+      </div>
     </div>
   );
 }
