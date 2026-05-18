@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
-import crypto from "crypto";
 import { requireRole } from "@/lib/auth-helpers";
+import { putUpload } from "@/lib/blob-storage";
 
 const MIME_TO_EXT: Record<string, string> = {
   "application/pdf": "pdf",
@@ -43,21 +41,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Tipo não permitido" }, { status: 400 });
   }
 
-  const uploadDir = path.join(process.cwd(), "public", "uploads");
-  await mkdir(uploadDir, { recursive: true });
-
-  const fileName = `histatt-${crypto.randomUUID()}.${ext}`;
-  const filePath = path.join(uploadDir, fileName);
-  await writeFile(filePath, Buffer.from(await file.arrayBuffer()));
+  const uploadedUrl = await putUpload(await file.arrayBuffer(), { prefix: "hist-att", ext, contentType: file.type });
 
   const displayName = file.name
     .replace(/[^\x20-\x7E -￿]/g, "")
     .trim()
-    .slice(0, 200) || fileName;
+    .slice(0, 200) || uploadedUrl.split("/").pop() || "arquivo";
 
   return NextResponse.json(
     {
-      url: `/uploads/${fileName}`,
+      url: uploadedUrl,
       name: displayName,
       mimeType: file.type,
       size: file.size,

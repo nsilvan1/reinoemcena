@@ -1,13 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
-import crypto from "crypto";
 import mongoose from "mongoose";
 import { connectDB } from "@/lib/mongodb";
 import Roteiro from "@/models/Roteiro";
 import { requireRole } from "@/lib/auth-helpers";
 import { canEditRoteiro } from "@/lib/roteiro-permissions";
-import { unlinkUploadedFile } from "@/lib/upload-storage";
+import { putUpload, deleteUpload } from "@/lib/blob-storage";
 
 // MIME -> extensão segura. Rejeita qualquer mismatch entre tipo declarado e extensão final.
 const MIME_TO_EXT: Record<string, string> = {
@@ -24,10 +21,6 @@ const MIME_TO_EXT: Record<string, string> = {
 const MAX_SIZE = 10 * 1024 * 1024; // 10MB
 const MIN_SIZE = 100; // 100 bytes
 
-// TODO PROD: o filesystem do Next/Vercel é efêmero — arquivos em /public/uploads
-// são perdidos a cada deploy/cold start. Antes de produção, migrar para storage
-// externo (S3, R2, Vercel Blob, GCS) e remover a escrita local abaixo. Mantemos
-// este código apenas para dev/local.
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { error, user } = await requireRole("roteirista");
   if (error) return error;
@@ -70,23 +63,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   }
 
   const bytes = await file.arrayBuffer();
-  const buffer = Buffer.from(bytes);
-
-  const uploadDir = path.join(process.cwd(), "public", "uploads");
-  await mkdir(uploadDir, { recursive: true });
-
-  // Nome final 100% derivado: ID do roteiro + UUID + extensão segura.
-  // Nada do file.name do client é usado — evita path traversal e injeção de extensão.
-  const fileName = `${id}-${crypto.randomUUID()}.${ext}`;
-  const filePath = path.join(uploadDir, fileName);
-
-  await writeFile(filePath, buffer);
-  const fileUrl = `/uploads/${fileName}`;
+  const fileUrl = await putUpload(bytes, { prefix: "rot", ext, contentType: file.type });
 
   const displayName = file.name
     .replace(/[^\x20-\x7E -￿]/g, "")
     .trim()
-    .slice(0, 120) || fileName;
+    .slice(0, 120) || fileUrl.split("/").pop() || "arquivo";
 
   // Semântica deste endpoint legado: troca o "arquivo principal".
   // Remove o anterior do disco e de files[] (se existir lá) e adiciona o novo.
@@ -107,7 +89,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   await roteiro.save();
 
   if (previousUrl && previousUrl !== fileUrl) {
-    await unlinkUploadedFile(previousUrl);
+    await deleteUpload(previousUrl);
   }
 
   return NextResponse.json({ fileUrl });

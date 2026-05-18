@@ -7,7 +7,7 @@ import { requireAuth, requireRole } from "@/lib/auth-helpers";
 import { notifyMany } from "@/lib/notifications";
 import { sanitizeHtml, isSafeUrl } from "@/lib/sanitize";
 import { canEditRoteiro } from "@/lib/roteiro-permissions";
-import { unlinkUploadedFile } from "@/lib/upload-storage";
+import { deleteUpload } from "@/lib/blob-storage";
 import RoteiroVersion from "@/models/RoteiroVersion";
 
 type Params = { params: Promise<{ id: string }> };
@@ -160,7 +160,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
     .populate("assignedEditors assignedNarrators", "name avatar");
 
   if (fileUrlToRemove) {
-    await unlinkUploadedFile(fileUrlToRemove);
+    await deleteUpload(fileUrlToRemove);
   }
 
   return NextResponse.json(updated);
@@ -197,7 +197,7 @@ export async function DELETE(req: NextRequest, { params }: Params) {
       );
     });
     if (fileUrlToRemove) {
-      await unlinkUploadedFile(fileUrlToRemove);
+      await deleteUpload(fileUrlToRemove);
     }
     return NextResponse.json({ success: true });
   } catch (err) {

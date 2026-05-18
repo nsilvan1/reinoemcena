@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
-import crypto from "crypto";
 import mongoose from "mongoose";
 import { connectDB } from "@/lib/mongodb";
 import Attachment from "@/models/Attachment";
 import { requireAuth } from "@/lib/auth-helpers";
+import { putUpload } from "@/lib/blob-storage";
 
 // MIME -> extensão segura. Rejeita qualquer tipo não listado.
 const MIME_TO_EXT: Record<string, string> = {
@@ -142,29 +140,19 @@ export async function POST(req: NextRequest) {
 
   await connectDB();
 
-  const bytes = await file.arrayBuffer();
-  const buffer = Buffer.from(bytes);
-
-  const uploadDir = path.join(process.cwd(), "public", "uploads");
-  await mkdir(uploadDir, { recursive: true });
-
-  // Nome final 100% derivado: prefixo att + scaleId + UUID + extensão segura.
-  // Nada do file.name do client é usado no path — evita path traversal e injeção de extensão.
-  const fileName = `att-${scaleId}-${crypto.randomUUID()}.${ext}`;
-  const filePath = path.join(uploadDir, fileName);
-  await writeFile(filePath, buffer);
+  const uploadedUrl = await putUpload(await file.arrayBuffer(), { prefix: 'att', ext, contentType: file.type });
 
   // Sanitiza o nome de display: remove caracteres não-printáveis, limita a 120 chars.
   const displayName = file.name
     .replace(/[^\x20-\x7E -￿]/g, "")
     .trim()
-    .slice(0, 120) || fileName;
+    .slice(0, 120) || uploadedUrl.split('/').pop() || 'arquivo';
 
   const attachment = await Attachment.create({
     scaleId,
     weekNumber,
     stage,
-    url: `/uploads/${fileName}`,
+    url: uploadedUrl,
     name: displayName,
     mimeType: file.type,
     size: file.size,

@@ -1,7 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
-import crypto from "crypto";
 import mongoose from "mongoose";
 import { connectDB } from "@/lib/mongodb";
 import Scale from "@/models/Scale";
@@ -9,6 +6,7 @@ import TaskProgress from "@/models/TaskProgress";
 import Attachment from "@/models/Attachment";
 import { requireAuth } from "@/lib/auth-helpers";
 import { tryAdvanceWeek } from "@/lib/week-advance";
+import { putUpload } from "@/lib/blob-storage";
 
 const VIDEO_MIME_TO_EXT: Record<string, string> = {
   "video/mp4": "mp4",
@@ -76,18 +74,12 @@ export async function POST(req: NextRequest, { params }: Params) {
     return NextResponse.json({ error: "Arquivo muito grande (máx. 200MB)" }, { status: 400 });
   }
 
-  const uploadDir = path.join(process.cwd(), "public", "uploads");
-  await mkdir(uploadDir, { recursive: true });
-
-  const fileName = `vid-${id}-${user.id}-${crypto.randomUUID()}.${ext}`;
-  const filePath = path.join(uploadDir, fileName);
-  await writeFile(filePath, Buffer.from(await file.arrayBuffer()));
-  const url = `/uploads/${fileName}`;
+  const url = await putUpload(await file.arrayBuffer(), { prefix: "vid", ext, contentType: file.type });
 
   const displayName = file.name
     .replace(/[^\x20-\x7E -￿]/g, "")
     .trim()
-    .slice(0, 120) || fileName;
+    .slice(0, 120) || url.split("/").pop() || "video";
 
   const attachment = await Attachment.create({
     scaleId: id,

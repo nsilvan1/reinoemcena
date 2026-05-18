@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
-import crypto from "crypto";
 import { requireRole } from "@/lib/auth-helpers";
+import { putUpload } from "@/lib/blob-storage";
 
 const MIME_TO_EXT: Record<string, string> = {
   "image/jpeg": "jpg",
@@ -47,14 +45,7 @@ export async function POST(req: NextRequest) {
   }
 
   const bytes = await file.arrayBuffer();
-  const buffer = Buffer.from(bytes);
+  const url = await putUpload(bytes, { prefix: "char", ext, contentType: file.type });
 
-  const uploadDir = path.join(process.cwd(), "public", "uploads");
-  await mkdir(uploadDir, { recursive: true });
-
-  const fileName = `char-${crypto.randomUUID()}.${ext}`;
-  const filePath = path.join(uploadDir, fileName);
-  await writeFile(filePath, buffer);
-
-  return NextResponse.json({ url: `/uploads/${fileName}` }, { status: 201 });
+  return NextResponse.json({ url }, { status: 201 });
 }

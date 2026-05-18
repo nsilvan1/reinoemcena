@@ -4,7 +4,7 @@ import { connectDB } from "@/lib/mongodb";
 import Roteiro from "@/models/Roteiro";
 import { requireRole } from "@/lib/auth-helpers";
 import { canEditRoteiro } from "@/lib/roteiro-permissions";
-import { unlinkUploadedFile } from "@/lib/upload-storage";
+import { deleteUpload } from "@/lib/blob-storage";
 
 type Params = { params: Promise<{ id: string; fileId: string }> };
 
@@ -53,7 +53,7 @@ export async function DELETE(req: NextRequest, { params }: Params) {
   }
 
   await roteiro.save();
-  await unlinkUploadedFile(removedUrl);
+  await deleteUpload(removedUrl);
 
   return NextResponse.json({ ok: true });
 }

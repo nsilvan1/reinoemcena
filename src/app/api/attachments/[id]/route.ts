@@ -5,7 +5,7 @@ import Attachment from "@/models/Attachment";
 import Character from "@/models/Character";
 import { requireAuth } from "@/lib/auth-helpers";
 import { ROLE_HIERARCHY } from "@/types";
-import { unlinkUploadedFile } from "@/lib/upload-storage";
+import { deleteUpload } from "@/lib/blob-storage";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -47,7 +47,7 @@ export async function DELETE(req: NextRequest, { params }: Params) {
   });
 
   if (!otherAttachmentUsing && !characterUsing) {
-    await unlinkUploadedFile(attachment.url);
+    await deleteUpload(attachment.url);
   }
   await Attachment.findByIdAndDelete(id);
 
