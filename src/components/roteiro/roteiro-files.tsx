@@ -17,6 +17,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { AudioPlayer } from "@/components/escala/audio-player";
 
 interface RoteiroFile {
   _id: string;
@@ -291,11 +292,7 @@ export function RoteiroFiles({ roteiroId, canEdit }: Props) {
                   </div>
                 )}
                 {isAudio(preview) && (
-                  <div className="p-3 rounded-lg bg-muted/20 border">
-                    <audio controls className="w-full h-10" src={preview.url}>
-                      Seu navegador não suporta áudio.
-                    </audio>
-                  </div>
+                  <AudioPlayer src={preview.url} title={preview.name} />
                 )}
                 {isImage(preview) && (
                   // eslint-disable-next-line @next/next/no-img-element

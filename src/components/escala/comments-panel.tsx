@@ -44,11 +44,12 @@ export function CommentsPanel({
   }, [comments]);
 
   return (
-    <div className="card-glass rounded-xl overflow-hidden lg:sticky lg:top-6">
-      <div
-        className="flex flex-col"
-        style={{ height: "min(calc(100vh - 6rem), 640px)" }}
-      >
+    <div className="card-glass rounded-xl overflow-hidden lg:sticky lg:top-6 animate-in-view">
+      {/*
+       * Mobile  (<lg): altura 320px — painel compacto que não domina o scroll
+       * Desktop (lg+): até 640px — sidebar sticky usa mais espaço vertical
+       */}
+      <div className="flex flex-col h-[320px] lg:h-[min(calc(100vh-6rem),640px)]">
         {/* Header */}
         <div className="px-3 py-2.5 border-b border-border/40 bg-[oklch(0.22_0.016_172)] flex items-center gap-2 shrink-0">
           <MessageCircle className="h-3.5 w-3.5 text-primary" />
@@ -136,7 +137,7 @@ export function CommentsPanel({
           <div ref={endRef} />
         </div>
 
-        {/* Input */}
+        {/* Input — textarea + send */}
         <div className="p-2 border-t border-border/40 bg-[oklch(0.22_0.016_172)] shrink-0">
           <div className="flex gap-1.5">
             <Textarea

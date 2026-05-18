@@ -4,7 +4,18 @@ import { useSession } from "next-auth/react";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2, Pencil, Users, Mic, Film } from "lucide-react";
+import {
+  Plus,
+  Trash2,
+  Pencil,
+  Users,
+  Mic,
+  Film,
+  Crown,
+  Sparkles,
+  User,
+  Activity,
+} from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
@@ -15,22 +26,21 @@ import {
   Avatar,
   PageHeader,
   EmptyState,
-  KpiInline,
-  KpiDivider,
+  Stat,
 } from "@/components/v2/primitives";
 
 const ROLE_LABELS: Record<string, string> = {
-  admin: "Admin",
+  admin:       "Admin",
   coordenador: "Coordenador",
-  roteirista: "Roteirista",
-  membro: "Membro",
+  roteirista:  "Roteirista",
+  membro:      "Membro",
 };
 
 const ROLE_TONE: Record<string, "danger" | "info" | "violet" | "neutral"> = {
-  admin: "danger",
+  admin:       "danger",
   coordenador: "info",
-  roteirista: "violet",
-  membro: "neutral",
+  roteirista:  "violet",
+  membro:      "neutral",
 };
 
 type User = {
@@ -42,21 +52,125 @@ type User = {
   managedBy?: { _id: string; name: string } | null;
 };
 
+// ─── Member Card ─────────────────────────────────────────────────────
+
+function MemberCard({
+  user,
+  canManage,
+  isAdmin,
+  sessionId,
+  onEdit,
+  onDelete,
+  staggerClass,
+}: {
+  user: User;
+  canManage: boolean;
+  isAdmin: boolean;
+  sessionId?: string;
+  onEdit: (u: User) => void;
+  onDelete: (id: string) => void;
+  staggerClass: string;
+}) {
+  return (
+    <Card
+      interactive
+      elevated
+      className={cn(
+        "p-4 sm:p-5 flex flex-col gap-4 animate-in-view hover-lift",
+        staggerClass
+      )}
+    >
+      {/* Top: avatar + name + actions */}
+      <div className="flex items-start gap-3">
+        <Avatar name={user.name} size="lg" />
+
+        <div className="flex-1 min-w-0">
+          <p className="font-semibold text-[14px] leading-tight tracking-[-0.01em] truncate">
+            {user.name}
+          </p>
+          <p className="text-[11px] font-mono text-muted-foreground/55 mt-0.5 truncate">
+            @{user.username}
+          </p>
+          {user.managedBy?.name && (
+            <p className="text-[10px] text-muted-foreground/40 mt-1 truncate">
+              Gestor: {user.managedBy.name}
+            </p>
+          )}
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-1 shrink-0">
+          {canManage && (
+            <button
+              onClick={() => onEdit(user)}
+              className="h-8 w-8 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 rounded-md inline-flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-white/8 transition-colors"
+              title="Editar"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+            </button>
+          )}
+          {isAdmin && user._id !== sessionId && (
+            <button
+              onClick={() => onDelete(user._id)}
+              className="h-8 w-8 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 rounded-md inline-flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+              title="Remover"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Bottom: role badge + skill chips */}
+      <div className="flex items-center gap-2 flex-wrap pt-1 border-t border-border/30">
+        <Badge tone={ROLE_TONE[user.role] || "neutral"}>
+          {ROLE_LABELS[user.role]}
+        </Badge>
+
+        {user.skills?.map((s) => (
+          <span
+            key={s}
+            className={cn(
+              "inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium",
+              s === "narrador"
+                ? "bg-amber-500/15 text-amber-400"
+                : "bg-violet-500/15 text-violet-400"
+            )}
+          >
+            {s === "narrador" ? (
+              <Mic className="h-2.5 w-2.5" />
+            ) : (
+              <Film className="h-2.5 w-2.5" />
+            )}
+            {s === "narrador" ? "Narrador" : "Editor"}
+          </span>
+        ))}
+
+        {(!user.skills || user.skills.length === 0) && (
+          <span className="text-[10px] text-muted-foreground/30">sem habilidades</span>
+        )}
+      </div>
+    </Card>
+  );
+}
+
+// ─── Page ────────────────────────────────────────────────────────────
+
 export default function MembrosPage() {
   const { data: session } = useSession();
-  const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [users,       setUsers]       = useState<User[]>([]);
+  const [loading,     setLoading]     = useState(true);
+  const [dialogOpen,  setDialogOpen]  = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [form, setForm] = useState({
-    name: "",
+    name:     "",
     username: "",
     password: "",
-    role: "membro",
-    skills: [] as string[],
+    role:     "membro",
+    skills:   [] as string[],
   });
 
-  const role = (session?.user as { role?: string })?.role;
+  const role      = (session?.user as { role?: string })?.role;
   const sessionId = (session?.user as { id?: string })?.id;
 
   useEffect(() => {
@@ -81,11 +195,11 @@ export default function MembrosPage() {
   function openEdit(user: User) {
     setEditingUser(user);
     setForm({
-      name: user.name,
+      name:     user.name,
       username: user.username,
       password: "",
-      role: user.role,
-      skills: user.skills || [],
+      role:     user.role,
+      skills:   user.skills || [],
     });
     setDialogOpen(true);
   }
@@ -102,11 +216,11 @@ export default function MembrosPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     try {
-      const url = editingUser ? `/api/users/${editingUser._id}` : "/api/users";
+      const url    = editingUser ? `/api/users/${editingUser._id}` : "/api/users";
       const method = editingUser ? "PUT" : "POST";
       const body: Record<string, unknown> = {
-        name: form.name,
-        role: form.role,
+        name:   form.name,
+        role:   form.role,
         skills: form.skills,
       };
       if (!editingUser) {
@@ -145,7 +259,16 @@ export default function MembrosPage() {
     return (
       <div className="space-y-6">
         <div className="h-24 skeleton rounded-2xl" />
-        <div className="h-64 skeleton rounded-lg" />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="h-24 skeleton rounded-lg" />
+          ))}
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="h-36 skeleton rounded-lg" />
+          ))}
+        </div>
       </div>
     );
   }
@@ -163,7 +286,9 @@ export default function MembrosPage() {
     return acc;
   }, {});
 
-  const isAdmin = role === "admin";
+  const totalSkillUsers = users.filter((u) => u.skills && u.skills.length > 0).length;
+
+  const isAdmin   = role === "admin";
   const canManage = ["admin", "coordenador"].includes(role || "");
 
   return (
@@ -180,51 +305,45 @@ export default function MembrosPage() {
             </Button>
           ) : undefined
         }
-        meta={
-          users.length > 0 ? (
-            <div className="flex items-center gap-4 flex-wrap">
-              <KpiInline value={users.length} label="total" tone="muted" />
-              {(["admin", "coordenador", "roteirista", "membro"] as const).map((r) =>
-                counts[r] ? (
-                  <span key={r} className="flex items-center gap-4">
-                    <KpiDivider />
-                    <KpiInline
-                      value={counts[r]}
-                      label={r + (counts[r] > 1 ? "s" : "")}
-                      tone={
-                        r === "admin"
-                          ? "danger"
-                          : r === "coordenador"
-                          ? "info"
-                          : r === "roteirista"
-                          ? "violet"
-                          : "muted"
-                      }
-                    />
-                  </span>
-                ) : null
-              )}
-              {skillCounts["narrador"] || skillCounts["editor"] ? (
-                <>
-                  <KpiDivider />
-                  {skillCounts["narrador"] ? (
-                    <span className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground/70">
-                      <Mic className="h-3 w-3" />
-                      {skillCounts["narrador"]} narradores
-                    </span>
-                  ) : null}
-                  {skillCounts["editor"] ? (
-                    <span className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground/70">
-                      <Film className="h-3 w-3" />
-                      {skillCounts["editor"]} editores
-                    </span>
-                  ) : null}
-                </>
-              ) : null}
-            </div>
-          ) : undefined
-        }
       />
+
+      {/* ── Stat strip ── */}
+      {users.length > 0 && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <Stat
+            icon={Crown}
+            label="Coordenadores"
+            value={(counts["coordenador"] || 0) + (counts["admin"] || 0)}
+            accent="info"
+            animated
+            className="animate-in-view stagger-1"
+          />
+          <Stat
+            icon={Sparkles}
+            label="Roteiristas"
+            value={counts["roteirista"] || 0}
+            accent="violet"
+            animated
+            className="animate-in-view stagger-2"
+          />
+          <Stat
+            icon={User}
+            label="Membros"
+            value={counts["membro"] || 0}
+            accent="primary"
+            animated
+            className="animate-in-view stagger-3"
+          />
+          <Stat
+            icon={Activity}
+            label="Com skills"
+            value={totalSkillUsers}
+            accent="warning"
+            animated
+            className="animate-in-view stagger-4"
+          />
+        </div>
+      )}
 
       {/* Dialog criar/editar */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -301,7 +420,7 @@ export default function MembrosPage() {
                     type="button"
                     onClick={() => toggleSkill(skill)}
                     className={cn(
-                      "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium border transition-colors",
+                      "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium border transition-colors min-h-[36px]",
                       form.skills.includes(skill)
                         ? "bg-primary/20 text-primary border-primary/40"
                         : "border-border text-muted-foreground hover:bg-muted/60"
@@ -318,11 +437,7 @@ export default function MembrosPage() {
               </div>
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => setDialogOpen(false)}
-              >
+              <Button type="button" variant="ghost" onClick={() => setDialogOpen(false)}>
                 Cancelar
               </Button>
               <Button type="submit">{editingUser ? "Salvar" : "Criar membro"}</Button>
@@ -331,6 +446,7 @@ export default function MembrosPage() {
         </DialogContent>
       </Dialog>
 
+      {/* ── Content ── */}
       {users.length === 0 ? (
         <EmptyState
           icon={Users}
@@ -345,122 +461,24 @@ export default function MembrosPage() {
           }
         />
       ) : (
-        <Card className="overflow-hidden animate-in-view">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[600px]">
-              <thead>
-                <tr className="border-b border-border/60">
-                  <th className="pl-5 pr-3 py-2.5 text-left text-[10px] font-mono uppercase tracking-[0.20em] text-muted-foreground/50 font-normal">
-                    Membro
-                  </th>
-                  <th className="px-3 py-2.5 text-left text-[10px] font-mono uppercase tracking-[0.20em] text-muted-foreground/50 font-normal">
-                    Papel
-                  </th>
-                  <th className="px-3 py-2.5 text-left text-[10px] font-mono uppercase tracking-[0.20em] text-muted-foreground/50 font-normal hidden md:table-cell">
-                    Habilidades
-                  </th>
-                  <th className="px-3 py-2.5 text-left text-[10px] font-mono uppercase tracking-[0.20em] text-muted-foreground/50 font-normal hidden lg:table-cell">
-                    Gestor
-                  </th>
-                  <th className="px-3 pr-5 py-2.5 w-20" />
-                </tr>
-              </thead>
-              <tbody>
-                {users.map((u) => (
-                  <tr
-                    key={u._id}
-                    className="border-t border-border/40 hover:bg-[oklch(0.225_0.016_172)] transition-colors group"
-                  >
-                    {/* Membro: avatar + nome + username */}
-                    <td className="pl-5 pr-3 py-3">
-                      <div className="flex items-center gap-3">
-                        <Avatar name={u.name} size="md" />
-                        <div className="min-w-0">
-                          <p className="font-medium text-[13px] leading-tight truncate">
-                            {u.name}
-                          </p>
-                          <p className="text-[11px] font-mono text-muted-foreground/55 leading-tight mt-0.5 truncate">
-                            @{u.username}
-                          </p>
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* Papel */}
-                    <td className="px-3 py-3">
-                      <Badge tone={ROLE_TONE[u.role] || "neutral"}>
-                        {ROLE_LABELS[u.role]}
-                      </Badge>
-                    </td>
-
-                    {/* Habilidades */}
-                    <td className="px-3 py-3 hidden md:table-cell">
-                      <div className="flex gap-1 flex-wrap">
-                        {u.skills?.length ? (
-                          u.skills.map((s) => (
-                            <span
-                              key={s}
-                              className={cn(
-                                "inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium",
-                                s === "narrador"
-                                  ? "bg-amber-500/15 text-amber-400"
-                                  : "bg-violet-500/15 text-violet-400"
-                              )}
-                            >
-                              {s === "narrador" ? (
-                                <Mic className="h-2.5 w-2.5" />
-                              ) : (
-                                <Film className="h-2.5 w-2.5" />
-                              )}
-                              {s}
-                            </span>
-                          ))
-                        ) : (
-                          <span className="text-[11px] text-muted-foreground/25">—</span>
-                        )}
-                      </div>
-                    </td>
-
-                    {/* Gestor */}
-                    <td className="px-3 py-3 hidden lg:table-cell">
-                      {u.managedBy ? (
-                        <span className="text-[12px] text-muted-foreground/70">
-                          {u.managedBy.name}
-                        </span>
-                      ) : (
-                        <span className="text-[11px] text-muted-foreground/25">—</span>
-                      )}
-                    </td>
-
-                    {/* Ações — visíveis só no hover */}
-                    <td className="px-3 pr-5 py-3">
-                      <div className="flex gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
-                        {canManage && (
-                          <button
-                            onClick={() => openEdit(u)}
-                            className="h-7 w-7 rounded-md inline-flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-white/8 transition-colors"
-                            title="Editar"
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                          </button>
-                        )}
-                        {isAdmin && u._id !== sessionId && (
-                          <button
-                            onClick={() => handleDelete(u._id)}
-                            className="h-7 w-7 rounded-md inline-flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-                            title="Remover"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {users.map((u, idx) => (
+            <MemberCard
+              key={u._id}
+              user={u}
+              canManage={canManage}
+              isAdmin={isAdmin}
+              sessionId={sessionId}
+              onEdit={openEdit}
+              onDelete={handleDelete}
+              staggerClass={
+                idx < 6
+                  ? `stagger-${(idx % 6) + 1}`
+                  : ""
+              }
+            />
+          ))}
+        </div>
       )}
     </div>
   );

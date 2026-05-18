@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
@@ -16,16 +16,34 @@ import {
   User2,
   Clock,
   History,
+  Paperclip,
+  Zap,
+  ArrowRight,
 } from "lucide-react";
 import Link from "next/link";
 import { format, formatDistanceToNowStrict } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { RichTextEditor, RichTextViewer } from "@/components/editor/rich-text-editor";
+import dynamic from "next/dynamic";
+
+const RichTextEditor = dynamic(
+  () => import("@/components/editor/rich-text-editor").then((m) => m.RichTextEditor),
+  {
+    ssr: false,
+    loading: () => <div className="skeleton h-96 w-full rounded-md" />,
+  }
+);
+const RichTextViewer = dynamic(
+  () => import("@/components/editor/rich-text-editor").then((m) => m.RichTextViewer),
+  {
+    ssr: false,
+    loading: () => <div className="skeleton h-64 w-full rounded-md" />,
+  }
+);
 import { VersionHistory } from "@/components/roteiro/version-history";
 import { RoteiroFiles } from "@/components/roteiro/roteiro-files";
-import { Avatar } from "@/components/v2/primitives";
+import { Avatar, Badge } from "@/components/v2/primitives";
 
 type SaveState = "idle" | "saving" | "error";
 
@@ -289,89 +307,249 @@ export default function RoteiroDetailPage() {
           </div>
 
           {/* Files — dense list */}
-          <RoteiroFiles roteiroId={String(id)} canEdit={canEdit} />
+          <div className="animate-in-view stagger-3">
+            <RoteiroFiles roteiroId={String(id)} canEdit={canEdit} />
+          </div>
         </div>
 
         {/* ── Right: sidebar meta ── */}
         <div className="lg:col-span-3">
-          <div className="lg:sticky lg:top-[3.75rem] space-y-0 rounded-xl bg-card border border-border overflow-hidden">
-            {/* Meta section */}
-            <div className="px-4 pt-4 pb-3 border-b border-border/60">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/50 mb-3">
-                Informacoes
-              </p>
-              <div className="space-y-2.5">
-                {roteiro.weekNumber && (
-                  <MetaRow icon={Hash} label="Semana" value={`Semana ${roteiro.weekNumber}`} />
-                )}
-                {roteiro.scaleId && (
-                  <MetaRow icon={Calendar} label="Escala" value={roteiro.scaleId?.title || "—"} />
-                )}
-                <MetaRow
-                  icon={Clock}
-                  label="Criado em"
-                  value={format(new Date(roteiro.createdAt), "dd/MM/yyyy", { locale: ptBR })}
-                />
-                {roteiro.createdBy && (
-                  <div className="flex items-center gap-2">
-                    <User2 className="h-3 w-3 text-muted-foreground/40 shrink-0" />
-                    <span className="text-[11px] text-muted-foreground/55 w-14 shrink-0">Autor</span>
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <Avatar name={roteiro.createdBy.name} size="xs" />
-                      <span className="text-[12px] font-medium truncate">{roteiro.createdBy.name}</span>
+          <div className="lg:sticky lg:top-[3.75rem] space-y-3">
+
+            {/* ── Proxima acao pulsante ── */}
+            <NextActionCard
+              isDirty={isDirty}
+              saveState={saveState}
+              lastSavedAt={lastSavedAt}
+              now={now}
+              scalePhase={roteiro.scaleId?.currentWeekStatus ?? null}
+              scaleId={roteiro.scaleId?._id ?? null}
+            />
+
+            {/* ── Informacoes ── */}
+            <div className="rounded-xl bg-card border border-border overflow-hidden animate-in-view stagger-2">
+              <div className="px-4 pt-4 pb-3 border-b border-border/60">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/50 mb-3">
+                  Informacoes
+                </p>
+                <div className="space-y-2.5">
+                  {roteiro.weekNumber && (
+                    <MetaRow icon={Hash} label="Semana" value={`Semana ${roteiro.weekNumber}`} />
+                  )}
+                  {roteiro.scaleId && (
+                    <MetaRow icon={Calendar} label="Escala" value={roteiro.scaleId?.title || "—"} />
+                  )}
+                  <MetaRow
+                    icon={Clock}
+                    label="Criado em"
+                    value={format(new Date(roteiro.createdAt), "dd/MM/yyyy", { locale: ptBR })}
+                  />
+                  {roteiro.createdBy && (
+                    <div className="flex items-center gap-2">
+                      <User2 className="h-3 w-3 text-muted-foreground/40 shrink-0" />
+                      <span className="text-[11px] text-muted-foreground/55 w-14 shrink-0">Autor</span>
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <Avatar name={roteiro.createdBy.name} size="xs" />
+                        <span className="text-[12px] font-medium truncate">{roteiro.createdBy.name}</span>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
+              </div>
+
+              {/* Versoes link */}
+              <div className="px-4 py-3">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/50 mb-2">
+                  Versoes
+                </p>
+                <button
+                  onClick={() => {
+                    // trigger VersionHistory open via a shared ref would require lifting state;
+                    // instead expose via VersionHistoryTrigger component pattern
+                  }}
+                  className="inline-flex items-center gap-1.5 text-[11px] text-primary hover:underline"
+                >
+                  <History className="h-3 w-3" />
+                  Ver historico de versoes
+                </button>
               </div>
             </div>
 
-            {/* Editors section */}
-            <TeamSection
-              label="Editores"
-              icon={Film}
-              iconHue={300}
-              users={editors}
-              assignedIds={assignedEditorIds}
-              canManage={canManageAssignments}
-              field="assignedEditors"
-              onToggle={toggleAssignment}
-              emptyText="Nenhum editor cadastrado"
-            />
+            {/* ── Equipe ── */}
+            <div className="rounded-xl bg-card border border-border overflow-hidden animate-in-view stagger-3">
+              {/* Editors section */}
+              <TeamSection
+                label="Editores"
+                icon={Film}
+                iconHue={300}
+                users={editors}
+                assignedIds={assignedEditorIds}
+                canManage={canManageAssignments}
+                field="assignedEditors"
+                onToggle={toggleAssignment}
+                emptyText="Nenhum editor cadastrado"
+              />
 
-            {/* Narrators section */}
-            <TeamSection
-              label="Narradores"
-              icon={Mic}
-              iconHue={60}
-              users={narrators}
-              assignedIds={assignedNarratorIds}
-              canManage={canManageAssignments}
-              field="assignedNarrators"
-              onToggle={toggleAssignment}
-              emptyText="Nenhum narrador cadastrado"
-            />
+              {/* Narrators section */}
+              <TeamSection
+                label="Narradores"
+                icon={Mic}
+                iconHue={60}
+                users={narrators}
+                assignedIds={assignedNarratorIds}
+                canManage={canManageAssignments}
+                field="assignedNarrators"
+                onToggle={toggleAssignment}
+                emptyText="Nenhum narrador cadastrado"
+              />
 
-            {/* Versions link */}
-            <div className="px-4 py-3 border-t border-border/60">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/50 mb-2">
-                Versoes
-              </p>
-              <button
-                onClick={() => {
-                  // trigger VersionHistory open via a shared ref would require lifting state;
-                  // instead expose via VersionHistoryTrigger component pattern
-                }}
-                className="inline-flex items-center gap-1.5 text-[11px] text-primary hover:underline"
-              >
-                <History className="h-3 w-3" />
-                Ver historico de versoes
-              </button>
+              {/* Assigned team cluster (read-only visual) */}
+              {(assignedEditorIds.length > 0 || assignedNarratorIds.length > 0) && (
+                <div className="px-4 py-3 border-t border-border/60">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/50 mb-2.5">
+                    Equipe atribuida
+                  </p>
+                  <div className="space-y-1.5">
+                    {users
+                      .filter((u: any) => assignedEditorIds.includes(u._id) || assignedNarratorIds.includes(u._id))
+                      .map((u: any) => {
+                        const isEditor = assignedEditorIds.includes(u._id);
+                        return (
+                          <div key={u._id} className="flex items-center gap-2 min-w-0">
+                            <Avatar name={u.name} size="xs" />
+                            <span className="text-[12px] font-medium truncate flex-1">{u.name}</span>
+                            <Badge tone={isEditor ? "violet" : "warning"}>
+                              {isEditor ? "Editor" : "Narrador"}
+                            </Badge>
+                          </div>
+                        );
+                      })}
+                  </div>
+                </div>
+              )}
             </div>
+
+            {/* ── Arquivos vinculados (atalho) ── */}
+            <div className="animate-in-view stagger-4">
+              <div className="rounded-xl overflow-hidden border border-border bg-card">
+                <div className="px-4 py-3 flex items-center gap-2.5">
+                  <span className="h-6 w-6 rounded-md bg-[oklch(0.22_0.030_220)] flex items-center justify-center shrink-0">
+                    <Paperclip className="h-3.5 w-3.5 text-[oklch(0.82_0.14_220)]" />
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/50">
+                      Arquivos vinculados
+                    </p>
+                    <p className="text-[11px] text-muted-foreground/55 mt-0.5">
+                      Acesse abaixo do editor
+                    </p>
+                  </div>
+                  <ArrowRight className="h-3.5 w-3.5 text-muted-foreground/30 shrink-0" />
+                </div>
+              </div>
+            </div>
+
           </div>
         </div>
       </div>
     </div>
   );
+}
+
+// ── NextActionCard ───────────────────────────────────────────────
+
+interface NextActionCardProps {
+  isDirty: boolean;
+  saveState: SaveState;
+  lastSavedAt: Date | null;
+  now: Date;
+  scalePhase: string | null;
+  scaleId: string | null;
+}
+
+function NextActionCard({ isDirty, saveState, lastSavedAt, now, scalePhase, scaleId }: NextActionCardProps) {
+  // Caso 1: salvando
+  if (saveState === "saving") {
+    return (
+      <div
+        className="rounded-xl border px-4 py-3 flex items-start gap-3 animate-in-view stagger-1"
+        style={{ boxShadow: "inset 2px 0 0 0 oklch(0.78 0.16 60)", background: "oklch(0.215_0.016_172 / 1)", borderColor: "oklch(0.295 0.016 170)" }}
+      >
+        <span className="h-6 w-6 rounded-md bg-[oklch(0.22_0.030_60)] flex items-center justify-center shrink-0 mt-0.5">
+          <Loader2 className="h-3.5 w-3.5 text-[oklch(0.82_0.14_60)] animate-spin" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-[11px] font-semibold text-[oklch(0.82_0.14_60)]">Salvando...</p>
+          <p className="text-[10px] text-muted-foreground/50 mt-0.5">Aguarde o auto-save completar</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Caso 2: nao salvo (dirty)
+  if (isDirty) {
+    return (
+      <div
+        className="rounded-xl border px-4 py-3 flex items-start gap-3 animate-in-view stagger-1"
+        style={{ boxShadow: "inset 2px 0 0 0 oklch(0.78 0.16 60)", background: "oklch(0.215_0.016_172 / 1)", borderColor: "oklch(0.295 0.016 170)" }}
+      >
+        <span className="h-6 w-6 rounded-md bg-[oklch(0.22_0.030_60)] flex items-center justify-center shrink-0 mt-0.5 status-pulse">
+          <Zap className="h-3.5 w-3.5 text-[oklch(0.82_0.14_60)]" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-[11px] font-semibold text-[oklch(0.82_0.14_60)]">Alteracoes nao salvas</p>
+          <p className="text-[10px] text-muted-foreground/50 mt-0.5">Auto-save em instantes</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Caso 3: salvo recentemente (< 5s)
+  if (lastSavedAt && now.getTime() - lastSavedAt.getTime() < 5000) {
+    return (
+      <div
+        className="rounded-xl border px-4 py-3 flex items-start gap-3 animate-in-view stagger-1"
+        style={{ boxShadow: "inset 2px 0 0 0 oklch(0.74 0.16 158)", background: "oklch(0.215_0.016_172 / 1)", borderColor: "oklch(0.295 0.016 170)" }}
+      >
+        <span className="h-6 w-6 rounded-md bg-[oklch(0.22_0.030_158)] flex items-center justify-center shrink-0 mt-0.5">
+          <Check className="h-3.5 w-3.5 text-[oklch(0.82_0.14_158)]" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-[11px] font-semibold text-[oklch(0.82_0.14_158)]">Salvo agora</p>
+          <p className="text-[10px] text-muted-foreground/50 mt-0.5">Todas as alteracoes foram persistidas</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Caso 4: escala em fase gravacao — alerta de confirmacao de narradores
+  if (scalePhase === "gravacao" && scaleId) {
+    return (
+      <div
+        className="rounded-xl border px-4 py-3 animate-in-view stagger-1"
+        style={{ boxShadow: "inset 2px 0 0 0 oklch(0.74 0.16 158)", background: "oklch(0.215_0.016_172 / 1)", borderColor: "oklch(0.295 0.016 170)" }}
+      >
+        <div className="flex items-start gap-3 mb-3">
+          <span className="h-6 w-6 rounded-md bg-[oklch(0.22_0.030_158)] flex items-center justify-center shrink-0 mt-0.5 glow-pulse">
+            <Mic className="h-3.5 w-3.5 text-[oklch(0.82_0.14_158)]" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] font-semibold text-[oklch(0.82_0.14_158)]">Esta semana esta em Gravacao</p>
+            <p className="text-[10px] text-muted-foreground/60 mt-0.5">Confirme que os narradores foram atribuidos</p>
+          </div>
+        </div>
+        <Link
+          href={`/escalas/${scaleId}`}
+          className="inline-flex items-center gap-1.5 text-[11px] font-medium text-[oklch(0.74_0.16_158)] hover:text-[oklch(0.82_0.14_158)] transition-colors"
+        >
+          Ver escala <ArrowRight className="h-3 w-3" />
+        </Link>
+      </div>
+    );
+  }
+
+  // Padrao: nao renderiza
+  return null;
 }
 
 // ── MetaRow ──────────────────────────────────────────────────────

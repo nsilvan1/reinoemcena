@@ -105,7 +105,7 @@ export function RichTextEditor({ content, onChange, editable = true, placeholder
     if (editor && content !== editor.getHTML()) {
       editor.commands.setContent(content);
     }
-  }, [content]);
+  }, [content, editor]);
 
   const setColor = useCallback((color: string) => {
     if (!editor) return;

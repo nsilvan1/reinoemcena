@@ -18,6 +18,7 @@ import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { LiveRecorder } from "@/components/escala/live-recorder";
+import { AudioPlayer } from "@/components/escala/audio-player";
 
 interface Take {
   _id: string;
@@ -284,9 +285,8 @@ export function RecordingsUploader({
                   <Trash2 className="h-3 w-3" />
                 </button>
               </div>
-              <audio controls className="w-full h-8" src={t.url}>
-                Seu navegador não suporta áudio.
-              </audio>
+              <AudioPlayer src={t.url} compact />
+
             </li>
           ))}
         </ul>

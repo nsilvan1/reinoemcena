@@ -10,12 +10,13 @@ import {
   Activity,
   Eye,
   Filter,
+  Inbox,
 } from "lucide-react";
 import { format, isToday, isYesterday, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { Button, PageHeader, EmptyState, KpiInline, KpiDivider } from "@/components/v2/primitives";
+import { Button, Card, PageHeader, EmptyState, Stat } from "@/components/v2/primitives";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -39,55 +40,55 @@ const TYPE_META: Record<
   {
     label: string;
     icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
-    bullet: string;       // classe de cor do bullet
-    iconBg: string;       // bg do icone
-    iconColor: string;    // cor do icone
+    bullet: string;
+    iconBg: string;
+    iconColor: string;
   }
 > = {
   escala: {
-    label: "Escala",
-    icon: Calendar,
-    bullet: "bg-[oklch(0.74_0.16_158)]",
-    iconBg: "bg-[oklch(0.22_0.030_158)]",
+    label:     "Escala",
+    icon:      Calendar,
+    bullet:    "bg-[oklch(0.74_0.16_158)]",
+    iconBg:    "bg-[oklch(0.22_0.030_158)]",
     iconColor: "text-[oklch(0.82_0.14_158)]",
   },
   roteiro: {
-    label: "Roteiro",
-    icon: FileText,
-    bullet: "bg-[oklch(0.72_0.16_220)]",
-    iconBg: "bg-[oklch(0.22_0.030_220)]",
+    label:     "Roteiro",
+    icon:      FileText,
+    bullet:    "bg-[oklch(0.72_0.16_220)]",
+    iconBg:    "bg-[oklch(0.22_0.030_220)]",
     iconColor: "text-[oklch(0.82_0.14_220)]",
   },
   status: {
-    label: "Status",
-    icon: Activity,
-    bullet: "bg-[oklch(0.78_0.16_60)]",
-    iconBg: "bg-[oklch(0.22_0.030_60)]",
+    label:     "Status",
+    icon:      Activity,
+    bullet:    "bg-[oklch(0.78_0.16_60)]",
+    iconBg:    "bg-[oklch(0.22_0.030_60)]",
     iconColor: "text-[oklch(0.85_0.14_60)]",
   },
   revisao: {
-    label: "Revisao",
-    icon: Eye,
-    bullet: "bg-[oklch(0.65_0.20_25)]",
-    iconBg: "bg-[oklch(0.22_0.030_25)]",
+    label:     "Revisão",
+    icon:      Eye,
+    bullet:    "bg-[oklch(0.65_0.20_25)]",
+    iconBg:    "bg-[oklch(0.22_0.030_25)]",
     iconColor: "text-[oklch(0.82_0.14_25)]",
   },
   geral: {
-    label: "Geral",
-    icon: Bell,
-    bullet: "bg-[oklch(0.42_0.025_170)]",
-    iconBg: "bg-[oklch(0.22_0.016_172)]",
+    label:     "Geral",
+    icon:      Bell,
+    bullet:    "bg-[oklch(0.42_0.025_170)]",
+    iconBg:    "bg-[oklch(0.22_0.016_172)]",
     iconColor: "text-muted-foreground",
   },
 };
 
 const FILTER_TABS: { key: FilterTab; label: string }[] = [
-  { key: "todas", label: "Todas" },
-  { key: "nao-lidas", label: "Nao lidas" },
-  { key: "escala", label: "Escala" },
-  { key: "roteiro", label: "Roteiro" },
-  { key: "status", label: "Status" },
-  { key: "revisao", label: "Revisao" },
+  { key: "todas",     label: "Todas"     },
+  { key: "nao-lidas", label: "Não lidas" },
+  { key: "escala",    label: "Escala"    },
+  { key: "roteiro",   label: "Roteiro"   },
+  { key: "status",    label: "Status"    },
+  { key: "revisao",   label: "Revisão"   },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -111,40 +112,132 @@ function groupByDate(items: Notification[]): { label: string; items: Notificatio
   return groups;
 }
 
+function countToday(items: Notification[]): number {
+  return items.filter((n) => isToday(new Date(n.createdAt))).length;
+}
+
+// ─── Notification card item ───────────────────────────────────────────────────
+
+function NotifCard({
+  n,
+  onRead,
+  onNavigate,
+}: {
+  n: Notification;
+  onRead: (id: string) => void;
+  onNavigate: (n: Notification) => void;
+}) {
+  const meta  = TYPE_META[n.type] || TYPE_META.geral;
+  const NIcon = meta.icon;
+
+  return (
+    <Card
+      interactive
+      className={cn(
+        "p-4 hover-lift animate-in-view",
+        !n.read && "border-primary/20 bg-primary/[0.03]"
+      )}
+      onClick={() => onNavigate(n)}
+    >
+      <div className="flex items-start gap-3">
+        {/* Icon square */}
+        <span
+          className={cn(
+            "h-10 w-10 rounded-md inline-flex items-center justify-center shrink-0",
+            meta.iconBg
+          )}
+        >
+          <NIcon className={cn("h-4 w-4", meta.iconColor)} strokeWidth={1.8} />
+        </span>
+
+        {/* Content */}
+        <div className="flex-1 min-w-0 pt-0.5">
+          <div className="flex items-start justify-between gap-2">
+            <p
+              className={cn(
+                "text-[13px] leading-snug flex-1",
+                !n.read ? "text-foreground font-medium" : "text-muted-foreground"
+              )}
+            >
+              {n.message}
+            </p>
+
+            {/* Unread dot + mark button */}
+            <div className="flex items-center gap-1.5 shrink-0">
+              {!n.read && (
+                <span className={cn("h-2 w-2 rounded-full shrink-0", meta.bullet, "status-pulse")} />
+              )}
+              {!n.read && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRead(n._id);
+                  }}
+                  className="h-7 w-7 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 rounded-md inline-flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-[oklch(0.255_0.016_172)] transition-colors"
+                  title="Marcar como lida"
+                >
+                  <Check className="h-3 w-3" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Meta row */}
+          <div className="flex items-center gap-2 mt-1.5">
+            <span className="text-[11px] text-muted-foreground/50">
+              {formatDistanceToNow(new Date(n.createdAt), { locale: ptBR, addSuffix: true })}
+            </span>
+            <span className="h-0.5 w-0.5 rounded-full bg-muted-foreground/30" />
+            <span className={cn("text-[10px] font-semibold uppercase tracking-[0.06em]", meta.iconColor)}>
+              {meta.label}
+            </span>
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function NotificacoesPage() {
   const router = useRouter();
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<FilterTab>("todas");
+  const [loading,       setLoading]       = useState(true);
+  const [filter,        setFilter]        = useState<FilterTab>("todas");
 
   useEffect(() => {
     fetch("/api/notifications")
       .then((r) => (r.ok ? r.json() : []))
       .then(setNotifications)
-      .catch(() => toast.error("Erro ao carregar notificacoes"))
+      .catch(() => toast.error("Erro ao carregar notificações"))
       .finally(() => setLoading(false));
   }, []);
 
   async function markAsRead(id?: string) {
     try {
       await fetch("/api/notifications", {
-        method: "PUT",
+        method:  "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(id ? { id } : { markAllRead: true }),
+        body:    JSON.stringify(id ? { id } : { markAllRead: true }),
       });
       const res = await fetch("/api/notifications");
       if (res.ok) setNotifications(await res.json());
     } catch {
-      toast.error("Nao foi possivel marcar como lida");
+      toast.error("Não foi possível marcar como lida");
     }
   }
 
-  const unread = notifications.filter((n) => !n.read);
+  function handleNavigate(n: Notification) {
+    if (!n.read) markAsRead(n._id);
+    if (n.link) router.push(n.link);
+  }
+
+  const unread  = notifications.filter((n) => !n.read);
+  const todayCount = countToday(notifications);
 
   const filtered = useMemo(() => {
-    if (filter === "todas") return notifications;
+    if (filter === "todas")     return notifications;
     if (filter === "nao-lidas") return notifications.filter((n) => !n.read);
     return notifications.filter((n) => n.type === filter);
   }, [notifications, filter]);
@@ -155,7 +248,15 @@ export default function NotificacoesPage() {
     return (
       <div className="space-y-6">
         <div className="h-24 skeleton rounded-2xl" />
-        <div className="h-64 skeleton rounded-lg" />
+        <div className="grid grid-cols-3 gap-3">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="h-24 skeleton rounded-lg" />
+          ))}
+        </div>
+        <div className="h-8 w-full skeleton rounded" />
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="h-20 skeleton rounded-lg" />
+        ))}
       </div>
     );
   }
@@ -165,8 +266,8 @@ export default function NotificacoesPage() {
       {/* Header */}
       <PageHeader
         eyebrow="Atividade"
-        title="Notificacoes"
-        description="Atualizacoes sobre suas escalas e a equipe"
+        title="Notificações"
+        description="Atualizações sobre suas escalas e a equipe"
         icon={Bell}
         actions={
           unread.length > 0 ? (
@@ -175,28 +276,42 @@ export default function NotificacoesPage() {
             </Button>
           ) : undefined
         }
-        meta={
-          notifications.length > 0 ? (
-            <div className="flex items-center gap-4 flex-wrap">
-              <KpiInline value={notifications.length} label="no total" tone="muted" />
-              {unread.length > 0 && (
-                <>
-                  <KpiDivider />
-                  <KpiInline
-                    value={unread.length}
-                    label="nao lidas"
-                    tone="primary"
-                  />
-                </>
-              )}
-            </div>
-          ) : undefined
-        }
       />
+
+      {/* ── Stat strip ── */}
+      {notifications.length > 0 && (
+        <div className="grid grid-cols-3 gap-3 sm:gap-4">
+          <Stat
+            icon={Bell}
+            label="Não lidas"
+            value={unread.length}
+            accent={unread.length > 0 ? "danger" : "primary"}
+            animated
+            pulse={unread.length > 0}
+            className="animate-in-view stagger-1"
+          />
+          <Stat
+            icon={Calendar}
+            label="Hoje"
+            value={todayCount}
+            accent="info"
+            animated
+            className="animate-in-view stagger-2"
+          />
+          <Stat
+            icon={Inbox}
+            label="Total"
+            value={notifications.length}
+            accent="primary"
+            animated
+            className="animate-in-view stagger-3"
+          />
+        </div>
+      )}
 
       {/* Filter tabs */}
       {notifications.length > 0 && (
-        <div className="flex items-center gap-1 overflow-x-auto pb-0.5 -mx-1 px-1">
+        <div className="flex items-center gap-1 overflow-x-auto pb-0.5 -mx-1 px-1 animate-in-view stagger-4">
           <Filter className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0 mr-1" />
           {FILTER_TABS.map((tab) => {
             const count =
@@ -211,7 +326,7 @@ export default function NotificacoesPage() {
                 key={tab.key}
                 onClick={() => setFilter(tab.key)}
                 className={cn(
-                  "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[12px] font-medium whitespace-nowrap transition-colors",
+                  "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[12px] font-medium whitespace-nowrap transition-colors min-h-[36px]",
                   filter === tab.key
                     ? "bg-[oklch(0.255_0.016_172)] text-foreground"
                     : "text-muted-foreground hover:text-foreground hover:bg-[oklch(0.225_0.014_172)]"
@@ -240,13 +355,13 @@ export default function NotificacoesPage() {
       {notifications.length === 0 ? (
         <EmptyState
           icon={Bell}
-          title="Sem notificacoes"
-          description="Voce vera aqui avisos sobre suas escalas, roteiros e revisoes."
+          title="Sem notificações"
+          description="Você verá aqui avisos sobre suas escalas, roteiros e revisões."
         />
       ) : filtered.length === 0 ? (
         <EmptyState
           icon={Bell}
-          title="Nenhuma notificacao aqui"
+          title="Nenhuma notificação aqui"
           description="Tente outro filtro para ver mais."
         />
       ) : (
@@ -258,111 +373,25 @@ export default function NotificacoesPage() {
                 {label}
               </p>
 
-              {/* Timeline list */}
-              <div className="relative">
-                {/* Linha vertical */}
-                <div className="absolute left-[15px] top-5 bottom-5 w-px bg-border/40" />
-
-                <div className="space-y-0">
-                  {items.map((n, idx) => {
-                    const meta = TYPE_META[n.type] || TYPE_META.geral;
-                    const NIcon = meta.icon;
-
-                    return (
-                      <div
-                        key={n._id}
-                        className={cn(
-                          "relative flex items-start gap-4 pl-10 pr-4 py-3 rounded-lg transition-colors",
-                          !n.read && "bg-primary/[0.04]",
-                          n.link
-                            ? "cursor-pointer hover:bg-[oklch(0.225_0.014_172)]"
-                            : "cursor-default"
-                        )}
-                        onClick={() => {
-                          if (!n.read) markAsRead(n._id);
-                          if (n.link) router.push(n.link);
-                        }}
-                      >
-                        {/* Bullet na linha */}
-                        <span
-                          className={cn(
-                            "absolute left-[9px] top-[18px] h-3.5 w-3.5 rounded-full shrink-0 ring-2 ring-background z-10",
-                            meta.bullet,
-                            !n.read && "animate-pulse-ring"
-                          )}
-                          style={
-                            idx === items.length - 1
-                              ? { boxShadow: "none" }
-                              : undefined
-                          }
-                        />
-
-                        {/* Icone do tipo */}
-                        <span
-                          className={cn(
-                            "h-8 w-8 rounded-md inline-flex items-center justify-center shrink-0 mt-0.5",
-                            meta.iconBg
-                          )}
-                        >
-                          <NIcon
-                            className={cn("h-3.5 w-3.5", meta.iconColor)}
-                            strokeWidth={1.8}
-                          />
-                        </span>
-
-                        {/* Conteudo */}
-                        <div className="flex-1 min-w-0 pt-0.5">
-                          <p
-                            className={cn(
-                              "text-[13px] leading-snug",
-                              !n.read
-                                ? "text-foreground font-medium"
-                                : "text-muted-foreground"
-                            )}
-                          >
-                            {n.message}
-                          </p>
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className="text-[11px] text-muted-foreground/50">
-                              {formatDistanceToNow(new Date(n.createdAt), {
-                                locale: ptBR,
-                                addSuffix: true,
-                              })}
-                            </span>
-                            <span className="h-0.5 w-0.5 rounded-full bg-muted-foreground/30" />
-                            <span
-                              className={cn(
-                                "text-[10px] font-medium uppercase tracking-wide",
-                                meta.iconColor
-                              )}
-                            >
-                              {meta.label}
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Indicadores direita */}
-                        <div className="flex items-center gap-2 shrink-0 pt-1">
-                          {!n.read && (
-                            <span className="h-2 w-2 rounded-full bg-primary shrink-0" />
-                          )}
-                          {!n.read && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                markAsRead(n._id);
-                              }}
-                              className="h-7 w-7 rounded-md inline-flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-[oklch(0.255_0.016_172)] transition-colors"
-                              title="Marcar como lida"
-                            >
-                              <Check className="h-3 w-3" />
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+              {/* Card list */}
+              <div className="space-y-2">
+                {items.map((n, idx) => (
+                  <div
+                    key={n._id}
+                    className={cn(
+                      idx === 0 ? "stagger-5" :
+                      idx === 1 ? "stagger-6" :
+                      idx === 2 ? "stagger-7" :
+                      "stagger-8"
+                    )}
+                  >
+                    <NotifCard
+                      n={n}
+                      onRead={markAsRead}
+                      onNavigate={handleNavigate}
+                    />
+                  </div>
+                ))}
               </div>
             </div>
           ))}

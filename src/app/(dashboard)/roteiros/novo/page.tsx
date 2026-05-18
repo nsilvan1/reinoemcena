@@ -15,10 +15,19 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn, parseLocalDate } from "@/lib/utils";
-import { RichTextEditor } from "@/components/editor/rich-text-editor";
+import dynamic from "next/dynamic";
+
+const RichTextEditor = dynamic(
+  () => import("@/components/editor/rich-text-editor").then((m) => m.RichTextEditor),
+  {
+    ssr: false,
+    loading: () => <div className="skeleton h-96 w-full rounded-md" />,
+  }
+);
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Button, Card, Input, Field, PageHeader, SectionHeading } from "@/components/v2/primitives";
+import { AudioPlayer } from "@/components/escala/audio-player";
 
 function getFileIcon(name: string) {
   const ext = name.split(".").pop()?.toLowerCase() || "";
@@ -334,9 +343,7 @@ export default function NovoRoteiroPage() {
                     )}
 
                     {file.type.startsWith("audio/") && (
-                      <audio controls className="w-full h-10 rounded-lg" src={URL.createObjectURL(file)}>
-                        Audio
-                      </audio>
+                      <AudioPlayer src={URL.createObjectURL(file)} compact />
                     )}
 
                     <button

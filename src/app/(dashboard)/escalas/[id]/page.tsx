@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useRef, useMemo } from "react";
+import React, { useEffect, useState, useRef, useMemo } from "react";
 import { useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
@@ -18,11 +18,20 @@ import {
   Paperclip,
   X,
   AlertTriangle,
+  TrendingUp,
+  CalendarClock,
+  Users,
+  Link2,
 } from "lucide-react";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
+import { cn, parseLocalDate } from "@/lib/utils";
+import { differenceInCalendarDays } from "date-fns";
 import { STEPS } from "@/components/pipeline/mini-pipeline";
-import { RichTextEditor } from "@/components/editor/rich-text-editor";
+import dynamic from "next/dynamic";
+const RichTextEditor = dynamic(
+  () => import("@/components/editor/rich-text-editor").then((m) => ({ default: m.RichTextEditor })),
+  { ssr: false, loading: () => <div className="h-[280px] skeleton rounded-lg" /> }
+);
 import { StageAttachments } from "@/components/escala/stage-attachments";
 import { RecordingsUploader } from "@/components/escala/recordings-uploader";
 import { RecordingsOverview } from "@/components/escala/recordings-overview";
@@ -113,8 +122,8 @@ export default function ScaleDetailPage() {
         setProgress(p);
         setComments(c);
       })
-      .catch((err) =>
-        console.error("Erro ao carregar dados da semana:", err)
+      .catch(() =>
+        toast.error("Erro ao carregar dados da semana")
       );
   }, [id, selectedWeek, scale]);
 
@@ -447,43 +456,60 @@ export default function ScaleDetailPage() {
   return (
     <div className="space-y-4">
       {/* ═══ HEADER ═══ */}
-      <WeekHeader
-        scaleTitle={scale.title}
-        scaleId={String(id)}
-        scaleMonth={scale.month}
-        weekNumber={selectedWeek}
-        weekTheme={currentWeek?.theme || ""}
-        weekDeadline={currentWeek?.deadline || ""}
-        weekStatus={weekStatus}
-        teamCount={teamCount}
-      />
+      <div className="animate-in-view stagger-1">
+        <WeekHeader
+          scaleTitle={scale.title}
+          scaleId={String(id)}
+          scaleMonth={scale.month}
+          weekNumber={selectedWeek}
+          weekTheme={currentWeek?.theme || ""}
+          weekDeadline={currentWeek?.deadline || ""}
+          weekStatus={weekStatus}
+          teamCount={teamCount}
+        />
+      </div>
 
       {/* ═══ WEEK STEPPER ═══ */}
-      <WeekStepper
-        weeks={scale.weeks}
-        selected={selectedWeek}
-        onSelect={setSelectedWeek}
-      />
+      <div className="animate-in-view stagger-2">
+        <WeekStepper
+          weeks={scale.weeks}
+          selected={selectedWeek}
+          onSelect={setSelectedWeek}
+        />
+      </div>
+
+      {/* ═══ WEEK SUMMARY KPIs ═══ */}
+      {currentWeek && (
+        <WeekSummaryCard
+          progress={progress}
+          deadline={currentWeek?.deadline || ""}
+          teamCount={teamCount}
+        />
+      )}
 
       {/* ═══ PHASE PIPELINE ═══ */}
-      <PhasePipeline
-        status={weekStatus}
-        viewingStage={viewingStage}
-        onSelectStage={setViewingStage}
-      />
+      <div className="animate-in-view stagger-4">
+        <PhasePipeline
+          status={weekStatus}
+          viewingStage={viewingStage}
+          onSelectStage={setViewingStage}
+        />
+      </div>
 
       {currentWeek && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
           {/* ═══ LEFT (8 cols) ═══ */}
           <div className="lg:col-span-8 space-y-4">
             {/* References strip */}
-            <ReferencesStrip
-              historyCard={currentWeek?.historyCardId || null}
-              characters={currentWeek?.characterIds || []}
-              canEdit={canLinkAcervo}
-              onPickHistory={() => setPickHistoryOpen(true)}
-              onPickCharacters={() => setPickCharactersOpen(true)}
-            />
+            <div className="animate-in-view stagger-5">
+              <ReferencesStrip
+                historyCard={currentWeek?.historyCardId || null}
+                characters={currentWeek?.characterIds || []}
+                canEdit={canLinkAcervo}
+                onPickHistory={() => setPickHistoryOpen(true)}
+                onPickCharacters={() => setPickCharactersOpen(true)}
+              />
+            </div>
 
             {/* Stage activity (only when viewing past stage) */}
             {viewingStage && viewingStep && (
@@ -936,18 +962,20 @@ export default function ScaleDetailPage() {
             )}
 
             {/* Team */}
-            <TeamTable
-              assignments={currentWeek.assignments || {}}
-              progress={progress}
-              weekStatus={weekStatus}
-              roteiro={currentWeek.roteiro}
-              canReview={canReview}
-              defaultOpen={teamCount > 0}
-            />
+            <div className="animate-in-view stagger-6">
+              <TeamTable
+                assignments={currentWeek.assignments || {}}
+                progress={progress}
+                weekStatus={weekStatus}
+                roteiro={currentWeek.roteiro}
+                canReview={canReview}
+                defaultOpen={teamCount > 0}
+              />
+            </div>
           </div>
 
           {/* ═══ RIGHT (4 cols) — Chat ═══ */}
-          <div className="lg:col-span-4">
+          <div className="lg:col-span-4 animate-in-view stagger-5">
             <CommentsPanel
               comments={comments}
               currentUserId={userId}
@@ -981,6 +1009,137 @@ export default function ScaleDetailPage() {
         weekNumber={selectedWeek}
         onChanged={refreshData}
       />
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════
+ * MiniKpi — KPI compacto p/ resumo de semana
+ * ═══════════════════════════════════════ */
+
+function MiniKpi({
+  icon: Icon,
+  label,
+  value,
+  tone = "muted",
+  pulse = false,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  value: string | number;
+  tone?: "muted" | "primary" | "warning" | "danger" | "info";
+  pulse?: boolean;
+}) {
+  const toneMap = {
+    muted: "text-foreground/90",
+    primary: "text-[oklch(0.82_0.14_158)]",
+    warning: "text-[oklch(0.82_0.14_60)]",
+    danger: "text-[oklch(0.80_0.16_25)]",
+    info: "text-[oklch(0.82_0.14_220)]",
+  };
+  const iconBgMap = {
+    muted: "bg-[oklch(0.265_0.014_170)]",
+    primary: "bg-[oklch(0.22_0.030_158)]",
+    warning: "bg-[oklch(0.22_0.030_60)]",
+    danger: "bg-[oklch(0.22_0.030_25)]",
+    info: "bg-[oklch(0.22_0.030_220)]",
+  };
+  const iconTextMap = {
+    muted: "text-muted-foreground",
+    primary: "text-[oklch(0.82_0.14_158)]",
+    warning: "text-[oklch(0.82_0.14_60)]",
+    danger: "text-[oklch(0.80_0.16_25)]",
+    info: "text-[oklch(0.82_0.14_220)]",
+  };
+  return (
+    <div className="flex flex-col gap-2 py-3 px-3 rounded-lg bg-[oklch(0.225_0.015_172)] border border-border/60 min-w-0">
+      <div className={cn("h-7 w-7 rounded-md flex items-center justify-center shrink-0", iconBgMap[tone], pulse && "glow-pulse")}>
+        <Icon className={cn("h-3.5 w-3.5", iconTextMap[tone])} />
+      </div>
+      <div className="min-w-0">
+        <p className={cn("text-[18px] font-semibold tabular-nums leading-none tracking-tight", toneMap[tone])}>
+          {value}
+        </p>
+        <p className="text-[10px] font-medium uppercase tracking-[0.09em] text-muted-foreground/55 mt-1 truncate">
+          {label}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════
+ * WeekSummaryCard — 4 KPIs inline
+ * ═══════════════════════════════════════ */
+
+function WeekSummaryCard({
+  progress,
+  deadline,
+  teamCount,
+}: {
+  progress: any[];
+  deadline: string;
+  teamCount: number;
+}) {
+  // % concluído
+  const totalTasks = progress.length;
+  const completedTasks = progress.filter((p: any) => p.completed).length;
+  const pctDone = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+  // Dias até prazo
+  let diasRestantes: number | null = null;
+  let deadlineTone: "primary" | "warning" | "danger" | "muted" = "muted";
+  try {
+    const deadlineDate = parseLocalDate(deadline);
+    diasRestantes = differenceInCalendarDays(deadlineDate, new Date());
+    if (diasRestantes > 7) deadlineTone = "primary";
+    else if (diasRestantes >= 0) deadlineTone = "warning";
+    else deadlineTone = "danger";
+  } catch {
+    // deadline inválido — ignora
+  }
+
+  // Anexos (linkUrl preenchidos)
+  const attachmentCount = progress.filter((p: any) => !!p.linkUrl).length;
+
+  const deadlineLabel =
+    diasRestantes === null
+      ? "—"
+      : diasRestantes < 0
+        ? `${Math.abs(diasRestantes)}d atrás`
+        : diasRestantes === 0
+          ? "Hoje"
+          : `${diasRestantes}d`;
+
+  return (
+    <div className="surface-elevated rounded-xl p-4 animate-in-view stagger-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <MiniKpi
+          icon={TrendingUp}
+          label="Concluído"
+          value={`${pctDone}%`}
+          tone={pctDone === 100 ? "primary" : pctDone >= 50 ? "info" : "muted"}
+        />
+        <MiniKpi
+          icon={CalendarClock}
+          label="Até prazo"
+          value={deadlineLabel}
+          tone={deadlineTone}
+          pulse={deadlineTone === "danger"}
+        />
+        <MiniKpi
+          icon={Users}
+          label="Membros"
+          value={teamCount}
+          tone="muted"
+        />
+        <MiniKpi
+          icon={Link2}
+          label="Anexos"
+          value={attachmentCount}
+          tone={attachmentCount > 0 ? "info" : "muted"}
+        />
+      </div>
     </div>
   );
 }

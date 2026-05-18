@@ -15,7 +15,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <div className="relative min-h-screen text-foreground">
         <div className="ambient-shell" />
         <SidebarV2 />
-        <main className="relative lg:pl-60 z-10">
+        <main
+          className="relative lg:pl-60 z-10"
+          style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+        >
           <div className="pt-14 lg:pt-0">
             <div className="px-4 py-6 sm:px-8 lg:px-12 lg:py-10 max-w-[1280px] mx-auto">
               {children}

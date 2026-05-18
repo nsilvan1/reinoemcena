@@ -2,12 +2,23 @@
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
-import { Plus, Calendar, ArrowRight, PenLine, Mic, Film, Eye, CircleCheck } from "lucide-react";
+import {
+  Plus,
+  Calendar,
+  ArrowRight,
+  PenLine,
+  Mic,
+  Film,
+  Eye,
+  CircleCheck,
+  Clock,
+  TrendingUp,
+} from "lucide-react";
 import { format, isBefore } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn, parseLocalDate } from "@/lib/utils";
 import { toast } from "sonner";
-import { Button, Card, PageHeader, EmptyState, KpiInline, KpiDivider } from "@/components/v2/primitives";
+import { Button, Card, PageHeader, EmptyState, Stat } from "@/components/v2/primitives";
 
 // ─── Step metadata ───────────────────────────────────────────────────
 
@@ -20,11 +31,11 @@ interface StepMeta {
 }
 
 const STEP_META: Record<StepKey, StepMeta> = {
-  roteiro:  { label: "Roteiro",  icon: PenLine,    hue: 220 },
-  gravacao: { label: "Gravação", icon: Mic,         hue: 60  },
-  edicao:   { label: "Edição",   icon: Film,        hue: 300 },
-  revisao:  { label: "Revisão",  icon: Eye,         hue: 25  },
-  concluido:{ label: "Concluído",icon: CircleCheck, hue: 158 },
+  roteiro:   { label: "Roteiro",   icon: PenLine,    hue: 220 },
+  gravacao:  { label: "Gravação",  icon: Mic,        hue: 60  },
+  edicao:    { label: "Edição",    icon: Film,       hue: 300 },
+  revisao:   { label: "Revisão",   icon: Eye,        hue: 25  },
+  concluido: { label: "Concluído", icon: CircleCheck,hue: 158 },
 };
 
 const STEP_ORDER: StepKey[] = ["roteiro", "gravacao", "edicao", "revisao", "concluido"];
@@ -65,9 +76,9 @@ function WeekChip({ week }: { week: Week }) {
         "border transition-opacity hover:opacity-80 cursor-default select-none"
       )}
       style={{
-        background: `oklch(0.20 0.025 ${hue})`,
-        color: `oklch(0.82 0.13 ${hue})`,
-        borderColor: `oklch(0.32 0.055 ${hue} / 0.50)`,
+        background:    `oklch(0.20 0.025 ${hue})`,
+        color:         `oklch(0.82 0.13 ${hue})`,
+        borderColor:   `oklch(0.32 0.055 ${hue} / 0.50)`,
       }}
     >
       <Icon className="h-2.5 w-2.5 shrink-0" strokeWidth={2} />
@@ -103,18 +114,19 @@ function WeekPipelineStrip({ weeks }: { weeks: Week[] }) {
 
 function ScaleRow({ scale, index }: { scale: Scale; index: number }) {
   const totalW = scale.weeks.length;
-  const doneW = scale.weeks.filter((w) => w.status === "concluido").length;
+  const doneW  = scale.weeks.filter((w) => w.status === "concluido").length;
   const progress = totalW > 0 ? Math.round((doneW / totalW) * 100) : 0;
-  const allDone = totalW > 0 && doneW === totalW;
+  const allDone  = totalW > 0 && doneW === totalW;
 
   return (
     <Link
       href={`/escalas/${scale._id}`}
       className={cn(
-        "group flex items-center gap-4 lg:gap-6 px-5 py-4 animate-in-view",
-        "border-t border-border/40 hover:bg-[oklch(0.215_0.016_172)] transition-colors",
+        "group relative flex items-center gap-4 lg:gap-6 px-5 py-4 animate-in-view",
+        "border-t border-border/40 transition-colors",
+        "hover:bg-[oklch(0.225_0.018_172)]",
         "first:border-t-0",
-        index === 0 ? "stagger-1" : index === 1 ? "stagger-2" : "stagger-3"
+        index === 0 ? "stagger-5" : index === 1 ? "stagger-6" : index === 2 ? "stagger-7" : "stagger-8"
       )}
     >
       {/* Left: month badge + title + creator */}
@@ -128,7 +140,6 @@ function ScaleRow({ scale, index }: { scale: Scale; index: number }) {
               : "bg-[oklch(0.215_0.016_172)] text-muted-foreground/70"
           )}
         >
-          {/* Show month abbreviated: 2026-04 → "abr 26" */}
           {(() => {
             const parts = scale.month.split("-");
             if (parts.length === 2) {
@@ -154,7 +165,7 @@ function ScaleRow({ scale, index }: { scale: Scale; index: number }) {
         </div>
       </div>
 
-      {/* Center: week chips pipeline */}
+      {/* Center: week chips */}
       <div className="hidden sm:block min-w-0 flex-[2]">
         <WeekPipelineStrip weeks={scale.weeks} />
       </div>
@@ -176,6 +187,20 @@ function ScaleRow({ scale, index }: { scale: Scale; index: number }) {
         </div>
         <ArrowRight className="h-4 w-4 text-muted-foreground/25 group-hover:text-foreground group-hover:translate-x-0.5 transition-all shrink-0" />
       </div>
+
+      {/* Progress bar — full-width bottom rail */}
+      {totalW > 0 && (
+        <span
+          aria-hidden
+          className="absolute bottom-0 left-0 h-[2px] rounded-full transition-all duration-700"
+          style={{
+            width: `${progress}%`,
+            background: allDone
+              ? "oklch(0.74 0.16 158)"
+              : "oklch(0.62 0.14 158 / 0.60)",
+          }}
+        />
+      )}
     </Link>
   );
 }
@@ -186,7 +211,7 @@ export default function EscalasPage() {
   const { data: session } = useSession();
   const [scales, setScales] = useState<Scale[]>([]);
   const [loading, setLoading] = useState(true);
-  const role = (session?.user as { role?: string })?.role;
+  const role    = (session?.user as { role?: string })?.role;
   const canCreate = ["admin", "coordenador"].includes(role || "");
 
   useEffect(() => {
@@ -201,20 +226,25 @@ export default function EscalasPage() {
     return (
       <div className="space-y-6">
         <div className="h-20 w-72 skeleton" />
-        <div className="h-14 skeleton rounded-xl" />
-        <div className="h-14 skeleton rounded-xl" />
-        <div className="h-14 skeleton rounded-xl" />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="h-24 skeleton rounded-lg" />
+          ))}
+        </div>
+        <div className="h-14 skeleton rounded-lg" />
+        <div className="h-14 skeleton rounded-lg" />
+        <div className="h-14 skeleton rounded-lg" />
       </div>
     );
   }
 
-  const totalScales = scales.length;
-  const totalWeeks = scales.reduce((acc, s) => acc + (s.weeks?.length || 0), 0);
-  const doneWeeks = scales.reduce(
+  const totalScales  = scales.length;
+  const totalWeeks   = scales.reduce((acc, s) => acc + (s.weeks?.length || 0), 0);
+  const doneWeeks    = scales.reduce(
     (acc, s) => acc + (s.weeks?.filter((w) => w.status === "concluido").length || 0),
     0
   );
-  const progressPct = totalWeeks > 0 ? Math.round((doneWeeks / totalWeeks) * 100) : 0;
+  const progressPct  = totalWeeks > 0 ? Math.round((doneWeeks / totalWeeks) * 100) : 0;
 
   return (
     <div className="space-y-7">
@@ -233,20 +263,44 @@ export default function EscalasPage() {
             </Link>
           )
         }
-        meta={
-          totalScales > 0 && (
-            <div className="flex items-center gap-5 flex-wrap">
-              <KpiInline value={totalScales} label={totalScales === 1 ? "escala" : "escalas"} />
-              <KpiDivider />
-              <KpiInline value={totalWeeks} label="semanas" />
-              <KpiDivider />
-              <KpiInline value={doneWeeks} label="concluídas" tone="primary" />
-              <KpiDivider />
-              <KpiInline value={`${progressPct}%`} label="progresso" tone={progressPct === 100 ? "primary" : "muted"} />
-            </div>
-          )
-        }
       />
+
+      {/* ── Stat strip ── */}
+      {totalScales > 0 && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <Stat
+            icon={Calendar}
+            label="Escalas"
+            value={totalScales}
+            accent="primary"
+            animated
+            className="animate-in-view stagger-1"
+          />
+          <Stat
+            icon={Clock}
+            label="Semanas"
+            value={totalWeeks}
+            accent="info"
+            animated
+            className="animate-in-view stagger-2"
+          />
+          <Stat
+            icon={CircleCheck}
+            label="Concluídas"
+            value={doneWeeks}
+            accent="primary"
+            animated
+            className="animate-in-view stagger-3"
+          />
+          <Stat
+            icon={TrendingUp}
+            label="Progresso"
+            value={`${progressPct}%`}
+            accent={progressPct === 100 ? "primary" : "warning"}
+            className="animate-in-view stagger-4"
+          />
+        </div>
+      )}
 
       {scales.length === 0 ? (
         <EmptyState
@@ -264,7 +318,7 @@ export default function EscalasPage() {
           }
         />
       ) : (
-        <Card className="overflow-hidden">
+        <Card elevated className="overflow-hidden animate-in-view stagger-5">
           {/* Column headers */}
           <div className="hidden sm:flex items-center gap-4 lg:gap-6 px-5 py-2.5 border-b border-border/50 bg-[oklch(0.205_0.014_172)]">
             <div className="flex-1 text-[10px] font-mono uppercase tracking-[0.18em] text-muted-foreground/45">

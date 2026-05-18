@@ -105,7 +105,8 @@ export function Card({
       className={cn(
         "rounded-lg bg-card border border-border",
         elevated && "shadow-[0_1px_2px_oklch(0_0_0_/_0.35),0_8px_24px_oklch(0_0_0_/_0.25)]",
-        interactive && "transition-[transform,border-color,background-color] duration-150 hover:-translate-y-px hover:border-[oklch(0.36_0.018_170)] hover:bg-[oklch(0.215_0.016_172)]",
+        interactive &&
+          "transition-[transform,border-color,background-color,box-shadow] duration-200 ease-out hover:-translate-y-[2px] hover:border-[oklch(0.36_0.018_170)] hover:bg-[oklch(0.215_0.016_172)] hover:shadow-[0_4px_24px_oklch(0_0_0_/_0.40)] active:scale-[0.995] active:translate-y-0 cursor-pointer",
         className
       )}
       {...props}
@@ -315,6 +316,42 @@ export function Kbd({ children, className }: { children: React.ReactNode; classN
   return <span className={cn("kbd", className)}>{children}</span>;
 }
 
+// ─── useCountUp ─────────────────────────────────────────────────────
+
+/**
+ * Animação count-up de 0 até `target` usando requestAnimationFrame.
+ * Só executa quando target muda. Retorna `String|number` pronto para render.
+ * `duration` em ms (default 700).
+ * Quando target é string (ex: "38%"), retorna direto sem animação.
+ */
+export function useCountUp(target: number | string, duration = 700): number | string {
+  const [current, setCurrent] = React.useState<number | string>(() =>
+    typeof target === "number" ? 0 : target
+  );
+
+  React.useEffect(() => {
+    if (typeof target !== "number") {
+      setCurrent(target);
+      return;
+    }
+    const start = performance.now();
+    const from = 0;
+    let raf = 0;
+    const tick = (now: number) => {
+      const elapsed = now - start;
+      const t = Math.min(1, elapsed / duration);
+      const eased = 1 - Math.pow(1 - t, 3); // easeOutCubic
+      const v = Math.round(from + (target - from) * eased);
+      setCurrent(v);
+      if (t < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target, duration]);
+
+  return current;
+}
+
 // ─── Stat Tile ──────────────────────────────────────────────────────
 
 interface StatProps {
@@ -324,6 +361,10 @@ interface StatProps {
   trend?: { value: number; label?: string };
   icon?: React.ComponentType<{ className?: string; strokeWidth?: number }>;
   accent?: "primary" | "info" | "warning" | "danger" | "violet";
+  /** Quando true e value é número, anima de 0 até o valor em 700ms. */
+  animated?: boolean;
+  /** Quando true e value > 0, aplica glow-pulse no icon. */
+  pulse?: boolean;
   className?: string;
 }
 
@@ -335,29 +376,60 @@ const STAT_ACCENT: Record<NonNullable<StatProps["accent"]>, { bar: string; text:
   violet: { bar: "from-[oklch(0.72_0.18_310)]", text: "text-[oklch(0.85_0.14_300)]", bg: "bg-[oklch(0.22_0.030_300)]" },
 };
 
-export function Stat({ label, value, hint, trend, icon: Icon, accent = "primary", className }: StatProps) {
+export function Stat({
+  label,
+  value,
+  hint,
+  trend,
+  icon: Icon,
+  accent = "primary",
+  animated,
+  pulse,
+  className,
+}: StatProps) {
   const a = STAT_ACCENT[accent];
+  const animatedValue = useCountUp(animated && typeof value === "number" ? value : value);
+  const display = animated ? animatedValue : value;
+  const isPositive = typeof value === "number" && value > 0;
   return (
-    <Card className={cn("p-4 group", className)}>
+    <Card className={cn("p-4 sm:p-5 group", className)}>
       <div className="flex items-center gap-2.5 mb-3">
         {Icon && (
-          <span className={cn("inline-flex h-7 w-7 rounded-md items-center justify-center", a.bg)}>
-            <Icon className={cn("h-3.5 w-3.5", a.text)} strokeWidth={1.8} />
+          <span
+            className={cn(
+              "inline-flex h-8 w-8 rounded-md items-center justify-center transition-transform group-hover:scale-105",
+              a.bg,
+              pulse && isPositive && "glow-pulse"
+            )}
+          >
+            <Icon className={cn("h-4 w-4", a.text)} strokeWidth={1.8} />
           </span>
         )}
         <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground/70 truncate">
           {label}
         </p>
         {trend && (
-          <span className={cn("ml-auto text-[10px] font-medium tabular-nums", trend.value >= 0 ? "text-emerald-400" : "text-red-400")}>
+          <span
+            className={cn(
+              "ml-auto text-[10px] font-medium tabular-nums",
+              trend.value >= 0 ? "text-emerald-400" : "text-red-400"
+            )}
+          >
             {trend.value >= 0 ? "+" : ""}
             {trend.value}
             {trend.label || "%"}
           </span>
         )}
       </div>
-      <p className="text-[26px] font-semibold tabular-nums leading-none tracking-tight">{value}</p>
-      {hint && <p className="text-[11px] text-muted-foreground/55 mt-1.5">{hint}</p>}
+      <p
+        className={cn(
+          "text-[28px] sm:text-[30px] font-semibold tabular-nums leading-none tracking-tight",
+          a.text
+        )}
+      >
+        {display}
+      </p>
+      {hint && <p className="text-[11px] text-muted-foreground/55 mt-2">{hint}</p>}
     </Card>
   );
 }

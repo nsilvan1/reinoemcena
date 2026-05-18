@@ -291,14 +291,85 @@
 }
 
 .animate-in-view { animation: fadeSlideUp 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
-.stagger-1 { animation-delay: 0.04s; }
-.stagger-2 { animation-delay: 0.08s; }
-.stagger-3 { animation-delay: 0.12s; }
-.stagger-4 { animation-delay: 0.16s; }
-.stagger-5 { animation-delay: 0.20s; }
-.stagger-6 { animation-delay: 0.24s; }
+.stagger-1  { animation-delay: 0.04s; }
+.stagger-2  { animation-delay: 0.08s; }
+.stagger-3  { animation-delay: 0.12s; }
+.stagger-4  { animation-delay: 0.16s; }
+.stagger-5  { animation-delay: 0.20s; }
+.stagger-6  { animation-delay: 0.24s; }
+.stagger-7  { animation-delay: 0.28s; }
+.stagger-8  { animation-delay: 0.32s; }
+.stagger-9  { animation-delay: 0.36s; }
+.stagger-10 { animation-delay: 0.40s; }
+.stagger-11 { animation-delay: 0.44s; }
+.stagger-12 { animation-delay: 0.48s; }
 .glow-pulse { animation: glow-pulse 2.4s ease-in-out infinite; }
 .status-pulse { animation: status-pulse 2.4s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-in-view,
+  .stagger-1, .stagger-2, .stagger-3, .stagger-4,
+  .stagger-5, .stagger-6, .stagger-7, .stagger-8,
+  .stagger-9, .stagger-10, .stagger-11, .stagger-12 {
+    animation: none !important;
+  }
+  .glow-pulse,
+  .status-pulse,
+  .hover-lift,
+  .tick-up,
+  .bg-grid-faint-animated {
+    animation: none !important;
+    transition: none !important;
+  }
+  .ambient-blob--1,
+  .ambient-blob--2,
+  .ambient-blob--3,
+  .ambient-blob--4 {
+    animation: none !important;
+  }
+  .skeleton::after {
+    animation: none !important;
+  }
+  * {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Hover lift utility — usado em cards/linhas interativas */
+.hover-lift {
+  transition: transform 200ms ease-out, box-shadow 200ms ease-out, border-color 200ms ease-out, background-color 200ms ease-out;
+}
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 24px oklch(0 0 0 / 0.40);
+}
+.hover-lift:active {
+  transform: translateY(0) scale(0.995);
+}
+
+/* Scroll-snap horizontal pra carrosséis de cards */
+.snap-x-cards {
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.snap-x-cards::-webkit-scrollbar { display: none; }
+.snap-x-cards > * { scroll-snap-align: start; }
+
+/* Fade-mask nas bordas pra indicar overflow */
+.fade-mask-x {
+  mask-image: linear-gradient(to right, transparent, black 4%, black 96%, transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, black 4%, black 96%, transparent);
+}
+
+/* Number ticker (alternativa CSS-only quando JS está desligado) */
+.tick-up {
+  display: inline-block;
+  animation: fadeSlideUp 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
 
 /* ═══ Skeleton ═══ */
 .skeleton {

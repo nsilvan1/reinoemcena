@@ -14,6 +14,7 @@ import {
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { AudioPlayer } from "./audio-player";
 
 interface Narrador {
   _id: string;
@@ -183,9 +184,8 @@ export function RecordingsOverview({ scaleId, weekNumber, narradores, progress }
                               {formatSize(t.size)}
                             </span>
                           </div>
-                          <audio controls className="w-full h-8" src={t.url}>
-                            Seu navegador não suporta áudio.
-                          </audio>
+                          <AudioPlayer src={t.url} compact />
+
                         </li>
                       ))}
                     </ul>

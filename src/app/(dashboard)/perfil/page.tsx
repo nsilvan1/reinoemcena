@@ -1,26 +1,38 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
-import { Save, UserCircle, Lock, Sliders, LogOut, Mic, Film, CheckSquare, Square } from "lucide-react";
+import {
+  Save,
+  UserCircle,
+  Lock,
+  Sliders,
+  LogOut,
+  Mic,
+  Film,
+  CheckSquare,
+  Square,
+  CheckCircle2,
+  CalendarDays,
+} from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
-import { Avatar, Badge, Button, Field, Input } from "@/components/v2/primitives";
+import { Avatar, Badge, Button, Card, Field, Input } from "@/components/v2/primitives";
 
 const ROLE_LABELS: Record<string, string> = {
-  admin: "Administrador",
+  admin:       "Administrador",
   coordenador: "Coordenador",
-  roteirista: "Roteirista",
-  membro: "Membro",
+  roteirista:  "Roteirista",
+  membro:      "Membro",
 };
 
 const ROLE_TONE: Record<string, "danger" | "info" | "violet" | "neutral"> = {
-  admin: "danger",
+  admin:       "danger",
   coordenador: "info",
-  roteirista: "violet",
-  membro: "neutral",
+  roteirista:  "violet",
+  membro:      "neutral",
 };
 
 type UserData = {
@@ -35,6 +47,7 @@ type UserData = {
 };
 
 // ─── Section wrapper ──────────────────────────────────────────────────────────
+
 function Section({
   icon: Icon,
   title,
@@ -64,18 +77,108 @@ function Section({
   );
 }
 
+// ─── Identity card ────────────────────────────────────────────────────────────
+
+function IdentityCard({ userData }: { userData: UserData }) {
+  return (
+    <Card elevated className="overflow-hidden sticky top-6 animate-in-view stagger-1">
+      {/* Gradient header strip */}
+      <div
+        className="h-20 w-full"
+        style={{
+          background: "linear-gradient(135deg, oklch(0.22 0.040 158), oklch(0.16 0.020 172))",
+        }}
+      />
+
+      <div className="px-5 pb-6 -mt-10">
+        {/* Avatar */}
+        <div className="mb-4">
+          <Avatar name={userData.name} size="2xl" status="online" />
+        </div>
+
+        <h2 className="text-[17px] font-semibold leading-tight">{userData.name}</h2>
+        <p className="font-mono text-[12px] text-muted-foreground/60 mt-0.5">
+          @{userData.username}
+        </p>
+
+        {/* Badges row */}
+        <div className="flex flex-wrap gap-1.5 mt-3">
+          <Badge tone={ROLE_TONE[userData.role] || "neutral"}>
+            {ROLE_LABELS[userData.role]}
+          </Badge>
+          {userData.skills?.map((s) => (
+            <span
+              key={s}
+              className={cn(
+                "inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium",
+                s === "narrador"
+                  ? "bg-amber-500/15 text-amber-400"
+                  : "bg-violet-500/15 text-violet-400"
+              )}
+            >
+              {s === "narrador" ? (
+                <Mic className="h-2.5 w-2.5" />
+              ) : (
+                <Film className="h-2.5 w-2.5" />
+              )}
+              {s}
+            </span>
+          ))}
+        </div>
+
+        {userData.createdAt && (
+          <p className="text-[11px] text-muted-foreground/50 mt-4">
+            Membro desde{" "}
+            {format(new Date(userData.createdAt), "MMMM 'de' yyyy", { locale: ptBR })}
+          </p>
+        )}
+
+        {/* Mini KPIs */}
+        {(userData._completedTasksCount !== undefined ||
+          userData._activeScalesCount  !== undefined) && (
+          <div className="mt-5 grid grid-cols-2 gap-2">
+            {userData._completedTasksCount !== undefined && (
+              <div className="rounded-md bg-[oklch(0.215_0.014_172)] p-3 text-center group hover:bg-[oklch(0.235_0.016_172)] transition-colors">
+                <div className="flex items-center justify-center gap-1 mb-1">
+                  <CheckCircle2 className="h-3 w-3 text-[oklch(0.74_0.16_158)]" strokeWidth={2} />
+                </div>
+                <p className="text-[20px] font-semibold tabular-nums text-[oklch(0.82_0.14_158)]">
+                  {userData._completedTasksCount}
+                </p>
+                <p className="text-[10px] text-muted-foreground/55 mt-0.5">entregas</p>
+              </div>
+            )}
+            {userData._activeScalesCount !== undefined && (
+              <div className="rounded-md bg-[oklch(0.215_0.014_172)] p-3 text-center group hover:bg-[oklch(0.235_0.016_172)] transition-colors">
+                <div className="flex items-center justify-center gap-1 mb-1">
+                  <CalendarDays className="h-3 w-3 text-[oklch(0.85_0.14_220)]" strokeWidth={2} />
+                </div>
+                <p className="text-[20px] font-semibold tabular-nums text-[oklch(0.85_0.14_220)]">
+                  {userData._activeScalesCount}
+                </p>
+                <p className="text-[10px] text-muted-foreground/55 mt-0.5">escalas ativas</p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </Card>
+  );
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
 export default function PerfilPage() {
   const { data: session, update } = useSession();
   const [userData, setUserData] = useState<UserData | null>(null);
 
-  // form state
-  const [name, setName] = useState("");
-  const [password, setPassword] = useState("");
+  const [name,            setName]            = useState("");
+  const [password,        setPassword]        = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [skills, setSkills] = useState<string[]>([]);
-  const [savingAccount, setSavingAccount] = useState(false);
-  const [savingPassword, setSavingPassword] = useState(false);
-  const [savingSkills, setSavingSkills] = useState(false);
+  const [skills,          setSkills]          = useState<string[]>([]);
+  const [savingAccount,   setSavingAccount]   = useState(false);
+  const [savingPassword,  setSavingPassword]  = useState(false);
+  const [savingSkills,    setSavingSkills]    = useState(false);
 
   const userId = (session?.user as { id?: string })?.id;
 
@@ -102,14 +205,14 @@ export default function PerfilPage() {
     setSavingAccount(true);
     try {
       const res = await fetch(`/api/users/${userId}`, {
-        method: "PUT",
+        method:  "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name }),
+        body:    JSON.stringify({ name }),
       });
       if (!res.ok) throw new Error((await res.json()).error);
       toast.success("Nome atualizado!");
       await update({ name });
-      setUserData((prev) => prev ? { ...prev, name } : prev);
+      setUserData((prev) => (prev ? { ...prev, name } : prev));
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Erro ao salvar");
     } finally {
@@ -121,15 +224,15 @@ export default function PerfilPage() {
     e.preventDefault();
     if (!password || !confirmPassword) return;
     if (password !== confirmPassword) {
-      toast.error("As senhas nao coincidem");
+      toast.error("As senhas não coincidem");
       return;
     }
     setSavingPassword(true);
     try {
       const res = await fetch(`/api/users/${userId}`, {
-        method: "PUT",
+        method:  "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password }),
+        body:    JSON.stringify({ password }),
       });
       if (!res.ok) throw new Error((await res.json()).error);
       toast.success("Senha atualizada!");
@@ -146,13 +249,13 @@ export default function PerfilPage() {
     setSavingSkills(true);
     try {
       const res = await fetch(`/api/users/${userId}`, {
-        method: "PUT",
+        method:  "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ skills }),
+        body:    JSON.stringify({ skills }),
       });
       if (!res.ok) throw new Error((await res.json()).error);
       toast.success("Habilidades atualizadas!");
-      setUserData((prev) => prev ? { ...prev, skills } : prev);
+      setUserData((prev) => (prev ? { ...prev, skills } : prev));
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Erro ao salvar");
     } finally {
@@ -174,96 +277,25 @@ export default function PerfilPage() {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-5xl">
 
-      {/* ── Coluna esquerda: identidade ─────────────────────────────── */}
+      {/* ── Col esquerda: identidade ─────────────────────────────────── */}
       <aside className="lg:col-span-1">
-        <div className="rounded-xl border border-border bg-card overflow-hidden sticky top-6">
-          {/* Faixa topo decorativa */}
-          <div
-            className="h-20 w-full"
-            style={{
-              background:
-                "linear-gradient(135deg, oklch(0.22 0.040 158), oklch(0.16 0.020 172))",
-            }}
-          />
-
-          <div className="px-5 pb-6 -mt-10">
-            {/* Avatar */}
-            <div className="mb-4">
-              <Avatar name={userData.name} size="2xl" status="online" />
-            </div>
-
-            <h2 className="text-[17px] font-semibold leading-tight">{userData.name}</h2>
-            <p className="font-mono text-[12px] text-muted-foreground/60 mt-0.5">
-              @{userData.username}
-            </p>
-
-            <div className="flex flex-wrap gap-1.5 mt-3">
-              <Badge tone={ROLE_TONE[userData.role] || "neutral"}>
-                {ROLE_LABELS[userData.role]}
-              </Badge>
-              {userData.skills?.map((s) => (
-                <span
-                  key={s}
-                  className={cn(
-                    "inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium",
-                    s === "narrador"
-                      ? "bg-amber-500/15 text-amber-400"
-                      : "bg-violet-500/15 text-violet-400"
-                  )}
-                >
-                  {s === "narrador" ? (
-                    <Mic className="h-2.5 w-2.5" />
-                  ) : (
-                    <Film className="h-2.5 w-2.5" />
-                  )}
-                  {s}
-                </span>
-              ))}
-            </div>
-
-            {userData.createdAt && (
-              <p className="text-[11px] text-muted-foreground/50 mt-4">
-                Membro desde{" "}
-                {format(new Date(userData.createdAt), "MMMM 'de' yyyy", { locale: ptBR })}
-              </p>
-            )}
-
-            {/* Mini stats */}
-            {(userData._completedTasksCount !== undefined ||
-              userData._activeScalesCount !== undefined) && (
-              <div className="mt-5 grid grid-cols-2 gap-2">
-                {userData._completedTasksCount !== undefined && (
-                  <div className="rounded-md bg-[oklch(0.215_0.014_172)] p-2.5 text-center">
-                    <p className="text-[18px] font-semibold tabular-nums">
-                      {userData._completedTasksCount}
-                    </p>
-                    <p className="text-[10px] text-muted-foreground/55 mt-0.5">entregas</p>
-                  </div>
-                )}
-                {userData._activeScalesCount !== undefined && (
-                  <div className="rounded-md bg-[oklch(0.215_0.014_172)] p-2.5 text-center">
-                    <p className="text-[18px] font-semibold tabular-nums">
-                      {userData._activeScalesCount}
-                    </p>
-                    <p className="text-[10px] text-muted-foreground/55 mt-0.5">escalas ativas</p>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
+        <IdentityCard userData={userData} />
       </aside>
 
-      {/* ── Coluna direita: formularios ─────────────────────────────── */}
-      <div className="lg:col-span-2 rounded-xl border border-border bg-card divide-y divide-border/50 overflow-hidden">
-
+      {/* ── Col direita: formulários ──────────────────────────────────── */}
+      <div
+        className={cn(
+          "lg:col-span-2 rounded-xl border border-border bg-card divide-y divide-border/50 overflow-hidden",
+          "animate-in-view stagger-2 surface-elevated"
+        )}
+      >
         {/* Section: Conta */}
         <form onSubmit={handleSaveAccount}>
           <div className="p-6">
             <Section
               icon={UserCircle}
               title="Conta"
-              description="Seu nome publico exibido para a equipe"
+              description="Seu nome público exibido para a equipe"
             >
               <Field label="Nome">
                 <Input
@@ -272,7 +304,7 @@ export default function PerfilPage() {
                   required
                 />
               </Field>
-              <Field label="Usuário" hint="Nao pode ser alterado">
+              <Field label="Usuário" hint="Não pode ser alterado">
                 <Input
                   value={userData.username}
                   disabled
@@ -310,7 +342,7 @@ export default function PerfilPage() {
                 label="Confirmar nova senha"
                 error={
                   confirmPassword && password !== confirmPassword
-                    ? "As senhas nao coincidem"
+                    ? "As senhas não coincidem"
                     : undefined
                 }
               >
@@ -343,7 +375,7 @@ export default function PerfilPage() {
             <Section
               icon={Sliders}
               title="Habilidades"
-              description="As funcoes que voce pode exercer nas producoes"
+              description="As funções que você pode exercer nas produções"
             >
               <div className="flex flex-col gap-3">
                 {(["narrador", "editor"] as const).map((skill) => {
@@ -354,7 +386,7 @@ export default function PerfilPage() {
                       type="button"
                       onClick={() => toggleSkill(skill)}
                       className={cn(
-                        "flex items-center gap-3 px-4 py-3 rounded-lg border text-left transition-colors",
+                        "flex items-center gap-3 px-4 py-3 rounded-lg border text-left transition-colors min-h-[64px]",
                         active
                           ? "border-primary/40 bg-primary/10 text-foreground"
                           : "border-border text-muted-foreground hover:bg-[oklch(0.225_0.014_172)] hover:text-foreground"
@@ -383,7 +415,7 @@ export default function PerfilPage() {
                         <p className="text-[11px] text-muted-foreground/60 mt-0.5">
                           {skill === "narrador"
                             ? "Grava a narração dos episódios"
-                            : "Edita e finaliza o video"}
+                            : "Edita e finaliza o vídeo"}
                         </p>
                       </div>
                       {active ? (
@@ -405,12 +437,12 @@ export default function PerfilPage() {
           </div>
         </div>
 
-        {/* Section: Sair */}
+        {/* Section: Sessão */}
         <div className="p-6">
           <Section
             icon={LogOut}
-            title="Sessao"
-            description="Encerrar a sessao atual neste dispositivo"
+            title="Sessão"
+            description="Encerrar a sessão atual neste dispositivo"
           >
             <Button
               variant="destructive"

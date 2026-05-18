@@ -11,6 +11,7 @@ import {
   FileText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { InlineMedia } from "./inline-media";
 
 interface User {
   _id: string;
@@ -120,122 +121,213 @@ export function TeamTable({
               )}
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border/40 text-left">
-                    <th className="px-4 py-2 text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-wider">
-                      Membro
-                    </th>
-                    <th className="px-4 py-2 text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-wider">
-                      Função
-                    </th>
-                    <th className="px-4 py-2 text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-wider hidden sm:table-cell">
-                      Anexo
-                    </th>
-                    <th className="px-4 py-2 text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-wider text-right">
-                      Status
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {groups.map((group) =>
-                    group.members.map((u) => {
-                      const userKey = u._id?.toString() || (u as unknown as string)?.toString();
-                      const mp = progress.find((p) => {
-                        const pid =
-                          typeof p.userId === "string"
-                            ? p.userId
-                            : p.userId?._id?.toString();
-                        return pid === userKey;
-                      });
-                      const RoleIcon = group.icon;
+            <>
+              {/* ── Mobile: lista de cards (< sm) ── */}
+              <div className="sm:hidden divide-y divide-border/30">
+                {groups.map((group) =>
+                  group.members.map((u) => {
+                    const userKey = u._id?.toString() || (u as unknown as string)?.toString();
+                    const mp = progress.find((p) => {
+                      const pid =
+                        typeof p.userId === "string"
+                          ? p.userId
+                          : p.userId?._id?.toString();
+                      return pid === userKey;
+                    });
+                    const RoleIcon = group.icon;
 
-                      let statusEl: React.ReactNode;
-                      if (mp) {
-                        statusEl = (
-                          <span
+                    const activeInPhase =
+                      (weekStatus === "roteiro" && group.key === "roteiristas") ||
+                      (weekStatus === "gravacao" && group.key === "narradores") ||
+                      (weekStatus === "edicao" && group.key === "editores") ||
+                      weekStatus === "revisao";
+
+                    const statusLabel = mp
+                      ? mp.completed
+                        ? "Concluído"
+                        : "Pendente"
+                      : activeInPhase
+                        ? "Pendente"
+                        : null;
+
+                    const statusClasses = mp
+                      ? mp.completed
+                        ? "bg-[oklch(0.22_0.030_158)] text-[oklch(0.82_0.13_158)]"
+                        : "bg-[oklch(0.22_0.030_60)] text-[oklch(0.82_0.13_60)]"
+                      : activeInPhase
+                        ? "bg-[oklch(0.22_0.030_25)] text-[oklch(0.82_0.13_25)]"
+                        : null;
+
+                    return (
+                      <div
+                        key={`mobile-${group.key}-${userKey}`}
+                        className="px-4 py-3 hover:bg-[oklch(0.22_0.016_172)] transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          {/* Avatar */}
+                          <div
                             className={cn(
-                              "inline-flex items-center text-[10px] font-bold px-1.5 py-0.5 rounded-md",
-                              mp.completed
-                                ? "bg-[oklch(0.22_0.030_158)] text-[oklch(0.82_0.13_158)]"
-                                : "bg-[oklch(0.22_0.030_60)] text-[oklch(0.82_0.13_60)]"
+                              "h-9 w-9 rounded-full flex items-center justify-center text-[12px] font-bold shrink-0",
+                              group.bg
                             )}
                           >
-                            {mp.completed ? "Concluído" : "Pendente"}
-                          </span>
-                        );
-                      } else {
-                        const activeInPhase =
-                          (weekStatus === "roteiro" && group.key === "roteiristas") ||
-                          (weekStatus === "gravacao" && group.key === "narradores") ||
-                          (weekStatus === "edicao" && group.key === "editores") ||
-                          weekStatus === "revisao";
-                        statusEl = activeInPhase ? (
-                          <span className="inline-flex items-center text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-[oklch(0.22_0.030_25)] text-[oklch(0.82_0.13_25)]">
-                            Pendente
-                          </span>
-                        ) : (
-                          <span className="text-[10px] text-muted-foreground/25">
-                            —
-                          </span>
-                        );
-                      }
+                            {u.name?.[0] || "?"}
+                          </div>
 
-                      return (
-                        <tr
-                          key={`${group.key}-${userKey}`}
-                          className="border-b border-border/30 last:border-0 hover:bg-[oklch(0.22_0.016_172)] transition-colors"
-                        >
-                          <td className="px-4 py-2">
-                            <div className="flex items-center gap-2">
-                              <div
+                          {/* Info */}
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-[14px] truncate">
+                              {u.name || "—"}
+                            </p>
+                            <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                              <span
                                 className={cn(
-                                  "h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0",
+                                  "inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded",
                                   group.bg
                                 )}
                               >
-                                {u.name?.[0] || "?"}
-                              </div>
-                              <span className="font-medium text-[13px]">
-                                {u.name || "—"}
+                                <RoleIcon className="h-2.5 w-2.5" />
+                                {group.label}
                               </span>
                             </div>
-                          </td>
-                          <td className="px-4 py-2">
+                          </div>
+
+                          {/* Status badge */}
+                          {statusLabel && statusClasses && (
                             <span
                               className={cn(
-                                "inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded",
-                                group.bg
+                                "inline-flex items-center shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded-md",
+                                statusClasses
                               )}
                             >
-                              <RoleIcon className="h-2.5 w-2.5" /> {group.label}
+                              {statusLabel}
                             </span>
-                          </td>
-                          <td className="px-4 py-2 hidden sm:table-cell">
-                            {mp?.linkUrl ? (
-                              <a
-                                href={mp.linkUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-[11px] text-primary hover:underline inline-flex items-center gap-0.5"
+                          )}
+                        </div>
+
+                        {/* Inline player abaixo da linha quando há anexo */}
+                        {mp?.linkUrl && (
+                          <div className="mt-2 pl-12">
+                            <InlineMedia url={mp.linkUrl} compact />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              {/* ── Desktop: tabela (>= sm) ── */}
+              <div className="hidden sm:block overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border/40 text-left">
+                      <th className="px-4 py-2 text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-wider">
+                        Membro
+                      </th>
+                      <th className="px-4 py-2 text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-wider">
+                        Função
+                      </th>
+                      <th className="px-4 py-2 text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-wider">
+                        Anexo
+                      </th>
+                      <th className="px-4 py-2 text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-wider text-right">
+                        Status
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {groups.map((group) =>
+                      group.members.map((u) => {
+                        const userKey = u._id?.toString() || (u as unknown as string)?.toString();
+                        const mp = progress.find((p) => {
+                          const pid =
+                            typeof p.userId === "string"
+                              ? p.userId
+                              : p.userId?._id?.toString();
+                          return pid === userKey;
+                        });
+                        const RoleIcon = group.icon;
+
+                        let statusEl: React.ReactNode;
+                        if (mp) {
+                          statusEl = (
+                            <span
+                              className={cn(
+                                "inline-flex items-center text-[10px] font-bold px-1.5 py-0.5 rounded-md",
+                                mp.completed
+                                  ? "bg-[oklch(0.22_0.030_158)] text-[oklch(0.82_0.13_158)]"
+                                  : "bg-[oklch(0.22_0.030_60)] text-[oklch(0.82_0.13_60)]"
+                              )}
+                            >
+                              {mp.completed ? "Concluído" : "Pendente"}
+                            </span>
+                          );
+                        } else {
+                          const activeInPhase =
+                            (weekStatus === "roteiro" && group.key === "roteiristas") ||
+                            (weekStatus === "gravacao" && group.key === "narradores") ||
+                            (weekStatus === "edicao" && group.key === "editores") ||
+                            weekStatus === "revisao";
+                          statusEl = activeInPhase ? (
+                            <span className="inline-flex items-center text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-[oklch(0.22_0.030_25)] text-[oklch(0.82_0.13_25)]">
+                              Pendente
+                            </span>
+                          ) : (
+                            <span className="text-[10px] text-muted-foreground/25">
+                              —
+                            </span>
+                          );
+                        }
+
+                        return (
+                          <tr
+                            key={`${group.key}-${userKey}`}
+                            className="border-b border-border/30 last:border-0 hover:bg-[oklch(0.22_0.016_172)] transition-colors"
+                          >
+                            <td className="px-4 py-2">
+                              <div className="flex items-center gap-2">
+                                <div
+                                  className={cn(
+                                    "h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0",
+                                    group.bg
+                                  )}
+                                >
+                                  {u.name?.[0] || "?"}
+                                </div>
+                                <span className="font-medium text-[13px]">
+                                  {u.name || "—"}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="px-4 py-2">
+                              <span
+                                className={cn(
+                                  "inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded",
+                                  group.bg
+                                )}
                               >
-                                <ExternalLink className="h-2.5 w-2.5" /> Abrir
-                              </a>
-                            ) : (
-                              <span className="text-[11px] text-muted-foreground/25">
-                                —
+                                <RoleIcon className="h-2.5 w-2.5" /> {group.label}
                               </span>
-                            )}
-                          </td>
-                          <td className="px-4 py-2 text-right">{statusEl}</td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
+                            </td>
+                            <td className="px-4 py-2 align-top">
+                              {mp?.linkUrl ? (
+                                <InlineMedia url={mp.linkUrl} compact />
+                              ) : (
+                                <span className="text-[11px] text-muted-foreground/25">
+                                  —
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-4 py-2 text-right">{statusEl}</td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
           {roteiroId && (
             <Link

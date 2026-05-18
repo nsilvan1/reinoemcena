@@ -18,7 +18,7 @@ interface Props {
 
 export function WeekStepper({ weeks, selected, onSelect }: Props) {
   return (
-    <div className="flex items-stretch gap-1.5 overflow-x-auto pb-1 -mx-1 px-1">
+    <div className="flex items-stretch gap-1.5 overflow-x-auto pb-1 -mx-1 px-1 snap-x-cards fade-mask-x sm:fade-mask-x-none">
       {weeks.map((week, idx) => {
         const ws = STEPS.find((s) => s.key === week.status) || STEPS[0];
         const sel = selected === week.number;
@@ -32,7 +32,8 @@ export function WeekStepper({ weeks, selected, onSelect }: Props) {
             key={week.number}
             onClick={() => onSelect(week.number)}
             className={cn(
-              "group relative flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-left transition-all whitespace-nowrap shrink-0",
+              "group relative flex items-center gap-2 rounded-lg border px-2.5 text-left transition-all whitespace-nowrap shrink-0",
+              "py-2.5 min-h-[44px] sm:py-1.5 sm:min-h-0",
               sel
                 ? "border-primary/40 bg-[oklch(0.22_0.030_172)] shadow-sm"
                 : "border-border bg-card hover:border-primary/20 hover:bg-[oklch(0.22_0.016_172)]"

@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { AudioPlayer } from "@/components/escala/audio-player";
 
 type RecorderState = "idle" | "recording" | "paused" | "stopped";
 
@@ -409,9 +410,8 @@ export function LiveRecorder({
 
       {blob && previewUrl && state === "stopped" && (
         <div className="space-y-2">
-          <audio controls className="w-full h-9" src={previewUrl}>
-            Seu navegador não suporta áudio.
-          </audio>
+          <AudioPlayer src={previewUrl} />
+
           <div className="flex gap-2">
             <Button
               type="button"
