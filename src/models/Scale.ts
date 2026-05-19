@@ -15,6 +15,8 @@ export interface IWeek {
   characterIds: Types.ObjectId[];
   /** URL do vídeo final entregue para revisão (Drive, YouTube ou upload). */
   reviewVideoUrl?: string;
+  /** Timestamp do momento em que a semana foi marcada como "concluido". */
+  completedAt?: Date;
 }
 
 export interface IScale extends Document {
@@ -53,6 +55,7 @@ const WeekSchema = new Schema<IWeek>(
       },
     },
     reviewVideoUrl: { type: String, trim: true, maxlength: 2048 },
+    completedAt: { type: Date },
   },
   { _id: false }
 );

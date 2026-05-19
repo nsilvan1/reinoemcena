@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
-import { ChevronRight, CalendarDays, Users } from "lucide-react";
-import { format } from "date-fns";
+import { ChevronRight, CalendarDays, Users, Check, AlertTriangle } from "lucide-react";
+import { differenceInCalendarDays, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn, parseLocalDate } from "@/lib/utils";
 import { STEPS } from "@/components/pipeline/mini-pipeline";
@@ -15,6 +15,7 @@ interface Props {
   weekDeadline: string;
   weekStatus: string;
   teamCount: number;
+  weekCompletedAt?: string | null;
 }
 
 export function WeekHeader({
@@ -25,9 +26,21 @@ export function WeekHeader({
   weekDeadline,
   weekStatus,
   teamCount,
+  weekCompletedAt,
 }: Props) {
   const step = STEPS.find((s) => s.key === weekStatus) || STEPS[0];
   const StatusIcon = step.icon;
+
+  const completedAtDate = weekCompletedAt ? new Date(weekCompletedAt) : null;
+  let onTimeDiff: number | null = null;
+  if (weekStatus === "concluido" && completedAtDate) {
+    try {
+      onTimeDiff = differenceInCalendarDays(completedAtDate, parseLocalDate(weekDeadline));
+    } catch {
+      onTimeDiff = null;
+    }
+  }
+  const onTime = onTimeDiff !== null && onTimeDiff <= 0;
 
   return (
     <div className="flex flex-col gap-2">
@@ -70,16 +83,48 @@ export function WeekHeader({
           </div>
         </div>
 
-        <div
-          className={cn(
-            "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider border shrink-0",
-            step.lightBg,
-            step.lightBorder,
-            step.lightText
+        <div className="flex flex-col items-end gap-1.5 shrink-0">
+          <div
+            className={cn(
+              "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider border",
+              step.lightBg,
+              step.lightBorder,
+              step.lightText
+            )}
+          >
+            <StatusIcon className="h-3 w-3" />
+            {step.label}
+          </div>
+          {weekStatus === "concluido" && completedAtDate && (
+            <div className="flex flex-col items-end gap-1">
+              <span className="text-[10px] text-muted-foreground/70 font-mono">
+                Finalizada em {format(completedAtDate, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+              </span>
+              {onTimeDiff !== null && (
+                <span
+                  className={cn(
+                    "inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider border",
+                    onTime
+                      ? "text-[oklch(0.82_0.13_158)] bg-[oklch(0.22_0.030_158)] border-[oklch(0.35_0.06_158)]"
+                      : "text-[oklch(0.82_0.14_25)] bg-[oklch(0.22_0.030_25)] border-[oklch(0.35_0.06_25)]"
+                  )}
+                >
+                  {onTime ? (
+                    <>
+                      <Check className="h-2.5 w-2.5" />
+                      No prazo
+                      {onTimeDiff < 0 && ` · ${Math.abs(onTimeDiff)}d antes`}
+                    </>
+                  ) : (
+                    <>
+                      <AlertTriangle className="h-2.5 w-2.5" />
+                      Atrasado · {onTimeDiff}d
+                    </>
+                  )}
+                </span>
+              )}
+            </div>
           )}
-        >
-          <StatusIcon className="h-3 w-3" />
-          {step.label}
         </div>
       </div>
     </div>

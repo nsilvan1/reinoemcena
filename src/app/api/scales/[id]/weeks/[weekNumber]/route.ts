@@ -103,7 +103,15 @@ export async function PUT(req: NextRequest, { params }: Params) {
   if (body.theme !== undefined) scale.weeks[weekIdx].theme = body.theme;
   if (body.deadline !== undefined) scale.weeks[weekIdx].deadline = body.deadline;
   if (body.assignments !== undefined) scale.weeks[weekIdx].assignments = body.assignments;
-  if (body.status !== undefined) scale.weeks[weekIdx].status = body.status;
+  if (body.status !== undefined) {
+    const prevStatus = scale.weeks[weekIdx].status;
+    scale.weeks[weekIdx].status = body.status;
+    if (body.status === "concluido" && prevStatus !== "concluido") {
+      scale.weeks[weekIdx].completedAt = new Date();
+    } else if (body.status !== "concluido" && prevStatus === "concluido") {
+      scale.weeks[weekIdx].completedAt = undefined;
+    }
+  }
 
   // reviewVideoUrl — exige coordenador+, valida via isSafeUrl
   if (body.reviewVideoUrl !== undefined) {

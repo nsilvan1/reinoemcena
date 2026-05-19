@@ -115,6 +115,7 @@ export async function POST(req: NextRequest, { params }: Params) {
       });
       if (approved === editorIds.length) {
         week.status = "concluido";
+        week.completedAt = new Date();
         await scale.save();
       }
     }

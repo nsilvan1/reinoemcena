@@ -25,7 +25,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn, parseLocalDate } from "@/lib/utils";
-import { differenceInCalendarDays } from "date-fns";
+import { differenceInCalendarDays, format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { STEPS } from "@/components/pipeline/mini-pipeline";
 import dynamic from "next/dynamic";
 const RichTextEditor = dynamic(
@@ -466,6 +467,7 @@ export default function ScaleDetailPage() {
           weekDeadline={currentWeek?.deadline || ""}
           weekStatus={weekStatus}
           teamCount={teamCount}
+          weekCompletedAt={currentWeek?.completedAt || null}
         />
       </div>
 
@@ -484,6 +486,8 @@ export default function ScaleDetailPage() {
           progress={progress}
           deadline={currentWeek?.deadline || ""}
           teamCount={teamCount}
+          weekStatus={weekStatus}
+          completedAt={currentWeek?.completedAt || null}
         />
       )}
 
@@ -904,33 +908,77 @@ export default function ScaleDetailPage() {
               </PhaseFrame>
             )}
 
-            {weekStatus === "concluido" && !viewingStage && (
-              <div className="flex items-center justify-between gap-3 p-4 rounded-xl card-glass border border-[oklch(0.35_0.06_158)] bg-[oklch(0.22_0.030_158)]">
-                <div className="flex items-center gap-3">
-                  <div className="h-9 w-9 rounded-lg bg-[oklch(0.30_0.05_158)] flex items-center justify-center">
-                    <CircleCheck className="h-5 w-5 text-[oklch(0.82_0.13_158)]" />
+            {weekStatus === "concluido" && !viewingStage && (() => {
+              const completedAt = currentWeek.completedAt
+                ? new Date(currentWeek.completedAt)
+                : null;
+              let deadlineDate: Date | null = null;
+              try {
+                deadlineDate = currentWeek.deadline
+                  ? parseLocalDate(currentWeek.deadline)
+                  : null;
+              } catch {
+                deadlineDate = null;
+              }
+              const diffDays =
+                completedAt && deadlineDate
+                  ? differenceInCalendarDays(completedAt, deadlineDate)
+                  : null;
+              const onTime = diffDays !== null && diffDays <= 0;
+              const lateBy = diffDays !== null && diffDays > 0 ? diffDays : 0;
+              return (
+                <div className="flex items-center justify-between gap-3 p-4 rounded-xl card-glass border border-[oklch(0.35_0.06_158)] bg-[oklch(0.22_0.030_158)]">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="h-9 w-9 rounded-lg bg-[oklch(0.30_0.05_158)] flex items-center justify-center shrink-0">
+                      <CircleCheck className="h-5 w-5 text-[oklch(0.82_0.13_158)]" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-[oklch(0.92_0.10_158)]">
+                        Semana concluída
+                      </p>
+                      <p className="text-[11px] text-[oklch(0.82_0.13_158)]/70">
+                        {completedAt
+                          ? `Finalizada em ${format(completedAt, "dd 'de' MMM 'de' yyyy 'às' HH:mm", { locale: ptBR })}`
+                          : "Todos os passos foram finalizados"}
+                      </p>
+                      {diffDays !== null && (
+                        <span
+                          className={cn(
+                            "inline-flex items-center gap-1 mt-1.5 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border",
+                            onTime
+                              ? "text-[oklch(0.82_0.13_158)] bg-[oklch(0.22_0.030_158)] border-[oklch(0.35_0.06_158)]"
+                              : "text-[oklch(0.82_0.14_25)] bg-[oklch(0.22_0.030_25)] border-[oklch(0.35_0.06_25)]"
+                          )}
+                        >
+                          {onTime ? (
+                            <>
+                              <Check className="h-2.5 w-2.5" />
+                              No prazo
+                              {diffDays < 0 && ` · ${Math.abs(diffDays)}d antes`}
+                            </>
+                          ) : (
+                            <>
+                              <AlertTriangle className="h-2.5 w-2.5" />
+                              Atrasado · {lateBy}d após o prazo
+                            </>
+                          )}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm font-bold text-[oklch(0.92_0.10_158)]">
-                      Semana concluída
-                    </p>
-                    <p className="text-[11px] text-[oklch(0.82_0.13_158)]/70">
-                      Todos os passos foram finalizados
-                    </p>
-                  </div>
+                  {currentWeek.reviewVideoUrl && (
+                    <a
+                      href={currentWeek.reviewVideoUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-[11px] text-[oklch(0.82_0.13_158)] hover:text-[oklch(0.92_0.10_158)] px-2 py-1 rounded-md border border-[oklch(0.35_0.06_158)] shrink-0"
+                    >
+                      Vídeo final <ExternalLink className="h-3 w-3" />
+                    </a>
+                  )}
                 </div>
-                {currentWeek.reviewVideoUrl && (
-                  <a
-                    href={currentWeek.reviewVideoUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-[11px] text-[oklch(0.82_0.13_158)] hover:text-[oklch(0.92_0.10_158)] px-2 py-1 rounded-md border border-[oklch(0.35_0.06_158)]"
-                  >
-                    Vídeo final <ExternalLink className="h-3 w-3" />
-                  </a>
-                )}
-              </div>
-            )}
+              );
+            })()}
 
             {weekStatus !== "concluido" &&
               !isRoteirista &&
@@ -1076,40 +1124,63 @@ function WeekSummaryCard({
   progress,
   deadline,
   teamCount,
+  weekStatus,
+  completedAt,
 }: {
   progress: any[];
   deadline: string;
   teamCount: number;
+  weekStatus: string;
+  completedAt?: string | null;
 }) {
   // % concluído
   const totalTasks = progress.length;
   const completedTasks = progress.filter((p: any) => p.completed).length;
   const pctDone = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
-  // Dias até prazo
-  let diasRestantes: number | null = null;
+  const isConcluido = weekStatus === "concluido";
+  const completedAtDate = completedAt ? new Date(completedAt) : null;
+
+  // Card "prazo": se concluído, mostra status de entrega (no prazo / atrasado).
+  // Caso contrário, dias restantes até deadline.
+  let deadlineValue = "—";
+  let deadlineLabel = "Até prazo";
   let deadlineTone: "primary" | "warning" | "danger" | "muted" = "muted";
+  let deadlinePulse = false;
+
   try {
     const deadlineDate = parseLocalDate(deadline);
-    diasRestantes = differenceInCalendarDays(deadlineDate, new Date());
-    if (diasRestantes > 7) deadlineTone = "primary";
-    else if (diasRestantes >= 0) deadlineTone = "warning";
-    else deadlineTone = "danger";
+    if (isConcluido && completedAtDate) {
+      const diff = differenceInCalendarDays(completedAtDate, deadlineDate);
+      deadlineLabel = "Entrega";
+      if (diff <= 0) {
+        deadlineValue = diff === 0 ? "No prazo" : `${Math.abs(diff)}d antes`;
+        deadlineTone = "primary";
+      } else {
+        deadlineValue = `${diff}d atraso`;
+        deadlineTone = "danger";
+      }
+    } else {
+      const diasRestantes = differenceInCalendarDays(deadlineDate, new Date());
+      deadlineValue =
+        diasRestantes < 0
+          ? `${Math.abs(diasRestantes)}d atrás`
+          : diasRestantes === 0
+            ? "Hoje"
+            : `${diasRestantes}d`;
+      if (diasRestantes > 7) deadlineTone = "primary";
+      else if (diasRestantes >= 0) deadlineTone = "warning";
+      else {
+        deadlineTone = "danger";
+        deadlinePulse = true;
+      }
+    }
   } catch {
     // deadline inválido — ignora
   }
 
   // Anexos (linkUrl preenchidos)
   const attachmentCount = progress.filter((p: any) => !!p.linkUrl).length;
-
-  const deadlineLabel =
-    diasRestantes === null
-      ? "—"
-      : diasRestantes < 0
-        ? `${Math.abs(diasRestantes)}d atrás`
-        : diasRestantes === 0
-          ? "Hoje"
-          : `${diasRestantes}d`;
 
   return (
     <div className="surface-elevated rounded-xl p-4 animate-in-view stagger-3">
@@ -1122,10 +1193,10 @@ function WeekSummaryCard({
         />
         <MiniKpi
           icon={CalendarClock}
-          label="Até prazo"
-          value={deadlineLabel}
+          label={deadlineLabel}
+          value={deadlineValue}
           tone={deadlineTone}
-          pulse={deadlineTone === "danger"}
+          pulse={deadlinePulse}
         />
         <MiniKpi
           icon={Users}
