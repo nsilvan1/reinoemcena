@@ -4,7 +4,8 @@ import { connectDB } from "@/lib/mongodb";
 import Roteiro from "@/models/Roteiro";
 import Scale from "@/models/Scale";
 import { requireAuth, requireRole } from "@/lib/auth-helpers";
-import { sanitizeHtml, isSafeUrl } from "@/lib/sanitize";
+import { sanitizeHtml } from "@/lib/sanitize";
+import { isSafeUrl } from "@/lib/url-safe";
 import { notifyMany } from "@/lib/notifications";
 
 // GET /api/roteiros

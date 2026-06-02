@@ -1,5 +1,9 @@
 import DOMPurify from "isomorphic-dompurify";
 
+// Re-export para compatibilidade. Quem só precisa validar URL deve importar
+// direto de "@/lib/url-safe" para não carregar o jsdom.
+export { isSafeUrl } from "./url-safe";
+
 const ALLOWED_TAGS = [
   "p",
   "h1",
@@ -43,18 +47,3 @@ export function sanitizeHtml(html: string): string {
   });
 }
 
-export function isSafeUrl(url: string): boolean {
-  if (!url || typeof url !== "string") return false;
-  const trimmed = url.trim();
-  if (trimmed.length === 0 || trimmed.length > 2048) return false;
-  if (trimmed.startsWith("/") && !trimmed.startsWith("//")) return true;
-  if (/^https?:\/\//i.test(trimmed)) {
-    try {
-      const parsed = new URL(trimmed);
-      return parsed.protocol === "http:" || parsed.protocol === "https:";
-    } catch {
-      return false;
-    }
-  }
-  return false;
-}

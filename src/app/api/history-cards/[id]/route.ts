@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 import { connectDB } from "@/lib/mongodb";
 import HistoryCard from "@/models/HistoryCard";
 import { requireAuth, requireRole } from "@/lib/auth-helpers";
-import { isSafeUrl } from "@/lib/sanitize";
+import { isSafeUrl } from "@/lib/url-safe";
 import { ROLE_HIERARCHY } from "@/types";
 
 type Params = { params: Promise<{ id: string }> };

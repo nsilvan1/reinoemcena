@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import HistoryCard from "@/models/HistoryCard";
 import { requireAuth, requireRole } from "@/lib/auth-helpers";
-import { isSafeUrl } from "@/lib/sanitize";
+import { isSafeUrl } from "@/lib/url-safe";
 
 function normalizeTraits(input: unknown): string[] | null {
   if (input === undefined) return null;

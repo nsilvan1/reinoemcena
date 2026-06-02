@@ -6,7 +6,7 @@ import TaskProgress from "@/models/TaskProgress";
 import Character from "@/models/Character";
 import HistoryCard from "@/models/HistoryCard";
 import { requireAuth } from "@/lib/auth-helpers";
-import { isSafeUrl } from "@/lib/sanitize";
+import { isSafeUrl } from "@/lib/url-safe";
 import { tryAdvanceWeek } from "@/lib/week-advance";
 import { notifyMany } from "@/lib/notifications";
 import { WeekStatus, ROLE_HIERARCHY, type Role } from "@/types";
