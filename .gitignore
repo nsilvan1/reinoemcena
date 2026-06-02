@@ -33,6 +33,10 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
+# Google OAuth client secrets — NUNCA commitar
+client_secret_*.json
+*.apps.googleusercontent.com.json
+
 # uploads — TEMPORÁRIO: commitando enquanto não migra pra blob storage.
 # Quando migrar (Vercel Blob / R2 / Cloudinary), reativar a linha abaixo.
 # /public/uploads

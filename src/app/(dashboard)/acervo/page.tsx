@@ -18,6 +18,7 @@ import { CharacterCard, type CharacterSummary } from "@/components/acervo/charac
 import { HistoryCardItem, type HistoryCardSummary } from "@/components/acervo/history-card-item";
 import { CharacterSheet } from "@/components/acervo/character-sheet";
 import { HistoryCardSheet } from "@/components/acervo/history-card-sheet";
+import { DriveSyncPanel } from "@/components/acervo/drive-sync-panel";
 import { ROLE_HIERARCHY, type Role } from "@/types";
 import { cn } from "@/lib/utils";
 
@@ -175,12 +176,15 @@ export default function AcervoPage() {
           </div>
         </div>
 
-        {canEdit && (
-          <Button onClick={tab === "personagens" ? openNewCharacter : openNewHistoryCard}>
-            <Plus className="h-3.5 w-3.5" />
-            Novo
-          </Button>
-        )}
+        <div className="flex items-center gap-2 flex-wrap justify-end">
+          {tab === "personagens" && <DriveSyncPanel onSynced={loadCharacters} />}
+          {canEdit && (
+            <Button onClick={tab === "personagens" ? openNewCharacter : openNewHistoryCard}>
+              <Plus className="h-3.5 w-3.5" />
+              Novo
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* ── Tabs as pills + search ── */}
