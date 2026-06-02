@@ -4,6 +4,7 @@ import DriveConnection from "@/models/DriveConnection";
 import { requireRole } from "@/lib/auth-helpers";
 import { getAuthedClient, getConnection } from "@/lib/google-drive";
 import { runDriveSync, type SyncProgress } from "@/lib/drive-sync";
+import { isBlobConfigured } from "@/lib/blob-storage";
 
 // Sync pode demorar (baixa muitas imagens). Sem limite curto de execução.
 export const maxDuration = 300;
@@ -13,6 +14,19 @@ export const maxDuration = 300;
 export async function POST() {
   const { error, user } = await requireRole("coordenador");
   if (error) return error;
+
+  // Na Vercel o filesystem é somente-leitura: sem o Vercel Blob, todo upload
+  // de imagem falharia silenciosamente e nenhum personagem seria criado.
+  // Avisa de forma clara em vez de "achar tudo e não salvar nada".
+  if (process.env.VERCEL && !isBlobConfigured()) {
+    return NextResponse.json(
+      {
+        error:
+          "Storage não configurado. Crie o Vercel Blob (Storage → Blob) para sincronizar em produção, ou rode a sincronização pelo localhost.",
+      },
+      { status: 503 }
+    );
+  }
 
   const conn = await getConnection();
   if (!conn) {
