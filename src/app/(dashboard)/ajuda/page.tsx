@@ -29,6 +29,7 @@ import {
 import { Button, Input, PageHeader } from "@/components/v2/primitives";
 import { cn } from "@/lib/utils";
 import { WelcomeTutorialModal, resetTutorial } from "@/components/welcome-tutorial-modal";
+import { startGuidedTour } from "@/components/guided-tour-launcher";
 
 interface FaqItem {
   q: string;
@@ -472,10 +473,16 @@ export default function AjudaPage() {
         description="FAQ completo, com tutorial inicial e atalhos. Tudo num só lugar."
         icon={HelpCircle}
         actions={
-          <Button onClick={openTutorial}>
-            <PlayCircle className="h-3.5 w-3.5" />
-            Ver tutorial
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="secondary" onClick={openTutorial}>
+              <PlayCircle className="h-3.5 w-3.5" />
+              Ver tutorial
+            </Button>
+            <Button onClick={startGuidedTour}>
+              <Sparkles className="h-3.5 w-3.5" />
+              Tour guiado
+            </Button>
+          </div>
         }
       />
 

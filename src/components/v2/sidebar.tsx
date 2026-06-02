@@ -23,13 +23,13 @@ import { cn } from "@/lib/utils";
 import { Avatar, Kbd } from "./primitives";
 
 const navItems = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard, shortcut: "G D" },
-  { href: "/escalas", label: "Escalas", icon: Calendar, shortcut: "G E" },
-  { href: "/roteiros", label: "Roteiros", icon: FileText, shortcut: "G R" },
-  { href: "/acervo", label: "Acervo", icon: Images, shortcut: "G A" },
-  { href: "/membros", label: "Membros", icon: Users, minRole: "coordenador", shortcut: "G M" },
-  { href: "/notificacoes", label: "Notificações", icon: Bell, shortcut: "G N" },
-  { href: "/ajuda", label: "Ajuda", icon: HelpCircle, shortcut: "G ?" },
+  { href: "/", label: "Dashboard", icon: LayoutDashboard, shortcut: "G D", tour: "dashboard" },
+  { href: "/escalas", label: "Escalas", icon: Calendar, shortcut: "G E", tour: "escalas" },
+  { href: "/roteiros", label: "Roteiros", icon: FileText, shortcut: "G R", tour: "roteiros" },
+  { href: "/acervo", label: "Acervo", icon: Images, shortcut: "G A", tour: "acervo" },
+  { href: "/membros", label: "Membros", icon: Users, minRole: "coordenador", shortcut: "G M", tour: "membros" },
+  { href: "/notificacoes", label: "Notificações", icon: Bell, shortcut: "G N", tour: "notificacoes" },
+  { href: "/ajuda", label: "Ajuda", icon: HelpCircle, shortcut: "G ?", tour: "ajuda" },
 ];
 
 function NavContent({ onClose }: { onClose?: () => void }) {
@@ -94,6 +94,7 @@ function NavContent({ onClose }: { onClose?: () => void }) {
                   key={item.href}
                   href={item.href}
                   onClick={onClose}
+                  data-tour={`nav-${item.tour}`}
                   className={cn(
                     "group relative flex items-center gap-2.5 px-2.5 py-2 rounded-lg",
                     "text-[13px] transition-all duration-150",
@@ -129,6 +130,7 @@ function NavContent({ onClose }: { onClose?: () => void }) {
         <Link
           href="/perfil"
           onClick={onClose}
+          data-tour="perfil"
           className="flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-sidebar-accent/60 transition-colors group"
         >
           <Avatar name={userName} size="sm" status="online" />

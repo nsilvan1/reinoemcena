@@ -161,7 +161,11 @@ export function DriveSyncPanel({ onSynced }: { onSynced: () => void }) {
   // Não conectado → botão conectar (só admin conecta a conta-fonte).
   if (!status.connected) {
     return isAdmin ? (
-      <Button variant="secondary" onClick={() => (window.location.href = "/api/drive/auth")}>
+      <Button
+        variant="secondary"
+        data-tour="drive-sync"
+        onClick={() => (window.location.href = "/api/drive/auth")}
+      >
         <HardDriveDownload className="h-3.5 w-3.5" />
         Conectar Google Drive
       </Button>
@@ -175,7 +179,7 @@ export function DriveSyncPanel({ onSynced }: { onSynced: () => void }) {
       : null;
 
   return (
-    <div className="flex items-center gap-2 flex-wrap">
+    <div className="flex items-center gap-2 flex-wrap" data-tour="drive-sync">
       {syncing && progress ? (
         <div className="flex items-center gap-2.5 min-w-[220px]">
           <Loader2 className="h-3.5 w-3.5 animate-spin text-[oklch(0.72_0.13_158)]" />
